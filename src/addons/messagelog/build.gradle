@@ -1,6 +1,7 @@
 dependencies {
-    compile project(':proxy')
-    testCompile project(':common-test')
-    testCompile 'org.hsqldb:hsqldb:2.5.1'
-    testCompile "com.typesafe.akka:akka-testkit_$akkaVersion"
+    implementation(project(path: ':proxy', configuration: 'shadow'))
+
+    testImplementation project(':common-test')
+    testImplementation 'org.hsqldb:hsqldb:2.5.1'
+    testImplementation "com.typesafe.akka:akka-testkit_$akkaVersion"
 }
