@@ -23,37 +23,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import dtsGenerator, {DefaultTypeNameConvertor} from 'dtsgenerator';
-import * as fs from 'fs';
-import {parseFileContent} from 'dtsgenerator/dist/utils';
-import prettier from 'prettier';
 
-const openAPIPath = '../src/main/resources/openapi-definition.yaml';
-const outputTSPath = 'src/openapi-types.ts';
-
-function main() {
-  console.log(`Generating typescript interfaces from ${openAPIPath}`);
-  dtsGenerator({
-    contents: [parseFileContent(fs.readFileSync(openAPIPath, 'utf-8'), openAPIPath)],
-    typeNameConvertor: id => {
-      const names = DefaultTypeNameConvertor(id);
-      return names.some(name => name.toLowerCase() === 'schemas') ? [names[names.length - 1]] : [];
-    }
-  })
-    .then(result => {
-      result = result
-        .split("\n")
-        .map(line => line.startsWith('declare') ? line.replace('declare', 'export') : line)
-        .join("\n");
-      prettier.resolveConfig(process.cwd())
-        .then(options => {
-          fs.writeFileSync(outputTSPath, prettier.format(result, {
-            ...options,
-            parser: 'typescript'
-          }), {encoding: 'utf-8'});
-          console.log(`Wrote typescript interfaces to ${outputTSPath}`);
-        }).catch((err: any) => console.error(err.stack || err));
-    }).catch((err: any) => console.error(err.stack || err));
+/*
+ * Use this function to display Unicode escape sequences (e.g. \007d) as a value in css properties.
+ * For example: `#close-x:before { content: unicode('00d7') }`, to display a 'close' symbol (x) in dialogs.
+ * If done in regular way: `#close-x:before { content: '\00d7' }`, SASS will compile the escape sequence into
+ * the real Unicode value which might be displayed wrongly in some browsers depending on the character
+ * encoding of the system.
+ */
+@function unicode($str) {
+  @return unquote('"') + unquote(str-insert($str, '\\', 1)) + unquote('"');
 }
-
-main();
