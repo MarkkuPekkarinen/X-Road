@@ -63,7 +63,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.niis.xroad.restapi.service.KeyService.WARNING_AUTH_KEY_REGISTERED_CERT_DETECTED;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_AUTH_KEY_REGISTERED_CERT_DETECTED;
 
 /**
  * test key service.
@@ -90,6 +90,9 @@ public class KeyServiceTest extends AbstractServiceTestContext {
 
     @Autowired
     SecurityHelper securityHelper;
+
+    @Autowired
+    TokenPinValidator tokenPinValidator;
 
     // token ids for mocking
     private static final String KEY_NOT_FOUND_KEY_ID = "key-404";
@@ -296,7 +299,8 @@ public class KeyServiceTest extends AbstractServiceTestContext {
 
     private void mockServices(PossibleActionsRuleEngine possibleActionsRuleEngineParam) {
         // override instead of mocking for better performance
-        tokenService = new TokenService(signerProxyFacade, possibleActionsRuleEngineParam, auditDataHelper) {
+        tokenService = new TokenService(signerProxyFacade, possibleActionsRuleEngineParam, auditDataHelper,
+                tokenPinValidator) {
             @Override
             public TokenInfo getTokenForKeyId(String keyId) throws KeyNotFoundException {
                 if (AUTH_KEY_ID.equals(keyId)
@@ -313,9 +317,8 @@ public class KeyServiceTest extends AbstractServiceTestContext {
                 return Collections.singletonList(TOKEN_INFO);
             }
         };
-        keyService = new KeyService(tokenService, signerProxyFacade, possibleActionsRuleEngineParam,
-                managementRequestSenderService, securityHelper, auditDataHelper, auditEventHelper,
-                auditEventLoggingFacade);
+        keyService = new KeyService(signerProxyFacade, tokenService, possibleActionsRuleEngineParam,
+                managementRequestSenderService, securityHelper, auditDataHelper, auditEventHelper);
     }
 
     private void mockPossibleActionsRuleEngineAllowAll() {

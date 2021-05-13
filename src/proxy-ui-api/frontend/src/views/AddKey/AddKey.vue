@@ -25,7 +25,7 @@
  -->
 <template>
   <div class="view-wrap">
-    <subViewTitle
+    <xrd-sub-view-title
       class="view-title"
       :title="$t('csr.addKey')"
       :showClose="false"
@@ -52,7 +52,11 @@
       <v-stepper-items class="stepper-content">
         <!-- Step 1 -->
         <v-stepper-content step="1">
-          <WizardPageKeyLabel @cancel="cancel" @done="currentStep = 2" />
+          <WizardPageKeyLabel
+            @cancel="cancel"
+            @done="currentStep = 2"
+            :tokenType="tokenType"
+          />
         </v-stepper-content>
         <!-- Step 2 -->
         <v-stepper-content step="2">
@@ -78,7 +82,6 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import SubViewTitle from '@/components/ui/SubViewTitle.vue';
 import WizardPageKeyLabel from '@/components/wizard/WizardPageKeyLabel.vue';
 import WizardPageCsrDetails from '@/components/wizard/WizardPageCsrDetails.vue';
 import WizardPageGenerateCsr from '@/components/wizard/WizardPageGenerateCsr.vue';
@@ -86,7 +89,6 @@ import { RouteName } from '@/global';
 
 export default Vue.extend({
   components: {
-    SubViewTitle,
     WizardPageKeyLabel,
     WizardPageCsrDetails,
     WizardPageGenerateCsr,
@@ -95,6 +97,10 @@ export default Vue.extend({
     tokenId: {
       type: String,
       required: true,
+    },
+    tokenType: {
+      type: String,
+      required: false,
     },
   },
   data() {
@@ -136,41 +142,12 @@ export default Vue.extend({
   },
   created() {
     this.$store.dispatch('setCsrTokenId', this.tokenId);
+    this.$store.dispatch('setCsrTokenType', this.tokenType);
     this.fetchCertificateAuthorities();
   },
 });
 </script>
 
 <style lang="scss" scoped>
-@import '../../assets/colors';
-@import '../../assets/shared';
-
-.view-wrap {
-  width: 100%;
-  max-width: 850px;
-  margin: 10px;
-}
-
-.view-title {
-  width: 100%;
-  max-width: 100%;
-  margin-bottom: 30px;
-}
-
-.stepper-content {
-  width: 100%;
-  max-width: 900px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.stepper {
-  width: 100%;
-}
-
-.noshadow {
-  -webkit-box-shadow: none;
-  -moz-box-shadow: none;
-  box-shadow: none;
-}
+@import '~styles/wizards';
 </style>

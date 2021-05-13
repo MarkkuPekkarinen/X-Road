@@ -26,7 +26,7 @@
 
 module.exports = {
   tags: ['ss', 'clients', 'localgroups'],
-  'Security server client local groups filtering': browser => {
+  'Security server client local groups filtering': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -69,7 +69,7 @@ module.exports = {
 
     browser.end();
   },
-  'Security server client add local group': browser => {
+  'Security server client add local group': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -101,7 +101,7 @@ module.exports = {
 
     clientLocalGroups.openAddDialog();
     clientLocalGroups.enterCode('abc');
-    browser.assert.valueContains('//div[contains(@class, "dlg-edit-row") and .//*[contains(text(), "Code")]]//input', "abc");
+    browser.assert.valueContains(clientLocalGroups.elements.groupCode, 'abc');
     clientLocalGroups.enterDescription('addDesc');
     clientLocalGroups.cancelAddDialog();
 
@@ -114,31 +114,42 @@ module.exports = {
 
     // Verify that local group dialog fields are empty after re-opening
     clientLocalGroups.openAddDialog();
-    browser.assert.value('//div[contains(@class, "dlg-edit-row") and .//*[contains(text(), "Code")]]//input', "");
-    browser.assert.value('//div[contains(@class, "dlg-edit-row") and .//*[contains(text(), "Description")]]//input', "");
+    browser.assert.value(clientLocalGroups.elements.groupCode, '');
+    browser.assert.value(clientLocalGroups.elements.groupDescription, '');
 
     // Verify that add is disabled if only Code is entered
     clientLocalGroups.enterCode('abc');
-    browser.waitForElementVisible('//button[contains(@data-test, "dialog-save-button") and @disabled="disabled"]');
+    browser.waitForElementVisible(
+      '//button[@data-test="dialog-save-button" and @disabled="disabled"]',
+    );
     clientLocalGroups.cancelAddDialog();
 
     // Verify that add is disabled if only description is entered
     clientLocalGroups.openAddDialog();
     clientLocalGroups.enterDescription('addDesc');
-    browser.waitForElementVisible('//button[contains(@data-test, "dialog-save-button") and @disabled="disabled"]');
+    browser.waitForElementVisible(
+      '//button[@data-test="dialog-save-button" and @disabled="disabled"]',
+    );
 
     // Verify that trying to add a group with existing code results in an error message
     clientLocalGroups.enterCode('abb');
     clientLocalGroups.confirmAddDialog();
-    browser.assert.containsText(mainPage.elements.snackBarMessage, "Local group code already exists");
-    mainPage.closeSnackbar();
+    browser.assert.containsText(
+      mainPage.elements.alertMessage,
+      'Local group code already exists',
+    );
 
     // Add a new group and verify
     clientLocalGroups.enterCode('abc');
     clientLocalGroups.enterDescription('addDesc');
     clientLocalGroups.confirmAddDialog();
-    browser.assert.containsText(mainPage.elements.snackBarMessage, "Local group added");
+    browser.assert.containsText(
+      mainPage.elements.snackBarMessage,
+      'Local group added',
+    );
     mainPage.closeSnackbar();
+    // Close also alert, this cannot be closed while the popup is active
+    mainPage.closeAlertMessage();
 
     clientLocalGroups.verifyGroupListRow(2, '1122');
     clientLocalGroups.verifyGroupListRow(3, '1212');
@@ -149,9 +160,8 @@ module.exports = {
     clientLocalGroups.verifyGroupListRow(8, 'cbb');
 
     browser.end();
-
   },
-  'Security server add local group member': browser => {
+  'Security server add local group member': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -183,7 +193,9 @@ module.exports = {
     localGroupPopup.selectMember('REST-UI-TEST:ORG:2908758-4:Management');
     localGroupPopup.cancelAddMembersDialog();
 
-    browser.waitForElementNotVisible('//span[contains(@class, "headline") and contains(text(), "Add Members")]');
+    browser.assert.not.elementPresent(
+      '//span[contains(@class, "headline") and @data-test="add-members-dialog-title"]',
+    );
     browser.waitForElementVisible(localGroupPopup);
     browser.assert.not.elementPresent('//*[contains(text(),"TestCom")]');
 
@@ -195,14 +207,15 @@ module.exports = {
     localGroupPopup.selectMember('REST-UI-TEST:ORG:2908758-4:Management');
     localGroupPopup.addSelectedMembers();
 
-    browser.waitForElementNotVisible('//span[contains(@class, "headline") and contains(text(), "Add Members")]');
+    browser.waitForElementNotPresent(
+      '//span[contains(@class, "headline") and contains(text(), "Add Members")]',
+    );
     browser.waitForElementVisible(localGroupPopup);
     browser.assert.elementPresent('//*[contains(text(),"TestCom")]');
 
     browser.end();
-
   },
-  'Security server delete local group members': browser => {
+  'Security server delete local group members': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -229,12 +242,16 @@ module.exports = {
     // Remove single
     localGroupPopup.clickRemoveTestComMember();
     localGroupPopup.cancelMemberRemove();
-    browser.waitForElementNotVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Remove member?")]');
+    browser.waitForElementNotPresent(
+      '//*[@data-test="dialog-title" and contains(text(), "Remove member?")]',
+    );
     browser.assert.elementPresent('//*[contains(text(),"TestCom")]');
 
     localGroupPopup.clickRemoveTestComMember();
     localGroupPopup.confirmMemberRemove();
-    browser.waitForElementNotVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Remove member?")]');
+    browser.waitForElementNotPresent(
+      '//*[@data-test="dialog-title" and contains(text(), "Remove member?")]',
+    );
     browser.assert.not.elementPresent('//*[contains(text(),"TestCom")]');
     localGroupPopup.close();
 
@@ -246,22 +263,26 @@ module.exports = {
 
     localGroupPopup.clickRemoveAll();
     localGroupPopup.cancelMemberRemove();
-    browser.waitForElementNotVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Remove all members?")]');
+    browser.waitForElementNotPresent(
+      '//*[@data-test="dialog-title" and contains(text(), "Remove all members?")]',
+    );
     browser.assert.elementPresent('//*[contains(text(),"TestGov")]');
     browser.assert.elementPresent('//*[contains(text(),"TestOrg")]');
 
-
     localGroupPopup.clickRemoveAll();
-    browser.waitForElementVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Remove all members?")]');
+    browser.waitForElementVisible(
+      '//*[@data-test="dialog-title" and contains(text(), "Remove all members?")]',
+    );
     localGroupPopup.confirmMemberRemove();
-    browser.waitForElementNotVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Remove all members?")]');
+    browser.waitForElementNotPresent(
+      '//*[@data-test="dialog-title" and contains(text(), "Remove all members?")]',
+    );
     browser.assert.not.elementPresent('//*[contains(text(),"TestGov")]');
     browser.assert.not.elementPresent('//*[contains(text(),"TestOrg")]');
 
     browser.end();
-
   },
-  'Security server edit local group': browser => {
+  'Security server edit local group': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -287,43 +308,65 @@ module.exports = {
 
     // Change description
     localGroupPopup.changeDescription('');
-    localGroupPopup.clickDescriptionLabel();
-    browser.assert.containsText('//div[contains(@class, "v-snack__content")]', 'Validation failure');
-    browser.assert.containsText(mainPage.elements.snackBarMessage, 'Validation failure');
-    mainPage.closeSnackbar();
+    browser.keys(browser.Keys.ENTER); // Enter keypress needed after data entry to trigger validation
+    browser.assert.containsText(
+      mainPage.elements.alertMessage,
+      'Validation failure',
+    );
+    mainPage.closeAlertMessage();
     localGroupPopup.close();
-    browser.waitForElementVisible('//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "Group4")]]')
+
+    browser.waitForElementVisible(
+      '//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "Group4")]]',
+    );
     clientLocalGroups.openDetails('cbb');
     browser.waitForElementVisible(localGroupPopup);
-    localGroupPopup.changeDescription(browser.globals.test_string_300.slice(0,256));
-    localGroupPopup.clickDescriptionLabel();
-    browser.assert.containsText('//div[contains(@class, "v-snack__content")]', 'Validation failure');
-    browser.assert.containsText(mainPage.elements.snackBarMessage, 'Validation failure');
-    mainPage.closeSnackbar();
+    localGroupPopup.changeDescription(
+      browser.globals.test_string_300.slice(0, 256),
+    );
+    browser.keys(browser.Keys.ENTER);
+    browser.assert.containsText(
+      mainPage.elements.alertMessage,
+      'Validation failure',
+    );
+    mainPage.closeAlertMessage();
     localGroupPopup.close();
-    browser.waitForElementVisible('//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "Group4")]]');
+    browser.waitForElementVisible(
+      '//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "Group4")]]',
+    );
     clientLocalGroups.openDetails('cbb');
     browser.waitForElementVisible(localGroupPopup);
-    localGroupPopup.changeDescription(browser.globals.test_string_300.slice(0,255));
-    localGroupPopup.clickDescriptionLabel();
-    browser.assert.containsText('//div[contains(@class, "v-snack__content")]', 'Description saved');
-    browser.assert.containsText(mainPage.elements.snackBarMessage, 'Description saved');
+    localGroupPopup.changeDescription(
+      browser.globals.test_string_300.slice(0, 255),
+    );
+    browser.keys(browser.Keys.ENTER);
+    browser.assert.containsText(
+      mainPage.elements.snackBarMessage,
+      'Description saved',
+    );
     mainPage.closeSnackbar();
     localGroupPopup.close();
-    browser.waitForElementVisible('//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "'+browser.globals.test_string_300.slice(0,255)+'")]]')
+    browser.waitForElementVisible(
+      '//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "' +
+        browser.globals.test_string_300.slice(0, 255) +
+        '")]]',
+    );
     clientLocalGroups.openDetails('cbb');
     browser.waitForElementVisible(localGroupPopup);
     localGroupPopup.changeDescription('Group4');
-    localGroupPopup.clickDescriptionLabel();
-    browser.assert.containsText('//div[contains(@class, "v-snack__content")]', 'Description saved');
-    browser.assert.containsText(mainPage.elements.snackBarMessage, 'Description saved');
+    browser.keys(browser.Keys.ENTER);
+    browser.assert.containsText(
+      mainPage.elements.snackBarMessage,
+      'Description saved',
+    );
     mainPage.closeSnackbar();
     localGroupPopup.close();
-    browser.waitForElementVisible('//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "Group4")]]')
+    browser.waitForElementVisible(
+      '//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")] and .//*[contains(text(), "Group4")]]',
+    );
     browser.end();
-
   },
-  'Security server delete local group': browser => {
+  'Security server delete local group': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -347,26 +390,38 @@ module.exports = {
     browser.waitForElementVisible(clientLocalGroups);
 
     // Delete and confirm
-    browser.assert.elementPresent('//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"bac")]]');
+    browser.assert.elementPresent(
+      '//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"bac")]]',
+    );
     clientLocalGroups.openDetails('abc');
     browser.waitForElementVisible(localGroupPopup);
-    browser.waitForElementVisible(localGroupPopup.elements.localGroupPopupCloseButton);
+    browser.waitForElementVisible(
+      localGroupPopup.elements.localGroupPopupCloseButton,
+    );
     localGroupPopup.deleteThisGroup();
-    browser.waitForElementVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Delete group?")]');
+    browser.waitForElementVisible(
+      '//*[@data-test="dialog-title" and contains(text(), "Delete group?")]',
+    );
     localGroupPopup.confirmDelete();
     browser.waitForElementVisible(clientLocalGroups);
-    browser.assert.not.elementPresent('//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"abc")]]');
+    browser.assert.not.elementPresent(
+      '//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"abc")]]',
+    );
 
     // Delete and cancel
     clientLocalGroups.openDetails('cbb');
     browser.waitForElementVisible(localGroupPopup);
     localGroupPopup.deleteThisGroup();
-    browser.waitForElementVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Delete group?")]');
+    browser.waitForElementVisible(
+      '//*[@data-test="dialog-title" and contains(text(), "Delete group?")]',
+    );
     localGroupPopup.cancelDelete();
-    browser.waitForElementNotVisible('//*[contains(@data-test, "dialog-title") and contains(text(), "Delete group?")]');
+    browser.waitForElementNotPresent(
+      '//*[@data-test="dialog-title" and contains(text(), "Delete group?")]',
+    );
     localGroupPopup.close();
-    browser.waitForElementVisible('//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")]]')
-
-  }
-
+    browser.waitForElementVisible(
+      '//table[contains(@class, "details-certificates")]//tr[.//*[contains(text(),"cbb")]]',
+    );
+  },
 };

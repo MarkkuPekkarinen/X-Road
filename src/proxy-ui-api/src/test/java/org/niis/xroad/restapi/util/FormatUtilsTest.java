@@ -65,6 +65,18 @@ public class FormatUtilsTest {
     }
 
     @Test
+    public void invalidBackupFilename() {
+        assertFalse(FormatUtils.isValidBackupFilename("/b.gpg"));
+        assertFalse(FormatUtils.isValidBackupFilename("../b.gpg"));
+        assertFalse(FormatUtils.isValidBackupFilename("a/b.gpg"));
+    }
+
+    @Test
+    public void validBackupFilename() {
+        assertTrue(FormatUtils.isValidBackupFilename("b.gpg"));
+    }
+
+    @Test
     public void invalidUrlProtocol() {
         assertFalse(FormatUtils.isValidUrl(INVALID_PROTOCOL));
     }

@@ -25,6 +25,9 @@
  */
 package org.niis.xroad.restapi;
 
+import ee.ria.xroad.common.Version;
+
+import org.niis.xroad.restapi.service.VersionService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
@@ -40,10 +43,16 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 public class RestApiApplication {
+
+    private static final String APP_NAME = "xroad-proxy-ui-api";
+
     /**
      * start application
      */
     public static void main(String[] args) {
-        SpringApplication.run(RestApiApplication.class, args);
+        Version.outputVersionInfo(APP_NAME, VersionService.MIN_SUPPORTED_JAVA_VERSION,
+                VersionService.MAX_SUPPORTED_JAVA_VERSION);
+        SpringApplication.run(RestApiApplication.class, args
+        );
     }
 }

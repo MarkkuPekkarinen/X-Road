@@ -30,6 +30,7 @@ import ee.ria.xroad.common.SystemProperties;
 import ee.ria.xroad.common.conf.globalconf.ApprovedCAInfo;
 import ee.ria.xroad.common.conf.globalconf.GlobalGroupInfo;
 import ee.ria.xroad.common.conf.globalconf.MemberInfo;
+import ee.ria.xroad.common.conf.globalconf.sharedparameters.v2.ApprovedTSAType;
 import ee.ria.xroad.common.conf.serverconf.model.TspType;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
@@ -57,6 +58,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static ee.ria.xroad.common.ErrorCodes.X_OUTDATED_GLOBALCONF;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_GLOBAL_CONF_DOWNLOAD_REQUEST;
 
 /**
  * Global configuration service.
@@ -67,10 +69,8 @@ import static ee.ria.xroad.common.ErrorCodes.X_OUTDATED_GLOBALCONF;
 @Service
 @PreAuthorize("isAuthenticated()")
 public class GlobalConfService {
-
     private static final int CONF_CLIENT_ADMIN_PORT = SystemProperties.getConfigurationClientAdminPort();
     private static final int REST_TEMPLATE_TIMEOUT_MS = 60000;
-    private static final String ERROR_GLOBAL_CONF_DOWNLOAD_REQUEST = "global_conf_download_request_failed";
 
     private final GlobalConfFacade globalConfFacade;
     private final ServerConfService serverConfService;
@@ -182,8 +182,9 @@ public class GlobalConfService {
      * {@link TspType#getId()} is null for all returned items
      */
     public List<TspType> getApprovedTspsForThisInstance() {
-        List<String> urls = globalConfFacade.getApprovedTsps(globalConfFacade.getInstanceIdentifier());
-        List<TspType> tsps = urls.stream()
+        List<ApprovedTSAType> approvedTspTypes =
+                globalConfFacade.getApprovedTspTypes(globalConfFacade.getInstanceIdentifier());
+        List<TspType> tsps = approvedTspTypes.stream()
                 .map(this::createTspType)
                 .collect(Collectors.toList());
         return tsps;
@@ -192,19 +193,11 @@ public class GlobalConfService {
     /**
      * init TspType DTO with name and url. id will be null
      */
-    private TspType createTspType(String url) {
+    private TspType createTspType(ApprovedTSAType approvedTSAType) {
         TspType tsp = new TspType();
-        tsp.setUrl(url);
-        tsp.setName(globalConfFacade.getApprovedTspName(globalConfFacade.getInstanceIdentifier(), url));
+        tsp.setUrl(approvedTSAType.getUrl());
+        tsp.setName(approvedTSAType.getName());
         return tsp;
-    }
-
-    /**
-     * @param url
-     * @return name of the timestamping service with the given url
-     */
-    public String getApprovedTspName(String url) {
-        return globalConfFacade.getApprovedTspName(globalConfFacade.getInstanceIdentifier(), url);
     }
 
     /**

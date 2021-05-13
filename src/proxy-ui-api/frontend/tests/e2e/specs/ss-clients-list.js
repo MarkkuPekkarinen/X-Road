@@ -26,10 +26,10 @@
 
 module.exports = {
   tags: ['ss', 'clients', 'clientslist'],
-  'Security server clients list': browser => {
+  'Security server clients list': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
-    const clientsTab = mainPage.section.clientsTab
+    const clientsTab = mainPage.section.clientsTab;
 
     // Open SUT and check that page is loaded
     frontPage.navigate();
@@ -43,8 +43,10 @@ module.exports = {
     browser.waitForElementVisible(clientsTab);
 
     // Verify default sorting and list items
-    browser.waitForElementVisible('//th[span[contains(text(),"Name")] and contains(@class, "active") and contains(@aria-sort, "ascending")]');
-    clientsTab.verifyRowName(1, 'TestGov (Owner');
+    browser.waitForElementVisible(
+      '//th[contains(@class, "xrd-table-header-name") and contains(@class, "active") and contains(@aria-sort, "ascending")]',
+    );
+    clientsTab.verifyRowName(1, 'TestGov');
     clientsTab.verifyRowName(2, 'TestSaved');
     clientsTab.verifyRowName(3, 'TestService');
     clientsTab.verifyRowName(4, 'TestSub');
@@ -55,9 +57,11 @@ module.exports = {
 
     // Re-sort by name and verify re-sorted list item positions
     clientsTab.clickNameHeader();
-    browser.waitForElementVisible('//th[span[contains(text(),"Name")] and contains(@class, "active") and contains(@aria-sort, "descending")]');
+    browser.waitForElementVisible(
+      '//th[contains(@class, "xrd-table-header-name") and contains(@class, "active") and contains(@aria-sort, "descending")]',
+    );
 
-    clientsTab.verifyRowName(1, 'TestGov (Owner');
+    clientsTab.verifyRowName(1, 'TestGov');
     clientsTab.verifyRowName(2, 'TestSub');
     clientsTab.verifyRowName(3, 'TestService');
     clientsTab.verifyRowName(4, 'TestSaved');
@@ -69,10 +73,14 @@ module.exports = {
     // Sort by ID and verify new sorting and list items
     clientsTab.clickIDHeader();
     browser
-      .waitForElementVisible('//th[span[contains(text(),"ID")] and contains(@class, "active") and contains(@aria-sort, "ascending")]')
-      .waitForElementVisible('//th[span[contains(text(),"Name")] and contains(@aria-sort, "none")]');
+      .waitForElementVisible(
+        '//th[contains(@class, "xrd-table-header-id") and contains(@class, "active") and contains(@aria-sort, "ascending")]',
+      )
+      .waitForElementVisible(
+        '//th[contains(@class, "xrd-table-header-name") and contains(@aria-sort, "none")]',
+      );
 
-    clientsTab.verifyRowName(1, 'TestGov (Owner');
+    clientsTab.verifyRowName(1, 'TestGov');
     clientsTab.verifyRowName(2, 'TestSaved');
     clientsTab.verifyRowName(3, 'TestService');
     clientsTab.verifyRowName(4, 'TestSub');
@@ -81,11 +89,13 @@ module.exports = {
     clientsTab.verifyRowName(7, 'TestOrg');
     clientsTab.verifyRowName(8, 'Management');
 
-    // Re-sort by ID and verify list items 
+    // Re-sort by ID and verify list items
     clientsTab.clickIDHeader();
-    browser.waitForElementVisible('//th[span[contains(text(),"ID")] and contains(@class, "active") and contains(@aria-sort, "descending")]');
+    browser.waitForElementVisible(
+      '//th[contains(@class, "xrd-table-header-id") and contains(@class, "active") and contains(@aria-sort, "descending")]',
+    );
 
-    clientsTab.verifyRowName(1, 'TestGov (Owner');
+    clientsTab.verifyRowName(1, 'TestGov');
     clientsTab.verifyRowName(2, 'TestSub');
     clientsTab.verifyRowName(3, 'TestService');
     clientsTab.verifyRowName(4, 'TestSaved');
@@ -96,9 +106,11 @@ module.exports = {
 
     // Sort by Status and verify items
     clientsTab.clickStatusHeader();
-    browser.waitForElementVisible('//th[span[contains(text(),"Status")] and contains(@class, "active") and contains(@aria-sort, "ascending")]');
+    browser.waitForElementVisible(
+      '//th[contains(@class, "xrd-table-header-status") and contains(@class, "active") and contains(@aria-sort, "ascending")]',
+    );
 
-    clientsTab.verifyRowName(1, 'TestGov (Owner');
+    clientsTab.verifyRowName(1, 'TestGov');
     clientsTab.verifyRowName(2, 'TestService');
     clientsTab.verifyRowName(3, 'TestSub');
     clientsTab.verifyRowName(4, 'TestSaved');
@@ -109,9 +121,11 @@ module.exports = {
 
     // Re-sort by Status and verify list items
     clientsTab.clickStatusHeader();
-    browser.waitForElementVisible('//th[span[contains(text(),"Status")] and contains(@class, "active") and contains(@aria-sort, "descending")]');
+    browser.waitForElementVisible(
+      '//th[contains(@class, "xrd-table-header-status") and contains(@class, "active") and contains(@aria-sort, "descending")]',
+    );
 
-    clientsTab.verifyRowName(1, 'TestGov (Owner');
+    clientsTab.verifyRowName(1, 'TestGov');
     clientsTab.verifyRowName(2, 'TestSaved');
     clientsTab.verifyRowName(3, 'TestSub');
     clientsTab.verifyRowName(4, 'TestService');
@@ -119,7 +133,7 @@ module.exports = {
     clientsTab.verifyRowName(6, 'TestClient');
     clientsTab.verifyRowName(7, 'TestOrg');
     clientsTab.verifyRowName(8, 'Management');
-    
+
     browser.end();
-  }
+  },
 };

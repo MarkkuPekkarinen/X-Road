@@ -24,7 +24,13 @@
  * THE SOFTWARE.
  */
 import { extend, configure } from 'vee-validate';
-import { required, email, min, between } from 'vee-validate/dist/rules';
+import {
+  required,
+  email,
+  min,
+  between,
+  confirmed,
+} from 'vee-validate/dist/rules';
 import i18n from '../i18n';
 import * as Helpers from '@/util/helpers';
 
@@ -50,6 +56,9 @@ extend('min', min);
 
 // Install between rule and message.
 extend('between', between);
+
+// Install the confirmed rule for cross-field validation (password confirm)
+extend('confirmed', confirmed);
 
 extend('restUrl', {
   validate: (value) => {
@@ -80,4 +89,11 @@ const allowedIdentifierPattern = new RegExp('^((?![:/;%\\\\]).)*$');
 extend('xrdIdentifier', {
   validate: (value) => allowedIdentifierPattern.test(value),
   message: () => i18n.t('customValidation.invalidXrdIdentifier') as string,
+});
+
+const allowedEndpointPattern = new RegExp('^\\S*$'); // No spaces
+
+extend('xrdEndpoint', {
+  validate: (value) => allowedEndpointPattern.test(value),
+  message: () => i18n.t('customValidation.invalidEndpoint') as string,
 });

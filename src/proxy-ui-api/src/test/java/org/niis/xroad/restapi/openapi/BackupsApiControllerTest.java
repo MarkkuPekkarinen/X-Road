@@ -33,7 +33,6 @@ import org.niis.xroad.restapi.openapi.model.Backup;
 import org.niis.xroad.restapi.openapi.model.TokensLoggedOut;
 import org.niis.xroad.restapi.service.BackupFileNotFoundException;
 import org.niis.xroad.restapi.service.InvalidBackupFileException;
-import org.niis.xroad.restapi.service.InvalidFilenameException;
 import org.niis.xroad.restapi.service.ProcessFailedException;
 import org.niis.xroad.restapi.service.RestoreProcessFailedException;
 import org.niis.xroad.restapi.service.UnhandledWarningsException;
@@ -59,6 +58,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_BACKUP_FILE_NOT_FOUND;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_BACKUP_RESTORE_PROCESS_FAILED;
 
 /**
  * Test BackupsApiController
@@ -68,19 +69,19 @@ public class BackupsApiControllerTest extends AbstractApiControllerTestContext {
     @Autowired
     BackupsApiController backupsApiController;
 
-    private static final String BACKUP_FILE_1_NAME = "ss-automatic-backup-2020_02_19_031502.tar";
+    private static final String BACKUP_FILE_1_NAME = "ss-automatic-backup-2020_02_19_031502.gpg";
 
     private static final String BACKUP_FILE_1_CREATED_AT = "2020-02-19T03:15:02.451Z";
 
     private static final Long BACKUP_FILE_1_CREATED_AT_MILLIS = 1582082102451L;
 
-    private static final String BACKUP_FILE_2_NAME = "ss-automatic-backup-2020_02_12_031502.tar";
+    private static final String BACKUP_FILE_2_NAME = "ss-automatic-backup-2020_02_12_031502.gpg";
 
     private static final String BACKUP_FILE_2_CREATED_AT = "2020-02-12T03:15:02.684Z";
 
     private static final Long BACKUP_FILE_2_CREATED_AT_MILLIS = 1581477302684L;
 
-    private final MockMultipartFile mockMultipartFile = new MockMultipartFile("test", "test",
+    private final MockMultipartFile mockMultipartFile = new MockMultipartFile("test", "test.gpg",
             "multipart/form-data", "content".getBytes());
 
     @Before
@@ -145,7 +146,7 @@ public class BackupsApiControllerTest extends AbstractApiControllerTestContext {
     @Test
     @WithMockUser(authorities = { "BACKUP_CONFIGURATION" })
     public void deleteNonExistingBackup() throws BackupFileNotFoundException {
-        String filename = "test_file.tar";
+        String filename = "test_file.gpg";
 
         doThrow(new BackupFileNotFoundException("")).when(backupService).deleteBackup(filename);
 
@@ -225,14 +226,14 @@ public class BackupsApiControllerTest extends AbstractApiControllerTestContext {
     @Test
     @WithMockUser(authorities = { "BACKUP_CONFIGURATION" })
     public void uploadBackupWithInvalidFilename() throws Exception {
-        doThrow(new InvalidFilenameException("")).when(backupService)
-                .uploadBackup(any(Boolean.class), any(String.class), any());
-
+        MockMultipartFile mockMultipartWithInvalidName = new MockMultipartFile("test", "/test.gpg",
+                "multipart/form-data", "content".getBytes());
         try {
-            ResponseEntity<Backup> response = backupsApiController.uploadBackup(true, mockMultipartFile);
+            ResponseEntity<Backup> response = backupsApiController.uploadBackup(true,
+                    mockMultipartWithInvalidName);
             fail("should throw BadRequestException");
         } catch (BadRequestException expected) {
-            // success
+            assertEquals("invalid_filename", expected.getErrorDeviation().getCode());
         }
     }
 
@@ -293,7 +294,7 @@ public class BackupsApiControllerTest extends AbstractApiControllerTestContext {
             backupsApiController.restoreBackup(BACKUP_FILE_1_NAME);
             fail("should throw BadRequestException");
         } catch (BadRequestException e) {
-            assertEquals(BackupFileNotFoundException.ERROR_BACKUP_FILE_NOT_FOUND, e.getErrorDeviation().getCode());
+            assertEquals(ERROR_BACKUP_FILE_NOT_FOUND, e.getErrorDeviation().getCode());
         }
     }
 
@@ -318,7 +319,7 @@ public class BackupsApiControllerTest extends AbstractApiControllerTestContext {
             backupsApiController.restoreBackup(BACKUP_FILE_1_NAME);
             fail("should throw InternalServerErrorException");
         } catch (InternalServerErrorException e) {
-            assertEquals(RestoreProcessFailedException.RESTORE_PROCESS_FAILED, e.getErrorDeviation().getCode());
+            assertEquals(ERROR_BACKUP_RESTORE_PROCESS_FAILED, e.getErrorDeviation().getCode());
         }
     }
 }

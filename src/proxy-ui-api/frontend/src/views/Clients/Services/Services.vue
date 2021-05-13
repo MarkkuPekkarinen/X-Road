@@ -39,28 +39,26 @@
       </v-text-field>
 
       <div>
-        <v-btn
-          v-if="showAddButton"
+        <xrd-button
+          v-if="showAddRestButton"
           color="primary"
           :loading="addRestBusy"
           @click="showAddRestDialog"
           outlined
-          rounded
           data-test="add-rest-button"
-          class="rounded-button elevation-0 rest-button"
-          >{{ $t('services.addRest') }}</v-btn
+          class="rest-button"
+          ><v-icon class="xrd-large-button-icon">icon-Add</v-icon
+          >{{ $t('services.addRest') }}</xrd-button
         >
 
-        <v-btn
-          v-if="showAddButton"
-          color="primary"
+        <xrd-button
+          v-if="showAddWSDLButton"
           :loading="addWsdlBusy"
           @click="showAddWsdlDialog"
-          outlined
-          rounded
           data-test="add-wsdl-button"
-          class="ma-0 rounded-button elevation-0"
-          >{{ $t('services.addWsdl') }}</v-btn
+          class="ma-0"
+          ><v-icon class="xrd-large-button-icon">icon-Add</v-icon
+          >{{ $t('services.addWsdl') }}</xrd-button
         >
       </div>
     </div>
@@ -70,7 +68,7 @@
     </div>
 
     <template v-if="filtered">
-      <expandable
+      <xrd-expandable
         v-for="(serviceDesc, index) in filtered"
         v-bind:key="serviceDesc.id"
         class="expandable"
@@ -93,7 +91,7 @@
         <template v-slot:link>
           <div
             class="clickable-link service-description-header"
-            v-if="canEditServiceDesc"
+            v-if="canEditServiceDesc(serviceDesc)"
             @click="descriptionClick(serviceDesc)"
             data-test="service-description-header"
           >
@@ -109,18 +107,17 @@
                 {{ $t('services.lastRefreshed') }}
                 {{ serviceDesc.refreshed_at | formatDateTime }}
               </div>
-              <v-btn
+              <xrd-button
                 v-if="showRefreshButton(serviceDesc.type)"
                 :key="refreshButtonComponentKey"
-                small
-                outlined
-                rounded
+                :outlined="false"
+                text
                 :loading="refreshBusy[serviceDesc.id]"
                 color="primary"
-                class="xrd-small-button xrd-table-button"
+                class="xrd-table-button"
                 @click="refresh(serviceDesc)"
                 data-test="refresh-button"
-                >{{ $t('action.refresh') }}</v-btn
+                >{{ $t('action.refresh') }}</xrd-button
               >
             </div>
 
@@ -138,7 +135,7 @@
                   v-bind:key="service.id"
                 >
                   <td
-                    class="service-code identifier-wrap"
+                    class="clickable-link"
                     @click="serviceClick(serviceDesc, service)"
                     data-test="service-link"
                   >
@@ -154,7 +151,7 @@
             </table>
           </div>
         </template>
-      </expandable>
+      </xrd-expandable>
     </template>
 
     <addWsdlDialog
@@ -207,23 +204,21 @@
 import Vue from 'vue';
 import { Permissions, RouteName } from '@/global';
 import * as api from '@/util/api';
-import Expandable from '@/components/ui/Expandable.vue';
+import { encodePathParameter } from '@/util/api';
 import AddWsdlDialog from './AddWsdlDialog.vue';
 import AddRestDialog from './AddRestDialog.vue';
 import DisableServiceDescDialog from './DisableServiceDescDialog.vue';
 import WarningDialog from '@/components/service/WarningDialog.vue';
 import ServiceIcon from '@/components/ui/ServiceIcon.vue';
 
-import { Service, ServiceDescription } from '@/openapi-types';
+import { Service, ServiceDescription, ServiceType } from '@/openapi-types';
 import { ServiceTypeEnum } from '@/domain';
 import { Prop } from 'vue/types/options';
 import { sortServiceDescriptionServices } from '@/util/sorting';
 import { deepClone } from '@/util/helpers';
-import { encodePathParameter } from '@/util/api';
 
 export default Vue.extend({
   components: {
-    Expandable,
     AddWsdlDialog,
     AddRestDialog,
     DisableServiceDescDialog,
@@ -266,11 +261,11 @@ export default Vue.extend({
     };
   },
   computed: {
-    showAddButton(): boolean {
+    showAddWSDLButton(): boolean {
       return this.$store.getters.hasPermission(Permissions.ADD_WSDL);
     },
-    canEditServiceDesc(): boolean {
-      return this.$store.getters.hasPermission(Permissions.EDIT_WSDL);
+    showAddRestButton(): boolean {
+      return this.$store.getters.hasPermission(Permissions.ADD_OPENAPI3);
     },
     canDisable(): boolean {
       return this.$store.getters.hasPermission(Permissions.ENABLE_DISABLE_WSDL);
@@ -303,7 +298,7 @@ export default Vue.extend({
         return arr;
       }
 
-      // Filter out service deascriptions that don't include search term
+      // Filter out service descriptions that don't include search term
       const filtered = arr.filter((element) => {
         return element.services.find((service) => {
           return service.service_code
@@ -350,6 +345,20 @@ export default Vue.extend({
         params: { serviceId: service.id, clientId: this.id },
         query: { descriptionType: serviceDescription.type },
       });
+    },
+    canEditServiceDesc(servicedescription: ServiceDescription): boolean {
+      let permission: Permissions;
+      if (servicedescription.type === ServiceType.REST) {
+        permission = Permissions.EDIT_REST;
+      } else if (servicedescription.type === ServiceType.WSDL) {
+        permission = Permissions.EDIT_WSDL;
+      } else if (servicedescription.type === ServiceType.OPENAPI3) {
+        permission = Permissions.EDIT_OPENAPI3;
+      } else {
+        return false;
+      }
+
+      return this.$store.getters.hasPermission(permission);
     },
     switchChanged(
       event: unknown,
@@ -686,14 +695,14 @@ export default Vue.extend({
 }
 
 .clickable-link {
-  text-decoration: underline;
+  color: $XRoad-Link;
   cursor: pointer;
 }
 
 .refresh-row {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-end;
   width: 100%;
   margin-top: 24px;
@@ -705,11 +714,6 @@ export default Vue.extend({
 
 .expandable {
   margin-bottom: 10px;
-}
-
-.service-code {
-  cursor: pointer;
-  text-decoration: underline;
 }
 
 .service-url {

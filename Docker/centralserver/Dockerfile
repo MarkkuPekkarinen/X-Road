@@ -3,7 +3,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -qq update \
   && apt-get -qq upgrade \
-  && apt-get -qq install sudo ca-certificates gnupg supervisor net-tools locales setpriv openjdk-8-jre-headless rlwrap ca-certificates-java crudini adduser expect nginx-light curl rsyslog authbind wget devscripts \
+  && apt-get -qq install sudo ca-certificates gnupg supervisor net-tools locales openjdk-8-jre-headless rlwrap ca-certificates-java crudini adduser expect nginx-light curl rsyslog wget \
   && echo "LC_ALL=en_US.UTF-8" >>/etc/environment \
   && locale-gen en_US.UTF-8 \
   && adduser --quiet --system --uid 998 --home /var/lib/postgresql --no-create-home --shell /bin/bash --group postgres \
@@ -29,7 +29,7 @@ RUN pg_ctlcluster 10 main start \
   && apt-get -qq clean \
   && pg_ctlcluster 10 main stop \
   && nginx -s stop \
-  && rm -f /var/run/nginx.pid \
+  && rm -f /var/run/nginx.pid ||: \
   && rm -rf /tmp/xroad
 
 # back up read-only config (for volume support)

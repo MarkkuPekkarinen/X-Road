@@ -38,8 +38,17 @@ import java.util.Properties;
 public final class Version {
 
     private static final String RELEASE = "RELEASE";
+    public static final String JAVA_VERSION_PROPERTY = "java.version";
+    public static final String JAVA_RUNTIME_NAME_PROPERTY = "java.runtime.name";
+    private static final String JAVA_DEFAULT_RUNTIME_NAME = "Java";
+    public static final String JAVA_RUNTIME_VERSION_PROPERTY = "java.runtime.version";
+    public static final String JAVA_VENDOR_PROPERTY = "java.vendor";
+    private static final int VERSION_STRING_SUFFIX_LENGTH = 3;
+
     public static final String XROAD_VERSION;
     public static final String BUILD_IDENTIFIER;
+    public static final String JAVA_VENDOR;
+    public static final String JAVA_RUNTIME_VERSION;
 
     static {
         Properties props = new Properties();
@@ -76,6 +85,54 @@ public final class Version {
         } else {
             XROAD_VERSION = String.format("%s-%s", version, BUILD_IDENTIFIER);
         }
+
+        JAVA_VENDOR = System.getProperty(JAVA_VENDOR_PROPERTY);
+        JAVA_RUNTIME_VERSION = System.getProperty(JAVA_RUNTIME_VERSION_PROPERTY, version);
+    }
+
+    /**
+     * Outputs version information and a warning if JVM version is not in the given range
+     * @param minJavaVersion the minimum supported version
+     * @param maxJavaVersion the maximum supported version
+     */
+    public static void outputVersionInfo(String appName, int minJavaVersion, int maxJavaVersion) {
+        // print app name + version and java vendor name + runtime version
+        int javaVersion = readJavaVersion();
+        String runtimeName = System.getProperty(JAVA_RUNTIME_NAME_PROPERTY, JAVA_DEFAULT_RUNTIME_NAME);
+        String vendorVersion =  JAVA_VENDOR != null ? javaVersion + " "  + JAVA_RUNTIME_VERSION : JAVA_RUNTIME_VERSION;
+
+        log.info(String.format("%s %s (%s %s)", appName, XROAD_VERSION, runtimeName, vendorVersion));
+        if (javaVersion < minJavaVersion || javaVersion > maxJavaVersion) {
+            if (minJavaVersion == maxJavaVersion) {
+                log.warn("Warning! Running on unsupported Java version {}. Java version {} is currently supported.",
+                        javaVersion, minJavaVersion);
+            } else {
+                log.warn(
+                        "Warning! Unsupported Java version {}. Java versions {} - {} are currently supported.",
+                        javaVersion, minJavaVersion, maxJavaVersion);
+            }
+        }
+    }
+
+    public static int readJavaVersion() {
+        String version = System.getProperty(JAVA_VERSION_PROPERTY);
+        // java.version system property exists in every JVM
+        if (version.startsWith("1.")) {
+            // Java 8 or lower has format: 1.6.0_23, 1.7.0, 1.7.0_80, 1.8.0_211
+            version = version.substring(2, VERSION_STRING_SUFFIX_LENGTH);
+        } else {
+            // Java 9 or higher has format: 9.0.1, 11.0.4, 12, 12.0.1
+            int dot = version.indexOf(".");
+            if (dot != -1) {
+                version = version.substring(0, dot);
+            }
+        }
+        try {
+            return Integer.parseInt(version);
+        } catch (NumberFormatException ex) {
+            log.error("Error interpreting Java version", ex);
+        }
+        return 0; // this should actually never happen
     }
 
     private Version() {

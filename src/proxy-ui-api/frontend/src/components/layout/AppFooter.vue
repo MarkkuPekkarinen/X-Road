@@ -24,16 +24,16 @@
    THE SOFTWARE.
  -->
 <template>
-  <v-footer color="grey lighten-3">
-    <v-layout align-center justify-center>
-      <v-row class="xrd-tab-max-width">
-        <v-col cols="6" sm="3" class="pt-2">
+  <v-footer class="footer">
+    <v-container>
+      <v-row>
+        <v-col cols="6" sm="3" class="pt-6">
           <v-img
-            :src="require('../../assets/xroad_logo_64_purple.png')"
-            height="64"
-            width="128"
-            max-height="64"
-            max-width="128"
+            :src="require('../../assets/xroad7_logo.svg')"
+            height="35"
+            width="132"
+            max-height="35"
+            max-width="132"
           ></v-img>
         </v-col>
         <v-col cols="3" class="footer-col pt-5">
@@ -55,6 +55,7 @@
           <v-row>
             <v-col>
               <a
+                rel="noopener"
                 class="footer-link"
                 target="_blank"
                 href="https://x-road.global/feedback"
@@ -74,24 +75,31 @@
           </v-row>
           <v-row>
             <v-col class="py-0">
-              <a class="footer-link" href="https://niis.org/" target="_blank">
-              {{ $t('footer.copyright.company') }}
+              <a
+                rel="noopener"
+                class="footer-link"
+                href="https://niis.org/"
+                target="_blank"
+              >
+                {{ $t('footer.copyright.company') }}
               </a>
             </v-col>
           </v-row>
           <v-row>
             <v-col>
-              <a class="footer-link" href="https://github.com/nordic-institute/X-Road/blob/develop/src/LICENSE.txt" target="_blank">
-                {{ $t('footer.copyright.license') }}
-              </a> {{ $t('footer.copyright.and') }}
-              <a class="footer-link" href="https://github.com/nordic-institute/X-Road/blob/develop/src/3RD-PARTY-NOTICES.txt" target="_blank">
-                {{ $t('footer.copyright.3rdPartyNotices') }}
+              <a
+                rel="noopener"
+                class="footer-link"
+                href="https://x-road.global/xroad-licence-info"
+                target="_blank"
+              >
+                {{ $t('footer.copyright.licenceInfo') }}
               </a>
             </v-col>
           </v-row>
         </v-col>
       </v-row>
-    </v-layout>
+    </v-container>
   </v-footer>
 </template>
 
@@ -108,11 +116,19 @@ export default Vue.extend({
 </script>
 
 <style lang="scss" scoped>
-$text-color: darken(#9e9e9e, 15);
+@import '../../assets/colors';
+$text-color: $XRoad-Black100;
+
+.footer {
+  background: $XRoad-WarmGrey30;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
 .footer-title {
   color: $text-color;
-  text-transform: uppercase;
   font-size: 0.9rem;
   font-weight: bold;
 }
@@ -123,6 +139,6 @@ $text-color: darken(#9e9e9e, 15);
 }
 
 .footer-link {
-  color: $text-color;
+  color: $XRoad-Purple100;
 }
 </style>

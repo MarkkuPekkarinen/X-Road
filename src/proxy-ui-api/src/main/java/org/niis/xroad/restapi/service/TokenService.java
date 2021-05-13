@@ -4,17 +4,17 @@
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,12 +33,12 @@ import ee.ria.xroad.signer.protocol.dto.TokenInfo;
 import ee.ria.xroad.signer.protocol.dto.TokenInfoAndKeyId;
 import ee.ria.xroad.signer.protocol.dto.TokenStatusInfo;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.dto.TokenInitStatusInfo;
 import org.niis.xroad.restapi.exceptions.ErrorDeviation;
 import org.niis.xroad.restapi.facade.SignerProxyFacade;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,10 +53,11 @@ import static ee.ria.xroad.common.ErrorCodes.X_CSR_NOT_FOUND;
 import static ee.ria.xroad.common.ErrorCodes.X_KEY_NOT_FOUND;
 import static ee.ria.xroad.common.ErrorCodes.X_LOGIN_FAILED;
 import static ee.ria.xroad.common.ErrorCodes.X_PIN_INCORRECT;
-import static ee.ria.xroad.common.ErrorCodes.X_TOKEN_NOT_ACTIVE;
 import static ee.ria.xroad.common.ErrorCodes.X_TOKEN_NOT_FOUND;
 import static java.util.stream.Collectors.toList;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.TOKEN_FRIENDLY_NAME;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_PIN_INCORRECT;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_TOKEN_NOT_ACTIVE;
 import static org.niis.xroad.restapi.service.PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID;
 
 /**
@@ -66,23 +67,13 @@ import static org.niis.xroad.restapi.service.PossibleActionsRuleEngine.SOFTWARE_
 @Service
 @Transactional
 @PreAuthorize("isAuthenticated()")
+@RequiredArgsConstructor
 public class TokenService {
 
     private final SignerProxyFacade signerProxyFacade;
     private final PossibleActionsRuleEngine possibleActionsRuleEngine;
     private final AuditDataHelper auditDataHelper;
-
-    /**
-     * TokenService constructor
-     */
-    @Autowired
-    public TokenService(SignerProxyFacade signerProxyFacade,
-            PossibleActionsRuleEngine possibleActionsRuleEngine,
-            AuditDataHelper auditDataHelper) {
-        this.signerProxyFacade = signerProxyFacade;
-        this.possibleActionsRuleEngine = possibleActionsRuleEngine;
-        this.auditDataHelper = auditDataHelper;
-    }
+    private final TokenPinValidator tokenPinValidator;
 
     /**
      * get all tokens
@@ -285,10 +276,6 @@ public class TokenService {
         return CSR_NOT_FOUND_FAULT_CODE.equals(e.getFaultCode());
     }
 
-    static boolean isCausedByTokenNotActive(CodedException e) {
-        return TOKEN_NOT_ACTIVE_FAULT_CODE.equals(e.getFaultCode());
-    }
-
     // detect a couple of CodedException error codes from core
     static final String PIN_INCORRECT_FAULT_CODE = SIGNER_X + "." + X_PIN_INCORRECT;
     static final String TOKEN_NOT_FOUND_FAULT_CODE = SIGNER_X + "." + X_TOKEN_NOT_FOUND;
@@ -296,7 +283,6 @@ public class TokenService {
     static final String CERT_NOT_FOUND_FAULT_CODE = SIGNER_X + "." + X_CERT_NOT_FOUND;
     static final String CSR_NOT_FOUND_FAULT_CODE = SIGNER_X + "." + X_CSR_NOT_FOUND;
     static final String LOGIN_FAILED_FAULT_CODE = SIGNER_X + "." + X_LOGIN_FAILED;
-    static final String TOKEN_NOT_ACTIVE_FAULT_CODE = SIGNER_X + "." + X_TOKEN_NOT_ACTIVE;
     static final String CKR_PIN_INCORRECT_MESSAGE = "Login failed: CKR_PIN_INCORRECT";
 
     /**
@@ -404,10 +390,42 @@ public class TokenService {
         return allTokens.stream().anyMatch(tokenInfo -> !SOFTWARE_TOKEN_ID.equals(tokenInfo.getId()));
     }
 
+    /**
+     * Update the pin code for a token and it's keys
+     *
+     * @param tokenId ID of the token
+     * @param oldPin the old (current) passing pin
+     * @param newPin the new pin
+     * @throws TokenNotFoundException token not found
+     * @throws PinIncorrectException incorrect pin
+     */
+    public void updateSoftwareTokenPin(String tokenId, String oldPin, String newPin) throws TokenNotFoundException,
+            PinIncorrectException, ActionNotPossibleException, InvalidCharactersException,
+            WeakPinException {
+        TokenInfo tokenInfo = getToken(tokenId);
+
+        auditDataHelper.put(tokenInfo);
+
+        possibleActionsRuleEngine.requirePossibleTokenAction(PossibleActionEnum.TOKEN_CHANGE_PIN,
+                tokenInfo);
+        char[] newPinCharArray = newPin.toCharArray();
+        tokenPinValidator.validateSoftwareTokenPin(newPinCharArray);
+        try {
+            signerProxyFacade.updateSoftwareTokenPin(tokenId, oldPin.toCharArray(), newPinCharArray);
+        } catch (CodedException ce) {
+            if (isCausedByTokenNotFound(ce)) {
+                throw new TokenNotFoundException(ce);
+            } else if (isCausedByIncorrectPin(ce)) {
+                throw new PinIncorrectException(ce);
+            } else {
+                throw ce;
+            }
+        } catch (Exception other) {
+            throw new SignerNotReachableException("updateSoftwareTokenPin failed", other);
+        }
+    }
+
     public static class PinIncorrectException extends ServiceException {
-
-        public static final String ERROR_PIN_INCORRECT = "pin_incorrect";
-
         public PinIncorrectException(Throwable t) {
             super(t, createError());
         }
@@ -419,9 +437,6 @@ public class TokenService {
     }
 
     public static class TokenNotActiveException extends ServiceException {
-
-        public static final String ERROR_TOKEN_NOT_ACTIVE = "token_not_active";
-
         public TokenNotActiveException(Throwable t) {
             super(t, createError());
         }

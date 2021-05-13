@@ -26,7 +26,7 @@
 
 module.exports = {
   tags: ['ss', 'localgroups', 'permissions'],
-  'Local groups system administrator role': browser => {
+  'Local groups system administrator role': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -45,15 +45,15 @@ module.exports = {
       .signin();
 
     // Check username
-    browser.waitForElementVisible('//div[contains(@class,"auth-container") and contains(text(),"'+browser.globals.login_system_administrator+'")]');
+    mainPage.verifyCurrentUser(browser.globals.login_system_administrator);
 
     // System admin should be in keys and certs view and not see clients tab
-    browser.waitForElementVisible(keysTab)
-    browser.waitForElementNotPresent(clientsTab)
+    browser.waitForElementVisible(keysTab);
+    browser.waitForElementNotPresent(clientsTab);
 
     browser.end();
   },
-  'Local groups security officer role': browser => {
+  'Local groups security officer role': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -72,18 +72,18 @@ module.exports = {
       .signin();
 
     // Check username
-    browser.waitForElementVisible('//div[contains(@class,"auth-container") and contains(text(),"'+browser.globals.login_security_officer+'")]');
+    mainPage.verifyCurrentUser(browser.globals.login_security_officer);
 
     // Security officer should see clients list
     mainPage.openClientsTab();
 
     // Security officer should not see clients details and thus not local groups
-    clientsTab.openTestGov();
-    browser.waitForElementNotPresent(clientInfo);
+    clientsTab.openClient('TestGov');
+    browser.waitForElementNotPresent(clientInfo.elements.detailsTab);
 
     browser.end();
   },
-  'Local groups registration officer role': browser => {
+  'Local groups registration officer role': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -102,17 +102,17 @@ module.exports = {
       .signin();
 
     // Check username
-    browser.waitForElementVisible('//div[contains(@class,"auth-container") and contains(text(),"'+browser.globals.login_registration_officer+'")]');
+    mainPage.verifyCurrentUser(browser.globals.login_registration_officer);
 
     // Registration officer should not see local groups in clients details
     mainPage.openClientsTab();
-    clientsTab.openTestGov();
+    clientsTab.openClient('TestGov');
     browser.waitForElementVisible(clientInfo);
-    browser.waitForElementNotPresent(clientInfo.elements.localGroupsTab)
+    browser.waitForElementNotPresent(clientInfo.elements.localGroupsTab);
 
     browser.end();
   },
-  'Local groups service administrator role': browser => {
+  'Local groups service administrator role': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -133,11 +133,11 @@ module.exports = {
       .signin();
 
     // Check username
-    browser.waitForElementVisible('//div[contains(@class,"auth-container") and contains(text(),"'+browser.globals.login_service_administrator+'")]');
+    mainPage.verifyCurrentUser(browser.globals.login_service_administrator);
 
     // Service administrator should see local groups list
     mainPage.openClientsTab();
-    clientsTab.openTestService();
+    clientsTab.openClient('TestService');
     clientInfo.openLocalGroupsTab();
     browser.waitForElementVisible(clientLocalGroups);
 
@@ -145,17 +145,28 @@ module.exports = {
     browser.waitForElementVisible(clientLocalGroups.elements.addGroupButton);
 
     //  Service administrator should see local groups members and edit buttons
-    clientLocalGroups.openBacDetails();
-    browser.assert.containsText(localGroupPopup.elements.groupIdentifier, 'bac');
+    clientLocalGroups.openDetails('bac');
+    browser.assert.containsText(
+      localGroupPopup.elements.groupIdentifier,
+      'bac',
+    );
 
-    browser.waitForElementVisible(localGroupPopup.elements.localGroupAddMembersButton);
-    browser.waitForElementVisible(localGroupPopup.elements.localGroupRemoveAllButton);
-    browser.waitForElementVisible(localGroupPopup.elements.localGroupTestComRemoveButton);
-    browser.waitForElementVisible(localGroupPopup.elements.localGroupDeleteButton);
+    browser.waitForElementVisible(
+      localGroupPopup.elements.localGroupAddMembersButton,
+    );
+    browser.waitForElementVisible(
+      localGroupPopup.elements.localGroupRemoveAllButton,
+    );
+    browser.waitForElementVisible(
+      localGroupPopup.elements.localGroupTestComRemoveButton,
+    );
+    browser.waitForElementVisible(
+      localGroupPopup.elements.localGroupDeleteButton,
+    );
 
     browser.end();
   },
-  'Local groups security server observer role': browser => {
+  'Local groups security server observer role': (browser) => {
     const frontPage = browser.page.ssFrontPage();
     const mainPage = browser.page.ssMainPage();
     const clientsTab = mainPage.section.clientsTab;
@@ -176,27 +187,38 @@ module.exports = {
       .signin();
 
     // Check username
-    browser.waitForElementVisible('//div[contains(@class,"auth-container") and contains(text(),"'+browser.globals.login_securityserver_observer+'")]');
+    mainPage.verifyCurrentUser(browser.globals.login_securityserver_observer);
 
     // Security server observer should see local groups list
     mainPage.openClientsTab();
-    clientsTab.openTestService();
+    clientsTab.openClient('TestService');
     clientInfo.openLocalGroupsTab();
     browser.waitForElementVisible(clientLocalGroups);
 
     // Security server observer should not see add local groups button
     browser.waitForElementNotPresent(clientLocalGroups.elements.addGroupButton);
- 
-    // security server observer should see local group members but not be able to edit them
-    clientLocalGroups.openBacDetails();
 
-    browser.assert.containsText(localGroupPopup.elements.groupIdentifier, 'bac');
+    // security server observer should see local group members but not be able to edit them
+    clientLocalGroups.openDetails('bac');
+
+    browser.assert.containsText(
+      localGroupPopup.elements.groupIdentifier,
+      'bac',
+    );
     browser.waitForElementVisible('//tr[.//*[contains(text(), "TestCom")]]');
-    browser.waitForElementNotPresent(localGroupPopup.elements.localGroupAddMembersButton);
-    browser.waitForElementNotPresent(localGroupPopup.elements.localGroupRemoveAllButton);
-    browser.waitForElementNotPresent(localGroupPopup.elements.localGroupTestComRemoveButton);
-    browser.waitForElementNotPresent(localGroupPopup.elements.localGroupDeleteButton);
+    browser.waitForElementNotPresent(
+      localGroupPopup.elements.localGroupAddMembersButton,
+    );
+    browser.waitForElementNotPresent(
+      localGroupPopup.elements.localGroupRemoveAllButton,
+    );
+    browser.waitForElementNotPresent(
+      localGroupPopup.elements.localGroupTestComRemoveButton,
+    );
+    browser.waitForElementNotPresent(
+      localGroupPopup.elements.localGroupDeleteButton,
+    );
 
     browser.end();
-  }
+  },
 };

@@ -25,17 +25,20 @@
  */
 package org.niis.xroad.restapi.openapi;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.niis.xroad.restapi.config.audit.AuditEventMethod;
 import org.niis.xroad.restapi.converter.TokenInitStatusMapping;
 import org.niis.xroad.restapi.dto.InitializationStatusDto;
+import org.niis.xroad.restapi.exceptions.ErrorDeviation;
 import org.niis.xroad.restapi.openapi.model.InitialServerConf;
 import org.niis.xroad.restapi.openapi.model.InitializationStatus;
 import org.niis.xroad.restapi.openapi.validator.InitialServerConfValidator;
 import org.niis.xroad.restapi.service.AnchorNotFoundException;
 import org.niis.xroad.restapi.service.InitializationService;
+import org.niis.xroad.restapi.service.InvalidCharactersException;
 import org.niis.xroad.restapi.service.UnhandledWarningsException;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.niis.xroad.restapi.service.WeakPinException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,6 +48,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.INIT_SERVER_CONFIGURATION;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_GPG_KEY_GENERATION_INTERRUPTED;
 
 /**
  * Init (Security Server) controller
@@ -53,13 +57,9 @@ import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.INIT_SERVER_
 @RequestMapping(ApiUtil.API_V1_PREFIX)
 @Slf4j
 @PreAuthorize("denyAll")
+@RequiredArgsConstructor
 public class InitializationApiController implements InitializationApi {
     private final InitializationService initializationService;
-
-    @Autowired
-    public InitializationApiController(InitializationService initializationService) {
-        this.initializationService = initializationService;
-    }
 
     @Override
     @PreAuthorize("isAuthenticated()")
@@ -95,12 +95,15 @@ public class InitializationApiController implements InitializationApi {
                     ignoreWarnings);
         } catch (AnchorNotFoundException | InitializationService.ServerAlreadyFullyInitializedException e) {
             throw new ConflictException(e);
-        } catch (UnhandledWarningsException | InitializationService.InvalidCharactersException
-                | InitializationService.WeakPinException | InitializationService.InvalidInitParamsException e) {
+        } catch (UnhandledWarningsException | InvalidCharactersException
+                | WeakPinException | InitializationService.InvalidInitParamsException e) {
             throw new BadRequestException(e);
         } catch (InitializationService.SoftwareTokenInitException e) {
             throw new InternalServerErrorException(e);
+        } catch (InterruptedException e) {
+            throw new InternalServerErrorException(new ErrorDeviation(ERROR_GPG_KEY_GENERATION_INTERRUPTED));
         }
+
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 }

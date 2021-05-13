@@ -26,12 +26,12 @@
 <template>
   <tr>
     <td class="td-name">
-      <div class="name-wrap">
+      <div class="name-wrap" @click="certificateClick()">
         <i
-          class="icon-xrd_certificate icon clickable"
-          @click="certificateClick(cert, key)"
-        ></i>
-        <div class="clickable-link" @click="certificateClick()">
+          class="icon-Certificate cert-icon clickable-link"
+          :style="{ color: certStatusColor }"
+        />
+        <div class="clickable-link" :style="{ color: certStatusColor }">
           {{ cert.certificate_details.issuer_common_name }}
           {{ cert.certificate_details.serial }}
         </div>
@@ -41,7 +41,7 @@
     <td>{{ cert.ocsp_status | ocspStatus }}</td>
     <td>{{ cert.certificate_details.not_after | formatDate }}</td>
     <td class="status-cell">
-      <certificate-status :certificate="cert" />
+      <certificate-status-icon :certificate="cert" />
     </td>
     <td class="td-align-right">
       <slot name="certificateAction"></slot>
@@ -55,17 +55,26 @@
  */
 import Vue from 'vue';
 import { Prop } from 'vue/types/options';
-import CertificateStatus from './CertificateStatus.vue';
+import CertificateStatusIcon from './CertificateStatusIcon.vue';
+import { CertificateStatus } from '@/openapi-types';
 import { TokenCertificate } from '@/openapi-types';
+import { Colors } from '@/global';
 
 export default Vue.extend({
   components: {
-    CertificateStatus,
+    CertificateStatusIcon,
   },
   props: {
     cert: {
       type: Object as Prop<TokenCertificate>,
       required: true,
+    },
+  },
+  computed: {
+    certStatusColor(): string {
+      return this.cert.status === CertificateStatus.GLOBAL_ERROR
+        ? Colors.Error
+        : '';
     },
   },
 
@@ -82,10 +91,12 @@ export default Vue.extend({
 .icon {
   margin-left: 18px;
   margin-right: 20px;
+  color: $XRoad-Purple100;
 }
 
 .clickable {
   cursor: pointer;
+  color: $XRoad-Purple100;
 }
 
 .td-align-right {
@@ -93,16 +104,21 @@ export default Vue.extend({
 }
 
 .clickable-link {
-  text-decoration: underline;
+  color: $XRoad-Purple100;
   cursor: pointer;
   height: 100%;
+}
+
+.cert-icon {
+  margin-right: 18px;
+  color: $XRoad-Purple100;
 }
 
 .name-wrap {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-left: 0.5rem;
+  margin-left: 2.7rem;
 
   i.v-icon.mdi-file-document-outline {
     margin-left: 42px;

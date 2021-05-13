@@ -134,12 +134,12 @@ export const mutations: MutationTree<NotificationsState> = {
     Object.assign(state, getDefaultState());
   },
   setSuccessCode(state: NotificationsState, val: string): void {
-    const notification = createEmptyNotification(2000);
+    const notification = createEmptyNotification(3000);
     notification.successMessageCode = val;
     state.successNotifications.push(notification);
   },
   setSuccessRaw(state: NotificationsState, val: string): void {
-    const notification = createEmptyNotification(2000);
+    const notification = createEmptyNotification(3000);
     notification.successMessageRaw = val;
     state.successNotifications.push(notification);
   },
@@ -171,6 +171,10 @@ export const mutations: MutationTree<NotificationsState> = {
       (item: Notification) => item.timeAdded !== id,
     );
   },
+
+  clearErrorNotifications(state: NotificationsState): void {
+    state.errorNotifications = [];
+  },
 };
 
 export const actions: ActionTree<NotificationsState, RootState> = {
@@ -197,7 +201,10 @@ export const actions: ActionTree<NotificationsState, RootState> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   showError({ commit }, errorObject: any): void {
     // Show error using the error object
-    commit('setErrorObject', errorObject);
+    // Don't show errors when the errorcode is 401 which is usually because of session expiring
+    if (errorObject?.response?.status !== 401) {
+      commit('setErrorObject', errorObject);
+    }
   },
 };
 

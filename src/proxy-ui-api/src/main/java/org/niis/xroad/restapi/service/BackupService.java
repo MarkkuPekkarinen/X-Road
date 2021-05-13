@@ -27,10 +27,9 @@ package org.niis.xroad.restapi.service;
 
 import ee.ria.xroad.common.identifier.SecurityServerId;
 
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.dto.BackupFile;
 import org.niis.xroad.restapi.exceptions.DeviationAwareRuntimeException;
@@ -38,14 +37,11 @@ import org.niis.xroad.restapi.exceptions.ErrorDeviation;
 import org.niis.xroad.restapi.exceptions.WarningDeviation;
 import org.niis.xroad.restapi.repository.BackupRepository;
 import org.niis.xroad.restapi.util.FormatUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -54,41 +50,27 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_BACKUP_GENERATION_FAILED;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_FILE_ALREADY_EXISTS;
+
 /**
  * Backups service.
  */
 @Slf4j
 @Service
 @PreAuthorize("isAuthenticated()")
+@RequiredArgsConstructor
 public class BackupService {
-
-    private static final String BACKUP_GENERATION_FAILED = "backup_generation_failed";
-    private static final String WARNING_FILE_ALREADY_EXISTS = "warning_file_already_exists";
-
     private final BackupRepository backupRepository;
     private final ServerConfService serverConfService;
     private final ExternalProcessRunner externalProcessRunner;
     private final AuditDataHelper auditDataHelper;
 
     @Setter
+    @Value("${script.generate-backup.path}")
     private String generateBackupScriptPath;
-    private static final String BACKUP_FILENAME_DATE_TIME_FORMAT = "yyyyMMdd-HHmmss";
 
-    /**
-     * BackupsService constructor
-     * @param backupRepository
-     */
-    @Autowired
-    public BackupService(BackupRepository backupRepository, ServerConfService serverConfService,
-            ExternalProcessRunner externalProcessRunner,
-            @Value("${script.generate-backup.path}") String generateBackupScriptPath,
-            AuditDataHelper auditDataHelper) {
-        this.backupRepository = backupRepository;
-        this.serverConfService = serverConfService;
-        this.externalProcessRunner = externalProcessRunner;
-        this.generateBackupScriptPath = generateBackupScriptPath;
-        this.auditDataHelper = auditDataHelper;
-    }
+    private static final String BACKUP_FILENAME_DATE_TIME_FORMAT = "yyyyMMdd-HHmmss";
 
     /**
      * Return a list of available backup files
@@ -153,13 +135,13 @@ public class BackupService {
             log.info(String.join("\n", processResult.getProcessOutput()));
             log.info(" --- Backup script console output - END --- ");
         } catch (ProcessNotExecutableException | ProcessFailedException e) {
-            throw new DeviationAwareRuntimeException(e, new ErrorDeviation(BACKUP_GENERATION_FAILED));
+            throw new DeviationAwareRuntimeException(e, new ErrorDeviation(ERROR_BACKUP_GENERATION_FAILED));
         }
 
         Optional<BackupFile> backupFile = getBackup(filename);
         if (!backupFile.isPresent()) {
             throw new DeviationAwareRuntimeException(getFileNotFoundExceptionMessage(filename),
-                    new ErrorDeviation(BACKUP_GENERATION_FAILED));
+                    new ErrorDeviation(ERROR_BACKUP_GENERATION_FAILED));
         }
         return backupFile.get();
     }
@@ -189,9 +171,6 @@ public class BackupService {
             throw new UnhandledWarningsException(new WarningDeviation(WARNING_FILE_ALREADY_EXISTS, filename));
         }
 
-        if (!isValidTarFile(fileBytes)) {
-            throw new InvalidBackupFileException("backup file is not a valid tar file (" + filename + ")");
-        }
         OffsetDateTime createdAt = backupRepository.writeBackupFile(filename, fileBytes);
         BackupFile backupFile = new BackupFile(filename);
         backupFile.setCreatedAt(createdAt);
@@ -231,33 +210,12 @@ public class BackupService {
      */
     public String generateBackupFileName() {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern(BACKUP_FILENAME_DATE_TIME_FORMAT);
-        return "conf_backup_" + LocalDateTime.now().format(dtf) + ".tar";
+        return "conf_backup_" + LocalDateTime.now().format(dtf) + ".gpg";
     }
 
     private String getFileNotFoundExceptionMessage(String filename) {
         StringBuilder sb = new StringBuilder();
         sb.append("Backup file with name ").append(filename).append(" not found");
         return sb.toString();
-    }
-
-    /**
-     * Validate that the given bytes represent a tar file. In addition, validate that
-     * the first entry of the tar file begins with a label that is included in the
-     * Security Server backups.
-     * @param fileBytes
-     * @return
-     */
-    private boolean isValidTarFile(byte[] fileBytes) {
-        try (TarArchiveInputStream tarIn = new TarArchiveInputStream(new ByteArrayInputStream(fileBytes))) {
-            TarArchiveEntry entry = (TarArchiveEntry) tarIn.getNextEntry();
-            // The first entry of a valid Security Server backup tar file contains:
-            // "security_${XROAD_VERSION_LABEL}_${SECURITY_SERVER_ID}"
-            if (entry == null || !entry.getName().startsWith("security_")) {
-                return false;
-            }
-            return true;
-        } catch (IOException ioe) {
-            return false;
-        }
     }
 }

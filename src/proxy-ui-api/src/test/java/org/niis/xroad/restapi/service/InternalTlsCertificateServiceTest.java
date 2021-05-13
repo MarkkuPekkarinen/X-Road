@@ -57,7 +57,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
-import static org.niis.xroad.restapi.service.InternalTlsCertificateService.KEY_CERT_GENERATION_FAILED;
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_KEY_CERT_GENERATION_FAILED;
 
 /**
  * test InternalTlsCertificateService
@@ -91,6 +91,12 @@ public class InternalTlsCertificateServiceTest {
                         throw new ProcessNotExecutableException(new IOException(ERROR));
                     }
                     throw new RuntimeException("TEST command not supported");
+                }
+            },
+            new ClearCacheService() {
+                @Override
+                public boolean executeClearConfigurationCache() {
+                    return true;
                 }
             }, null, SCRIPT_ARGS, mock(AuditDataHelper.class));
 
@@ -168,7 +174,7 @@ public class InternalTlsCertificateServiceTest {
         try {
             internalTlsCertificateService.generateInternalTlsKeyAndCertificate();
         } catch (DeviationAwareRuntimeException e) {
-            assertEquals(KEY_CERT_GENERATION_FAILED, e.getErrorDeviation().getCode());
+            assertEquals(ERROR_KEY_CERT_GENERATION_FAILED, e.getErrorDeviation().getCode());
         }
     }
 
@@ -178,7 +184,7 @@ public class InternalTlsCertificateServiceTest {
         try {
             internalTlsCertificateService.generateInternalTlsKeyAndCertificate();
         } catch (DeviationAwareRuntimeException e) {
-            assertEquals(KEY_CERT_GENERATION_FAILED, e.getErrorDeviation().getCode());
+            assertEquals(ERROR_KEY_CERT_GENERATION_FAILED, e.getErrorDeviation().getCode());
         }
     }
 

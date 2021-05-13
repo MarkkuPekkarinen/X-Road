@@ -51,6 +51,8 @@ import java.io.IOException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 
+import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_KEY_CERT_GENERATION_FAILED;
+
 /**
  * Operations related to internal tls certificates
  */
@@ -59,14 +61,13 @@ import java.security.cert.X509Certificate;
 @Transactional
 @PreAuthorize("isAuthenticated()")
 public class InternalTlsCertificateService {
-
-    public static final String KEY_CERT_GENERATION_FAILED = "key_and_cert_generation_failed";
     public static final String IMPORT_INTERNAL_CERT_FAILED = "import_internal_cert_failed";
 
     private static final String CERT_PEM_FILENAME = "./cert.pem";
     private static final String CERT_CER_FILENAME = "./cert.cer";
 
     private final ExternalProcessRunner externalProcessRunner;
+    private final ClearCacheService clearCacheService;
     private final String generateCertScriptArgs;
     private final AuditDataHelper auditDataHelper;
 
@@ -84,11 +85,13 @@ public class InternalTlsCertificateService {
     @Autowired
     public InternalTlsCertificateService(InternalTlsCertificateRepository internalTlsCertificateRepository,
             ExternalProcessRunner externalProcessRunner,
+            ClearCacheService clearCacheService,
             @Value("${script.generate-certificate.path}") String generateCertScriptPath,
             @Value("${script.generate-certificate.args}") String generateCertScriptArgs,
             AuditDataHelper auditDataHelper) {
         this.internalTlsCertificateRepository = internalTlsCertificateRepository;
         this.externalProcessRunner = externalProcessRunner;
+        this.clearCacheService = clearCacheService;
         this.generateCertScriptPath = generateCertScriptPath;
         this.generateCertScriptArgs = generateCertScriptArgs;
         this.auditDataHelper = auditDataHelper;
@@ -153,8 +156,11 @@ public class InternalTlsCertificateService {
                     generateCertScriptArgs.split("\\s+"));
         } catch (ProcessNotExecutableException | ProcessFailedException e) {
             log.error("Failed to generate internal TLS key and cert", e);
-            throw new DeviationAwareRuntimeException(e, new ErrorDeviation(KEY_CERT_GENERATION_FAILED));
+            throw new DeviationAwareRuntimeException(e, new ErrorDeviation(ERROR_KEY_CERT_GENERATION_FAILED));
         }
+
+        clearCacheService.executeClearConfigurationCache();
+
         // audit log hash of generated cert
         X509Certificate generatedCert = internalTlsCertificateRepository.getInternalTlsCertificate();
         auditDataHelper.putCertificateHash(generatedCert);
@@ -182,6 +188,9 @@ public class InternalTlsCertificateService {
             throw new DeviationAwareRuntimeException("cannot import internal tls cert", e,
                     new ErrorDeviation(IMPORT_INTERNAL_CERT_FAILED));
         }
+
+        clearCacheService.executeClearConfigurationCache();
+
         return x509Certificate;
     }
 }

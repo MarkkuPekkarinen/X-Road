@@ -16,7 +16,8 @@ Requires(post):     /usr/sbin/semanage, /usr/sbin/setsebool
 Requires(preun):    systemd
 Requires(postun):   systemd
 Requires:           net-tools, tar
-Requires:           xroad-base = %version-%release, xroad-confclient = %version-%release, xroad-signer = %version-%release, rsyslog, postgresql-server, postgresql-contrib
+Requires:           xroad-base = %version-%release, xroad-confclient = %version-%release, xroad-signer = %version-%release, rsyslog
+Requires:           xroad-database >= %version-%release, xroad-database <= %version-%{release}.1
 
 %define src %{_topdir}/..
 
@@ -77,11 +78,11 @@ rm -rf %{buildroot}
 %config /etc/xroad/conf.d/proxy.ini
 %config /etc/xroad/conf.d/override-rhel-proxy.ini
 %config /etc/xroad/conf.d/proxy-logback.xml
+
 %dir /etc/xroad/jetty
 %config /etc/xroad/jetty/clientproxy.xml
 %config /etc/xroad/jetty/serverproxy.xml
 %config /etc/xroad/jetty/ocsp-responder.xml
-%config /etc/xroad/services/jetty.conf
 %config(noreplace) %attr(644,root,root) /etc/pam.d/xroad
 %attr(0440,xroad,xroad) %config /etc/xroad/backup.d/??_xroad-proxy
 
@@ -113,6 +114,7 @@ rm -rf %{buildroot}
 /usr/share/xroad/scripts/restore_xroad_proxy_configuration.sh
 /usr/share/xroad/scripts/autobackup_xroad_proxy_configuration.sh
 /usr/share/xroad/scripts/get_security_server_id.sh
+/usr/share/xroad/scripts/read_db_properties.sh
 %doc /usr/share/doc/%{name}/LICENSE.txt
 %doc /usr/share/doc/%{name}/3RD-PARTY-NOTICES.txt
 %doc /usr/share/doc/%{name}/CHANGELOG.md
@@ -182,6 +184,16 @@ if [ $1 -gt 1 ]; then
         bash /usr/share/xroad/db/backup_and_remove_non-member_permissions.sh >>/var/log/xroad/proxy-install.log
     fi
     rm -rf %{_localstatedir}/lib/rpm-state/%{name}
+fi
+
+if [ $1 -gt 1 ]; then
+  # upgrade, generate gpg keypair when needed
+  if [ ! -d /etc/xroad/gpghome ] ; then
+    ID=$(source /usr/share/xroad/scripts/get_security_server_id.sh)
+    if [[ -n "${ID}" ]] ; then
+      /usr/share/xroad/scripts/generate_gpg_keypair.sh /etc/xroad/gpghome "${ID}"
+    fi
+  fi
 fi
 
 #parameters:
