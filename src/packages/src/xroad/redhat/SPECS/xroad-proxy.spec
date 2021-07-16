@@ -1,3 +1,4 @@
+%include %{_specdir}/common.inc
 # do not repack jars
 %define __jar_repack %{nil}
 # produce .elX dist tag on both centos and redhat
@@ -119,7 +120,9 @@ rm -rf %{buildroot}
 %doc /usr/share/doc/%{name}/3RD-PARTY-NOTICES.txt
 %doc /usr/share/doc/%{name}/CHANGELOG.md
 
-%pre
+%pre -p /bin/bash
+%upgrade_check
+
 if [ $1 -gt 1 ] ; then
     # upgrade
     # remove the previous port forwarding rules (if any)
@@ -189,11 +192,13 @@ fi
 if [ $1 -gt 1 ]; then
   # upgrade, generate gpg keypair when needed
   if [ ! -d /etc/xroad/gpghome ] ; then
-    ID=$(source /usr/share/xroad/scripts/get_security_server_id.sh)
+    ID=$(/usr/share/xroad/scripts/get_security_server_id.sh)
     if [[ -n "${ID}" ]] ; then
       /usr/share/xroad/scripts/generate_gpg_keypair.sh /etc/xroad/gpghome "${ID}"
     fi
   fi
+  # always fix gpghome ownership
+  [ -d /etc/xroad/gpghome ] && chown -R xroad:xroad /etc/xroad/gpghome
 fi
 
 #parameters:

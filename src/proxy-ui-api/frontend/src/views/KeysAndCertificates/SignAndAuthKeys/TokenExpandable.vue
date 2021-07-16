@@ -26,68 +26,82 @@
 <template>
   <xrd-expandable
     class="expandable"
+    :is-open="isExpanded(token.id)"
+    :color="tokenStatusColor"
     @open="descOpen(token.id)"
     @close="descClose(token.id)"
-    :isOpen="isExpanded(token.id)"
-    :color="tokenStatusColor"
   >
-    <template v-slot:action>
-      <template v-if="canActivateToken">
-        <span
-          v-if="tokenLabelKey && tokenLabelKey.length > 1"
-          class="token-status-indicator label"
-          v-bind:class="tokenStatusClass"
-        >
-          {{ $t(tokenLabelKey) }}
-        </span>
-        <TokenLoggingButton
-          class="token-logging-button"
-          :token="token"
-          @token-logout="logout()"
-          @token-login="login()"
-        />
-      </template>
-    </template>
-
-    <template v-slot:link>
+    <template #link>
       <div
         class="clickable-link identifier-wrap"
-        @click="tokenClick(token)"
         data-test="token-name"
+        @click="tokenNameClick()"
       >
         <span
           class="token-status-indicator token-name"
-          v-bind:class="tokenStatusClass"
+          :class="tokenStatusClass"
         >
           {{ $t('keys.token') }} {{ token.name }}
         </span>
+
+        <v-btn
+          icon
+          color="primary"
+          data-test="token-icon-button"
+          @click="tokenClick(token)"
+        >
+          <v-icon class="button-icon">icon-Edit</v-icon>
+        </v-btn>
       </div>
     </template>
 
-    <template v-slot:content>
+    <template #action>
+      <div class="action-slot-wrapper">
+        <template v-if="canActivateToken">
+          <div
+            v-if="tokenLabelKey && tokenLabelKey.length > 1"
+            class="token-status token-status-indicator label"
+            :class="tokenStatusClass"
+          >
+            <v-icon class="token-status-indicator" :class="tokenStatusClass">{{
+              tokenIcon
+            }}</v-icon>
+            {{ $t(tokenLabelKey) }}
+          </div>
+          <TokenLoggingButton
+            class="token-logging-button"
+            :token="token"
+            @token-logout="logout()"
+            @token-login="login()"
+          />
+        </template>
+      </div>
+    </template>
+
+    <template #content>
       <div>
-        <div class="button-wrap">
+        <div class="button-wrap mb-6">
           <xrd-button
             v-if="canAddKey"
             outlined
-            @click="addKey()"
             :disabled="!token.logged_in"
             data-test="token-add-key-button"
+            @click="addKey()"
             ><v-icon class="xrd-large-button-icon">icon-Add</v-icon
             >{{ $t('keys.addKey') }}</xrd-button
           >
           <xrd-file-upload
             v-if="canImportCertificate"
+            v-slot="{ upload }"
             accepts=".pem, .cer, .der"
             @file-changed="importCert"
-            v-slot="{ upload }"
           >
             <xrd-button
               outlined
               class="button-spacing"
               :disabled="!token.logged_in"
-              @click="upload"
               data-test="token-import-cert-button"
+              @click="upload"
             >
               <v-icon class="xrd-large-button-icon">icon-Import</v-icon>
               {{ $t('keys.importCert') }}</xrd-button
@@ -96,44 +110,69 @@
         </div>
 
         <!-- AUTH keys table -->
-        <keys-table
-          v-if="getAuthKeys(token.keys).length > 0"
-          :keys="getAuthKeys(token.keys)"
-          title="keys.authKeyCert"
-          :tokenLoggedIn="token.logged_in"
-          :tokenType="token.type"
-          @key-click="keyClick"
-          @generate-csr="generateCsr"
-          @certificate-click="certificateClick"
-          @import-cert-by-hash="importCertByHash"
-          @refresh-list="fetchData"
-        />
 
+        <div v-if="getAuthKeys(token.keys).length > 0">
+          <KeysTableTitle
+            title="keys.authKeyCert"
+            :keys="getAuthKeys(token.keys)"
+            :arrow-state="authKeysOpen"
+            @click="authKeysOpen = !authKeysOpen"
+          />
+          <keys-table
+            v-if="authKeysOpen"
+            :keys="getAuthKeys(token.keys)"
+            :token-logged-in="token.logged_in"
+            :token-type="token.type"
+            @key-click="keyClick"
+            @generate-csr="generateCsr"
+            @certificate-click="certificateClick"
+            @import-cert-by-hash="importCertByHash"
+            @refresh-list="fetchData"
+          />
+        </div>
         <!-- SIGN keys table -->
-        <keys-table
-          v-if="getSignKeys(token.keys).length > 0"
-          :keys="getSignKeys(token.keys)"
-          title="keys.signKeyCert"
-          :tokenLoggedIn="token.logged_in"
-          :tokenType="token.type"
-          @key-click="keyClick"
-          @generate-csr="generateCsr"
-          @certificate-click="certificateClick"
-          @import-cert-by-hash="importCertByHash"
-          @refresh-list="fetchData"
-        />
+
+        <div v-if="getSignKeys(token.keys).length > 0">
+          <KeysTableTitle
+            title="keys.signKeyCert"
+            :keys="getSignKeys(token.keys)"
+            :arrow-state="signKeysOpen"
+            @click="signKeysOpen = !signKeysOpen"
+          />
+
+          <keys-table
+            v-if="signKeysOpen"
+            class="keys-table"
+            :keys="getSignKeys(token.keys)"
+            :token-logged-in="token.logged_in"
+            :token-type="token.type"
+            @key-click="keyClick"
+            @generate-csr="generateCsr"
+            @certificate-click="certificateClick"
+            @import-cert-by-hash="importCertByHash"
+            @refresh-list="fetchData"
+          />
+        </div>
 
         <!-- Keys with unknown type -->
-        <unknown-keys-table
-          v-if="getOtherKeys(token.keys).length > 0"
-          :keys="getOtherKeys(token.keys)"
-          title="keys.unknown"
-          :tokenLoggedIn="token.logged_in"
-          :tokenType="token.type"
-          @key-click="keyClick"
-          @generate-csr="generateCsr"
-          @import-cert-by-hash="importCertByHash"
-        />
+        <div v-if="getOtherKeys(token.keys).length > 0">
+          <KeysTableTitle
+            title="keys.unknown"
+            :keys="getOtherKeys(token.keys)"
+            :arrow-state="unknownKeysOpen"
+            @click="unknownKeysOpen = !unknownKeysOpen"
+          />
+          <unknown-keys-table
+            v-if="unknownKeysOpen"
+            :keys="getOtherKeys(token.keys)"
+            :token-logged-in="token.logged_in"
+            :token-type="token.type"
+            @key-click="keyClick"
+            @generate-csr="generateCsr"
+            @certificate-click="certificateClick"
+            @import-cert-by-hash="importCertByHash"
+          />
+        </div>
       </div>
     </template>
   </xrd-expandable>
@@ -144,6 +183,7 @@
 import Vue from 'vue';
 import { Permissions, RouteName } from '@/global';
 import KeysTable from './KeysTable.vue';
+import KeysTableTitle from './KeysTableTitle.vue';
 import UnknownKeysTable from './UnknownKeysTable.vue';
 import { Key, KeyUsageType, Token, TokenCertificate } from '@/openapi-types';
 import * as api from '@/util/api';
@@ -151,6 +191,7 @@ import { FileUploadResult } from '@niis/shared-ui';
 import { encodePathParameter } from '@/util/api';
 import TokenLoggingButton from '@/views/KeysAndCertificates/SignAndAuthKeys/TokenLoggingButton.vue';
 import { Prop } from 'vue/types/options';
+import { Colors } from '@/global';
 import {
   getTokenUIStatus,
   TokenUIStatus,
@@ -159,6 +200,7 @@ import {
 export default Vue.extend({
   components: {
     KeysTable,
+    KeysTableTitle,
     UnknownKeysTable,
     TokenLoggingButton,
   },
@@ -167,6 +209,14 @@ export default Vue.extend({
       type: Object as Prop<Token>,
       required: true,
     },
+  },
+  data() {
+    return {
+      colors: Colors,
+      authKeysOpen: true,
+      signKeysOpen: true,
+      unknownKeysOpen: true,
+    };
   },
   computed: {
     canActivateToken(): boolean {
@@ -183,6 +233,7 @@ export default Vue.extend({
     canAddKey(): boolean {
       return this.$store.getters.hasPermission(Permissions.GENERATE_KEY);
     },
+
     tokenLabelKey(): string {
       const status: TokenUIStatus = getTokenUIStatus(this.token.status);
 
@@ -196,6 +247,21 @@ export default Vue.extend({
 
       return ''; // if TokenUIStatus is Active or Available or unknown return empty string
     },
+
+    tokenIcon(): string {
+      const status: TokenUIStatus = getTokenUIStatus(this.token.status);
+
+      if (status === TokenUIStatus.Inactive) {
+        return 'icon-Cancel';
+      } else if (status === TokenUIStatus.Unavailable) {
+        return 'icon-Error';
+      } else if (status === TokenUIStatus.Unsaved) {
+        return 'icon-Error';
+      }
+
+      return '';
+    },
+
     tokenStatusClass(): string {
       const status: TokenUIStatus = getTokenUIStatus(this.token.status);
 
@@ -213,16 +279,24 @@ export default Vue.extend({
       const status: TokenUIStatus = getTokenUIStatus(this.token.status);
 
       if (status === TokenUIStatus.Inactive) {
-        return '#9c9c9c';
+        return this.colors.Black50;
       } else if (
         status === TokenUIStatus.Unavailable ||
         status === TokenUIStatus.Unsaved
       ) {
-        return '#ff0032'; // XRoad-Red
+        return this.colors.Error; // Red
       } else {
-        return '#202020'; // XRoad-Black
+        return this.colors.Black100;
       }
     },
+  },
+  created() {
+    if (this.getAuthKeys(this.token.keys).length > 10) {
+      this.authKeysOpen = false;
+    }
+    if (this.getSignKeys(this.token.keys).length > 10) {
+      this.signKeysOpen = false;
+    }
   },
   methods: {
     addKey(): void {
@@ -238,6 +312,12 @@ export default Vue.extend({
     logout(): void {
       this.$store.dispatch('setSelectedToken', this.token);
       this.$emit('token-logout');
+    },
+
+    tokenNameClick(): void {
+      this.isExpanded(this.token.id)
+        ? this.descClose(this.token.id)
+        : this.descOpen(this.token.id);
     },
 
     tokenClick(token: Token): void {
@@ -352,6 +432,8 @@ export default Vue.extend({
 
 .token-status-indicator {
   font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
 
   &.label {
     margin-right: 24px;
@@ -359,18 +441,18 @@ export default Vue.extend({
   }
 
   &.inactive {
-    color: $XRoad-Grey40;
-    text-decoration-color: $XRoad-Grey40;
+    color: $XRoad-Black50;
+    text-decoration-color: $XRoad-Black50;
   }
 
   &.unavailable {
-    color: $XRoad-Red;
-    text-decoration-color: $XRoad-Red;
+    color: $XRoad-Error;
+    text-decoration-color: $XRoad-Error;
   }
 
   &.unsaved {
-    color: $XRoad-Red;
-    text-decoration-color: $XRoad-Red;
+    color: $XRoad-Error;
+    text-decoration-color: $XRoad-Error;
   }
 }
 
@@ -383,6 +465,20 @@ export default Vue.extend({
   margin-bottom: 10px;
 }
 
+.action-slot-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.token-status {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  align-items: center;
+  font-weight: 700;
+}
+
 .button-wrap {
   margin-top: 10px;
   padding-right: 16px;
@@ -393,5 +489,14 @@ export default Vue.extend({
 
 .button-spacing {
   margin-left: 20px;
+}
+
+.keys-table {
+  transform-origin: top;
+  transition: transform 0.4s ease-in-out;
+}
+
+.button-icon {
+  margin-top: -14px; // fix for icon position
 }
 </style>

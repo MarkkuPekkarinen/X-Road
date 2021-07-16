@@ -337,12 +337,12 @@
     "submit": "Submit",
     "finish": "Finish",
     "searching": "Searching...",
-    "goToFront": "Got to front page"
+    "goToFront": "Go to the front page"
   },
   "keys": {
     "token": "Token:",
-    "authKeyCert": "AUTH Key and Certificate",
-    "signKeyCert": "SIGN Key and Certificate",
+    "authKeyCert": "AUTH Keys and Certificates",
+    "signKeyCert": "SIGN Keys and Certificates",
     "id": "ID",
     "ocsp": "OCSP",
     "expires": "Expires",
@@ -402,6 +402,8 @@
     "certMarkedForDeletion": "Certificate marked for deletion",
     "unregisterError": "Failed to unregister certificate. Continue with certificate deletion anyway?",
     "authNotSupported": "Auth. key not supported",
+    "noIssues": "No issues",
+    "globalErrors": "Global errors",
     "ocspStatus": {
       "disabled": "Disabled",
       "expired": "Expired",
@@ -730,6 +732,12 @@
   "warning": "Warning",
   "id": "ID",
   "count": "Amount of same errors:",
+  "403": {
+    "topTitle": "Forbidden",
+    "mainTitle": "Permission denied",
+    "text": "Seems like you do not have the permission to view this page. If you think this is a mistake, check if you are logged into the correct account or contact your administrator to inquire about your permissions.",
+    "goBack": "Go back"
+  },
   "404": "404 - page not found",
   "404text": "Seems like you found the",
   "404textUnicorn": "unicorn",
@@ -759,7 +767,7 @@
       "csrFormat": "CSR Format"
     },
     "keys": {
-      "friendlyName": "Friendly name"
+      "name": "Name"
     },
     "addClient": {
       "memberClass": "Member class",
@@ -907,6 +915,7 @@
     "member_class_exists": "Member class exists",
     "member_code_exists": "Member code exists",
     "pin_code_exists": "PIN code exists",
+    "unsupported_openapi_version": "Unsupported OpenAPI version. Only versions 3.0.x are currently supported.",
     "conf_verification": {
       "anchor_not_for_external_source": "Anchor points to an internal configuration source. Only external configuration source anchors are supported as trusted anchors.",
       "missing_private_params": "Configuration anchor import failed: invalid anchor file",

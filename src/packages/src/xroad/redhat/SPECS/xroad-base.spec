@@ -1,3 +1,4 @@
+%include %{_specdir}/common.inc
 # do not repack jars
 %define __jar_repack %{nil}
 # produce .elX dist tag on both centos and redhat
@@ -76,7 +77,6 @@ rm -rf %{buildroot}
 %dir /var/lib/xroad
 %dir /var/lib/xroad/backup
 %config /etc/xroad/services/global.conf
-%config(noreplace) /etc/xroad/services/local.properties
 %config /etc/xroad/conf.d/common.ini
 %config /etc/xroad/ssl/openssl.cnf
 
@@ -101,7 +101,9 @@ rm -rf %{buildroot}
 %doc /usr/share/doc/%{name}/3RD-PARTY-NOTICES.txt
 %doc /usr/share/doc/%{name}/CHANGELOG.md
 
-%pre
+%pre -p /bin/bash
+%upgrade_check
+
 if ! getent passwd xroad > /dev/null; then
 useradd --system --home /var/lib/xroad --no-create-home --shell /bin/bash --user-group --comment "X-Road system user" xroad
 fi
@@ -150,7 +152,7 @@ chmod 1750 /var/tmp/xroad
 chown xroad:xroad /var/tmp/xroad
 
 #local overrides
-test -f /etc/xroad/services/local.conf || touch /etc/xroad/services/local.conf
+test -f /etc/xroad/services/local.properties || touch /etc/xroad/services/local.properties
 test -f /etc/xroad/conf.d/local.ini || touch /etc/xroad/conf.d/local.ini
 
 chown -R xroad:xroad /etc/xroad/services/* /etc/xroad/conf.d/*

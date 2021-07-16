@@ -164,7 +164,7 @@
               <tbody>
                 <tr
                   v-for="timestampingService in timestampingServices"
-                  v-bind:key="timestampingService.url"
+                  :key="timestampingService.url"
                 >
                   <td>
                     <xrd-status-icon
@@ -201,7 +201,7 @@
           <v-card-text class="xrd-card-text">
             <div
               v-for="ocspDiags in ocspResponderDiagnostics"
-              v-bind:key="ocspDiags.distinguished_name"
+              :key="ocspDiags.distinguished_name"
             >
               <div class="cert-service-name">
                 <span>{{
@@ -228,10 +228,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="ocsp in ocspDiags.ocsp_responders"
-                    v-bind:key="ocsp.url"
-                  >
+                  <tr v-for="ocsp in ocspDiags.ocsp_responders" :key="ocsp.url">
                     <td>
                       <xrd-status-icon
                         :status="statusIconType(ocsp.status_class)"
@@ -276,9 +273,6 @@ import {
 } from '@/openapi-types';
 
 export default Vue.extend({
-  computed: {
-    ...mapGetters(['securityServerVersion']),
-  },
   data: () => ({
     timestampingServices: [] as TimestampingServiceDiagnostics[],
     globalConf: undefined as GlobalConfDiagnostics | undefined,
@@ -287,6 +281,13 @@ export default Vue.extend({
     timestampingLoading: false,
     ocspLoading: false,
   }),
+  computed: {
+    ...mapGetters(['securityServerVersion']),
+  },
+
+  created() {
+    this.fetchData();
+  },
   methods: {
     fetchData(): void {
       this.globalConfLoading = true;
@@ -348,9 +349,6 @@ export default Vue.extend({
       }
     },
   },
-  created() {
-    this.fetchData();
-  },
 });
 </script>
 
@@ -387,7 +385,7 @@ export default Vue.extend({
 }
 
 .level-column {
-  @media only screen and (min-width: 1500px) {
+  @media only screen and (min-width: 1200px) {
     width: 20%;
   }
 }

@@ -4,7 +4,7 @@
 
 # X-Road: Central Server Installation Guide <!-- omit in toc -->
 
-Version: 2.22  
+Version: 2.24  
 Doc. ID: IG-CS
 
 ---
@@ -44,49 +44,52 @@ Doc. ID: IG-CS
 | 19.01.2021 | 2.20    | Add instructions for using an alternative Java distribution. | Jarkko Hyöty
 | 04.02.2021 | 2.21    | Minor updates. | Ilkka Seppälä
 | 16.04.2021 | 2.22    | Update remote database installation instructions. | Jarkko Hyöty
+| 18.05.2021 | 2.23    | Update installation error handling section. | Ilkka Seppälä
+| 01.07.2021 | 2.24    | Update 3rd party key server | Petteri Kivimäki
 
 ## Table of Contents <!-- omit in toc -->
 
 <!-- toc -->
 <!-- vim-markdown-toc GFM -->
 
-* [License](#license)
-* [1. Introduction](#1-introduction)
-  * [1.1 Target Audience](#11-target-audience)
-  * [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
-  * [1.3 References](#13-references)
-* [2. Installation](#2-installation)
-  * [2.1 Prerequisites to Installation](#21-prerequisites-to-installation)
-  * [2.2 Reference Data](#22-reference-data)
-  * [2.3 Requirements to the Central Server](#23-requirements-to-the-central-server)
-  * [2.4 Preparing OS](#24-preparing-os)
-  * [2.5 Setup Package Repository](#25-setup-package-repository)
-  * [2.6 Remote Database Setup (optional)](#26-remote-database-setup-optional)
-  * [2.7 Package Installation](#27-package-installation)
-  * [2.8 Installing the Support for Hardware Tokens](#28-installing-the-support-for-hardware-tokens)
-  * [2.9 Installing the Support for Monitoring](#29-installing-the-support-for-monitoring)
-  * [2.10 Post-Installation Checks](#210-post-installation-checks)
-* [3 Initial Configuration](#3-initial-configuration)
-  * [3.1 Reference Data](#31-reference-data)
-  * [3.2 Initializing the Central Server](#32-initializing-the-central-server)
-  * [3.3 Configuring the Central Server and the Management Services' Security Server](#33-configuring-the-central-server-and-the-management-services-security-server)
-* [4 Additional configuration](#4-additional-configuration)
-  * [4.1 Global configuration V1 support](#41-global-configuration-v1-support)
-* [5 Installation Error Handling](#5-installation-error-handling)
-  * [5.1 Cannot Set LC_ALL to Default Locale](#51-cannot-set-lc_all-to-default-locale)
-  * [5.2 PostgreSQL Is Not UTF8 Compatible](#52-postgresql-is-not-utf8-compatible)
-  * [5.3 Could Not Create Default Cluster](#53-could-not-create-default-cluster)
-  * [5.4 Is Postgres Running on Port 5432?](#54-is-postgres-running-on-port-5432)
-* [Annex A Central Server Default Database Properties](#annex-a-central-server-default-database-properties)
-* [Annex B Database Users](#annex-b-database-users)
-* [Annex C Deployment Options](#annex-c-deployment-options)
-  * [C.1 General](#c1-general)
-  * [C.2 Local Database](#c2-local-database)
-  * [C.3 Remote Database](#c3-remote-database)
-  * [C.4 Remote Database Cluster](#c4-remote-database-cluster)
-  * [C.5 Cloud Database Cluster](#c5-cloud-database-cluster)
-  * [C.6 Summary](#c6-summary)
-* [Annex D Create Database Structure Manually](#annex-d-create-database-structure-manually)
+- [License](#license)
+- [1. Introduction](#1-introduction)
+  - [1.1 Target Audience](#11-target-audience)
+  - [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
+  - [1.3 References](#13-references)
+- [2. Installation](#2-installation)
+  - [2.1 Prerequisites to Installation](#21-prerequisites-to-installation)
+  - [2.2 Reference Data](#22-reference-data)
+  - [2.3 Requirements to the Central Server](#23-requirements-to-the-central-server)
+  - [2.4 Preparing OS](#24-preparing-os)
+  - [2.5 Setup Package Repository](#25-setup-package-repository)
+  - [2.6 Remote Database Setup (optional)](#26-remote-database-setup-optional)
+  - [2.7 Package Installation](#27-package-installation)
+  - [2.8 Installing the Support for Hardware Tokens](#28-installing-the-support-for-hardware-tokens)
+  - [2.9 Installing the Support for Monitoring](#29-installing-the-support-for-monitoring)
+  - [2.10 Post-Installation Checks](#210-post-installation-checks)
+- [3 Initial Configuration](#3-initial-configuration)
+  - [3.1 Reference Data](#31-reference-data)
+  - [3.2 Initializing the Central Server](#32-initializing-the-central-server)
+  - [3.3 Configuring the Central Server and the Management Services' Security Server](#33-configuring-the-central-server-and-the-management-services-security-server)
+- [4 Additional configuration](#4-additional-configuration)
+  - [4.1 Global configuration V1 support](#41-global-configuration-v1-support)
+- [5 Installation Error Handling](#5-installation-error-handling)
+  - [5.1 Cannot Set LC_ALL to Default Locale](#51-cannot-set-lc_all-to-default-locale)
+  - [5.2 PostgreSQL Is Not UTF8 Compatible](#52-postgresql-is-not-utf8-compatible)
+  - [5.3 Could Not Create Default Cluster](#53-could-not-create-default-cluster)
+  - [5.4 Is Postgres Running on Port 5432?](#54-is-postgres-running-on-port-5432)
+  - [5.5 Upgrade supported from version X.Y.Z or newer](#55-upgrade-supported-from-version-xyz-or-newer)
+- [Annex A Central Server Default Database Properties](#annex-a-central-server-default-database-properties)
+- [Annex B Database Users](#annex-b-database-users)
+- [Annex C Deployment Options](#annex-c-deployment-options)
+  - [C.1 General](#c1-general)
+  - [C.2 Local Database](#c2-local-database)
+  - [C.3 Remote Database](#c3-remote-database)
+  - [C.4 Remote Database Cluster](#c4-remote-database-cluster)
+  - [C.5 Cloud Database Cluster](#c5-cloud-database-cluster)
+  - [C.6 Summary](#c6-summary)
+- [Annex D Create Database Structure Manually](#annex-d-create-database-structure-manually)
 
 <!-- vim-markdown-toc -->
 <!-- tocstop -->
@@ -137,7 +140,7 @@ Caution: Data necessary for the functioning of the operating system is not inclu
 |----------------------|--------------------------------------------------|----------------------------------------------------|
 | 1.0  | Ubuntu 18.04, 64-bit, 2 GB RAM, 3 GB free disk space | Minimum requirements |
 | 1.1  | https://artifactory.niis.org/xroad-release-deb | X-Road package repository |
-| 1.2  | https://artifactory.niis.org/api/gpg/key/public | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [SKS key servers](http://pool.sks-keyservers.net/pks/lookup?op=vindex&hash=on&fingerprint=on&search=0xFB0D532C10F6EC5B) |
+| 1.2  | https://artifactory.niis.org/api/gpg/key/public | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index) |
 | 1.3  |  | Account name in the user interface |
 | 1.4  | TCP 4001 service for authentication certificate registration<br>TCP 80 distribution of the global configuration | Ports for inbound connections (from the external network to the central server) |
 | 1.4.1| TCP 4002 management services | Port for inbound connections from the management security server |
@@ -465,6 +468,60 @@ Then check if any of the following errors occurred during the installation of Po
 The interrupted installation can be finished using
 
 `sudo apt-get -f install`
+
+### 5.5 Upgrade supported from version X.Y.Z or newer
+
+The following error message may come up during the central server upgrade.
+
+`Upgrade supported from version X.Y.Z or newer`
+
+Upgrading the packages from the current version to the target version is not supported directly. The fix is to upgrade the central server to the target version step by step.
+
+For example, the following central server packages are currently installed.
+
+```
+root@test-cs:~# dpkg -l | grep xroad
+ii  xroad-base                      7.0.0-1.ubuntu18.04 amd64        X-Road base components
+ii  xroad-center                    7.0.0-1.ubuntu18.04 all          X-Road central server
+ii  xroad-centralserver             7.0.0-1.ubuntu18.04 all          X-Road central server
+ii  xroad-centralserver-monitoring  7.0.0-1.ubuntu18.04 all          Monitoring client configuration for X-Road central
+ii  xroad-confclient                7.0.0-1.ubuntu18.04 amd64        X-Road configuration client components
+ii  xroad-database-local            7.0.0-1.ubuntu18.04 all          Meta-package for X-Road local database dependencies
+ii  xroad-jetty9                    7.0.0-1.ubuntu18.04 all          Jetty9 for X-Road purposes
+ii  xroad-nginx                     7.0.0-1.ubuntu18.04 amd64        X-Road nginx component
+ii  xroad-signer                    7.0.0-1.ubuntu18.04 amd64        X-Road signer component
+```
+
+The following packages are available in the repository.
+
+```
+root@test-cs:~# apt-cache madison xroad-centralserver
+xroad-centralserver | 7.3.0-1.ubuntu18.04 | https://artifactory.niis.org/xroad-release-deb bionic-current/main amd64 Packages
+xroad-centralserver | 7.1.0-1.ubuntu18.04 | https://artifactory.niis.org/xroad-release-deb bionic-current/main amd64 Packages
+```
+
+Now trying to upgrade the central server packages directly will produce the following error.
+
+```
+root@test-cs:~# apt-get upgrade xroad-centralserver
+...
+Preparing to unpack .../xroad-centralserver_7.3.0-1.ubuntu18.04_all.deb ...
+ERROR: Upgrade supported from version 7.1.0 or newer
+```
+
+The fix is to upgrade the central server in two separate steps. First, upgrade to 7.1.x with the following command.
+
+```
+apt install xroad-base=7.1.0-1.ubuntu18.04 xroad-center=7.1.0-1.ubuntu18.04 xroad-centralserver=7.1.0-1.ubuntu18.04 xroad-centralserver-monitoring=7.1.0-1.ubuntu18.04 xroad-confclient=7.1.0-1.ubuntu18.04 xroad-database-local=7.1.0-1.ubuntu18.04 xroad-jetty9=7.1.0-1.ubuntu18.04 xroad-nginx=7.1.0-1.ubuntu18.04 xroad-signer=7.1.0-1.ubuntu18.04
+```
+
+An alternative approach to the previous command is to temporarily configure the server to use a repository that contains only the specific version of X-Road software we want to upgrade to. For example, configure the repository as `deb https://artifactory.niis.org/xroad-release-deb bionic-7.1.0 main` and then use the `apt update` and `apt upgrade xroad-centralserver` commands.
+
+Finally, we can upgrade to our target version 7.3.x as follows.
+
+```
+apt upgrade xroad-centralserver
+```
 
 ## Annex A Central Server Default Database Properties
 

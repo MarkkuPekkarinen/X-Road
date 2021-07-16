@@ -27,18 +27,18 @@
   <xrd-simple-dialog
     :dialog="dialog"
     title="services.addWsdl"
+    :disable-save="!isValid"
+    width="620"
     @save="save"
     @cancel="cancel"
-    :disableSave="!isValid"
-    width="620"
   >
     <div slot="content">
       <div class="pt-4 dlg-input-width">
         <ValidationProvider
-          rules="required|wsdlUrl"
           ref="serviceUrl"
-          name="serviceUrl"
           v-slot="{ errors }"
+          rules="required|wsdlUrl"
+          name="serviceUrl"
           class="validation-provider"
         >
           <v-text-field
@@ -93,9 +93,9 @@ export default Vue.extend({
     },
     clear(): void {
       this.url = '';
-      (this.$refs.serviceUrl as InstanceType<
-        typeof ValidationProvider
-      >).reset();
+      (
+        this.$refs.serviceUrl as InstanceType<typeof ValidationProvider>
+      ).reset();
     },
   },
 });
