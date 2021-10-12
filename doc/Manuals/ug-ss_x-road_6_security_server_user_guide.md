@@ -4,9 +4,9 @@
 
 # SECURITY SERVER USER GUIDE <!-- omit in toc -->
 
-**X-ROAD 6**
+**X-ROAD 7**
 
-Version: 2.57  
+Version: 2.64  
 Doc. ID: UG-SS
 
 ---
@@ -90,131 +90,144 @@ Doc. ID: UG-SS
  25.02.2020 | 2.55    | Added information to find X-Road ID from conf backup file in chapter [13.2 Restore from the Command Line](#132-restore-from-the-command-line) | Karl Talumäe
  31.05.2021 | 2.56    | Added information about backup archive contents and encryption | Andres Allkivi
  23.06.2021 | 2.57    | Fix incorrect link in Chapter [3.1](#31-configuring-the-signing-key-and-certificate-for-the-security-server-owner) | Petteri Kivimäki
+ 11.08.2021 | 2.58    | Minor updates to backup archive contents and encryption | Petteri Kivimäki
+ 13.08.2021 | 2.59    | Add documentation about message log archive grouping and encryption | Jarkko Hyöty
+ 25.08.2021 | 2.60    | Update X-Road references from version 6 to 7 | Caro Hautamäki
+ 31.08.2021 | 2.61    | Describe new messagelog and message archive functionality | Ilkka Seppälä
+ 13.09.2021 | 2.62    | Added a new chapter about custom command line arguments [21](#21-adding-command-line-arguments) | Caro Hautamäki
+ 22.09.2021 | 2.63    | Update backup encryption instructions | Jarkko Hyöty
+ 05.10.2021 | 2.64    | Moved the chapter about command line arguments to the system parameters document | Caro Hautamäki
 
 ## Table of Contents <!-- omit in toc -->
 
 <!-- toc -->
 <!-- vim-markdown-toc GFM -->
 
-- [License](#license)
-- [1 Introduction](#1-introduction)
-  - [1.1 The X-Road Security Server](#11-the-x-road-security-server)
-  - [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
-  - [1.3 References](#13-references)
-- [2 User Management](#2-user-management)
-  - [2.1 User Roles](#21-user-roles)
-  - [2.2 Managing the Users](#22-managing-the-users)
-  - [2.3 Managing API Keys](#23-managing-api-keys)
-    - [2.3.1 Creating a new API key](#231-creating-a-new-api-key)
-    - [2.3.2 Editing the roles of an API key](#232-editing-the-roles-of-an-api-key)
-    - [2.3.3 Revoking an API key](#233-revoking-an-api-key)
-- [3 Security Server Registration](#3-security-server-registration)
-  - [3.1 Configuring the Signing Key and Certificate for the Security Server Owner](#31-configuring-the-signing-key-and-certificate-for-the-security-server-owner)
-    - [3.1.1 Generating a Signing Key and Certificate Signing Request](#311-generating-a-signing-key-and-certificate-signing-request)
-    - [3.1.2 Importing a Certificate from the Local File System](#312-importing-a-certificate-from-the-local-file-system)
-    - [3.1.3 Importing a Certificate from a Security Token](#313-importing-a-certificate-from-a-security-token)
-  - [3.2 Configuring the Authentication Key and Certificate for the Security Server](#32-configuring-the-authentication-key-and-certificate-for-the-security-server)
-    - [3.2.1 Generating an Authentication Key](#321-generating-an-authentication-key)
-    - [3.2.2 Generating a Certificate Signing Request for an Authentication Key](#322-generating-a-certificate-signing-request-for-an-authentication-key)
-    - [3.2.3 Importing an Authentication Certificate from the Local File System](#323-importing-an-authentication-certificate-from-the-local-file-system)
-  - [3.3 Registering the Security Server in the X-Road Governing Authority](#33-registering-the-security-server-in-the-x-road-governing-authority)
-    - [3.3.1 Registering an Authentication Certificate](#331-registering-an-authentication-certificate)
-  - [3.4 Changing the Security Server Owner](#34-changing-the-security-server-owner)
-- [4 Security Server Clients](#4-security-server-clients)
-  - [4.1 Security Server Client States](#41-security-server-client-states)
-  - [4.2 Adding a Security Server Client](#42-adding-a-security-server-client)
-  - [4.3 Configuring a Signing Key and Certificate for a Security Server Client](#43-configuring-a-signing-key-and-certificate-for-a-security-server-client)
-  - [4.4 Registering a Security Server Client in the X-Road Governing Authority](#44-registering-a-security-server-client-in-the-x-road-governing-authority)
-    - [4.4.1 Registering a Security Server Client](#441-registering-a-security-server-client)
-  - [4.5 Deleting a Client from the Security Server](#45-deleting-a-client-from-the-security-server)
-    - [4.5.1 Unregistering a Client](#451-unregistering-a-client)
-    - [4.5.2 Deleting a Client](#452-deleting-a-client)
-- [5 Security Tokens, Keys, and Certificates](#5-security-tokens-keys-and-certificates)
-  - [5.1 Availability States of Security Tokens](#51-availability-states-of-security-tokens)
-  - [5.2 Registration States of Certificates](#52-registration-states-of-certificates)
-    - [5.2.1 Registration States of the Signing Certificate](#521-registration-states-of-the-signing-certificate)
-    - [5.2.2 Registration States of the Authentication Certificate](#522-registration-states-of-the-authentication-certificate)
-  - [5.3 Validity States of Certificates](#53-validity-states-of-certificates)
-  - [5.4 Activating and Disabling the Certificates](#54-activating-and-disabling-the-certificates)
-  - [5.5 Configuring and Registering an Authentication key and Certificate](#55-configuring-and-registering-an-authentication-key-and-certificate)
-  - [5.6 Deleting a Certificate](#56-deleting-a-certificate)
-    - [5.6.1 Unregistering an Authentication Certificate](#561-unregistering-an-authentication-certificate)
-    - [5.6.2 Deleting a Certificate or a certificate Signing Request notice](#562-deleting-a-certificate-or-a-certificate-signing-request-notice)
-  - [5.7 Deleting a Key](#57-deleting-a-key)
-- [6 X-Road Services](#6-x-road-services)
-  - [6.1 Adding a service description](#61-adding-a-service-description)
-    - [6.1.1 SOAP](#611-soap)
-    - [6.1.2 REST](#612-rest)
-  - [6.2 Refreshing a service description](#62-refreshing-a-service-description)
-  - [6.3 Enabling and Disabling a service description](#63-enabling-and-disabling-a-service-description)
-  - [6.4 Changing the Address of a service description](#64-changing-the-address-of-a-service-description)
-  - [6.5 Deleting a service description](#65-deleting-a-service-description)
-  - [6.6 Changing the Parameters of a Service](#66-changing-the-parameters-of-a-service)
-  - [6.7 Managing REST Endpoints](#67-managing-rest-endpoints)
-- [7 Access Rights](#7-access-rights)
-  - [7.1 Changing the Access Rights of a Service](#71-changing-the-access-rights-of-a-service)
-  - [7.2 Adding a Service Client](#72-adding-a-service-client)
-  - [7.3 Changing the Access Rights of a Service Client](#73-changing-the-access-rights-of-a-service-client)
-- [8 Local Access Right Groups](#8-local-access-right-groups)
-  - [8.1 Adding a Local Group](#81-adding-a-local-group)
-  - [8.2 Displaying and Changing the Members of a Local Group](#82-displaying-and-changing-the-members-of-a-local-group)
-  - [8.3 Changing the description of a Local Group](#83-changing-the-description-of-a-local-group)
-  - [8.4 Deleting a Local Group](#84-deleting-a-local-group)
-- [9 Communication with the Client Information Systems](#9-communication-with-the-client-information-systems)
-- [10 System Parameters](#10-system-parameters)
-  - [10.1 Managing the Configuration Anchor](#101-managing-the-configuration-anchor)
-  - [10.2 Managing the Timestamping Services](#102-managing-the-timestamping-services)
-  - [10.3 Changing the Internal TLS Key and Certificate](#103-changing-the-internal-tls-key-and-certificate)
-  - [10.4 Approved Certificate Authorities](#104-approved-certificate-authorities)
-- [11 Message Log](#11-message-log)
-  - [11.1 Changing the Configuration of the Message Log](#111-changing-the-configuration-of-the-message-log)
-    - [11.1.1 Common parameters](#1111-common-parameters)
-    - [11.1.2 Timestamping parameters](#1112-timestamping-parameters)
-    - [11.1.3 Archiving parameters](#1113-archiving-parameters)
-  - [11.2 Transferring the Archive Files from the Security Server](#112-transferring-the-archive-files-from-the-security-server)
-  - [11.3 Using a Remote Database](#113-using-a-remote-database)
-- [12 Audit Log](#12-audit-log)
-  - [12.1 Changing the Configuration of the Audit Log](#121-changing-the-configuration-of-the-audit-log)
-  - [12.2 Archiving the Audit Log](#122-archiving-the-audit-log)
-- [13 Back up and Restore](#13-back-up-and-restore)
-  - [13.1 Back Up and Restore in the User Interface](#131-back-up-and-restore-in-the-user-interface)
-  - [13.2 Restore from the Command Line](#132-restore-from-the-command-line)
-  - [13.3 Automatic Backups](#133-automatic-backups)
-  - [13.4 Backup Encryption Configuration](#134-backup-encryption-configuration)
-  - [13.5 Verifying Backup Archive Consistency](#135-verifying-backup-archive-consistency)
-- [14 Diagnostics](#14-diagnostics)
-  - [14.1 Examine security server services status information](#141-examine-security-server-services-status-information)
-- [15 Operational Monitoring](#15-operational-monitoring)
-  - [15.1 Operational Monitoring Buffer](#151-operational-monitoring-buffer)
-    - [15.1.1 Stopping the Collecting of Operational Data](#1511-stopping-the-collecting-of-operational-data)
-  - [15.2 Operational Monitoring Daemon](#152-operational-monitoring-daemon)
-    - [15.2.1 Configuring the Health Statistics Period](#1521-configuring-the-health-statistics-period)
-    - [15.2.2 Configuring the Parameters Related to Database Cleanup](#1522-configuring-the-parameters-related-to-database-cleanup)
-    - [15.2.3 Configuring the Parameters related to the HTTP Endpoint of the Operational Monitoring Daemon](#1523-configuring-the-parameters-related-to-the-http-endpoint-of-the-operational-monitoring-daemon)
-    - [15.2.4 Installing an External Operational Monitoring Daemon](#1524-installing-an-external-operational-monitoring-daemon)
-    - [15.2.5 Configuring an External Operational Monitoring Daemon and the Corresponding Security Server](#1525-configuring-an-external-operational-monitoring-daemon-and-the-corresponding-security-server)
-    - [15.2.6 Monitoring Health Data over JMXMP](#1526-monitoring-health-data-over-jmxmp)
-- [16 Environmental Monitoring](#16-environmental-monitoring)
-  - [16.1 Usage via SOAP API](#161-usage-via-soap-api)
-  - [16.2 Usage via JMX API](#162-usage-via-jmx-api)
-  - [16.3 Limiting environmental monitoring remote data set](#163-limiting-environmental-monitoring-remote-data-set)
-- [17 Logs and System Services](#17-logs-and-system-services)
-  - [17.1 System Services](#171-system-services)
-  - [17.2 Logging configuration](#172-logging-configuration)
-  - [17.3 Fault Detail UUID](#173-fault-detail-uuid)
-- [18 Federation](#18-federation)
-- [19 Management REST API](#19-management-rest-api)
-  - [19.1 API key management operations](#191-api-key-management-operations)
-    - [19.1.1 Creating new API keys](#1911-creating-new-api-keys)
-    - [19.1.2 Listing API keys](#1912-listing-api-keys)
-    - [19.1.3 Updating API keys](#1913-updating-api-keys)
-    - [19.1.4 Revoking API keys](#1914-revoking-api-keys)
-    - [19.1.5 API key caching](#1915-api-key-caching)
-  - [19.2 Executing REST calls](#192-executing-rest-calls)
-  - [19.3 Correlation ID HTTP header](#193-correlation-id-http-header)
-  - [19.4 Validation errors](#194-validation-errors)
-  - [19.5 Warning responses](#195-warning-responses)
-- [20 Migrating to Remote Database Host](#20-migrating-to-remote-database-host)
+* [License](#license)
+* [1 Introduction](#1-introduction)
+  * [1.1 The X-Road Security Server](#11-the-x-road-security-server)
+  * [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
+  * [1.3 References](#13-references)
+* [2 User Management](#2-user-management)
+  * [2.1 User Roles](#21-user-roles)
+  * [2.2 Managing the Users](#22-managing-the-users)
+  * [2.3 Managing API Keys](#23-managing-api-keys)
+    * [2.3.1 Creating a new API key](#231-creating-a-new-api-key)
+    * [2.3.2 Editing the roles of an API key](#232-editing-the-roles-of-an-api-key)
+    * [2.3.3 Revoking an API key](#233-revoking-an-api-key)
+* [3 Security Server Registration](#3-security-server-registration)
+  * [3.1 Configuring the Signing Key and Certificate for the Security Server Owner](#31-configuring-the-signing-key-and-certificate-for-the-security-server-owner)
+    * [3.1.1 Generating a Signing Key and Certificate Signing Request](#311-generating-a-signing-key-and-certificate-signing-request)
+    * [3.1.2 Importing a Certificate from the Local File System](#312-importing-a-certificate-from-the-local-file-system)
+    * [3.1.3 Importing a Certificate from a Security Token](#313-importing-a-certificate-from-a-security-token)
+  * [3.2 Configuring the Authentication Key and Certificate for the Security Server](#32-configuring-the-authentication-key-and-certificate-for-the-security-server)
+    * [3.2.1 Generating an Authentication Key](#321-generating-an-authentication-key)
+    * [3.2.2 Generating a Certificate Signing Request for an Authentication Key](#322-generating-a-certificate-signing-request-for-an-authentication-key)
+    * [3.2.3 Importing an Authentication Certificate from the Local File System](#323-importing-an-authentication-certificate-from-the-local-file-system)
+  * [3.3 Registering the Security Server in the X-Road Governing Authority](#33-registering-the-security-server-in-the-x-road-governing-authority)
+    * [3.3.1 Registering an Authentication Certificate](#331-registering-an-authentication-certificate)
+  * [3.4 Changing the Security Server Owner](#34-changing-the-security-server-owner)
+* [4 Security Server Clients](#4-security-server-clients)
+  * [4.1 Security Server Client States](#41-security-server-client-states)
+  * [4.2 Adding a Security Server Client](#42-adding-a-security-server-client)
+  * [4.3 Adding a Security Server Member Subsystem](#43-adding-a-security-server-member-subsystem)
+  * [4.4 Configuring a Signing Key and Certificate for a Security Server Client](#44-configuring-a-signing-key-and-certificate-for-a-security-server-client)
+  * [4.5 Registering a Security Server Client in the X-Road Governing Authority](#45-registering-a-security-server-client-in-the-x-road-governing-authority)
+    * [4.5.1 Registering a Security Server Client](#451-registering-a-security-server-client)
+  * [4.6 Deleting a Client from the Security Server](#46-deleting-a-client-from-the-security-server)
+    * [4.6.1 Unregistering a Client](#461-unregistering-a-client)
+    * [4.6.2 Deleting a Client](#462-deleting-a-client)
+* [5 Security Tokens, Keys, and Certificates](#5-security-tokens-keys-and-certificates)
+  * [5.1 Availability States of Security Tokens](#51-availability-states-of-security-tokens)
+  * [5.2 Registration States of Certificates](#52-registration-states-of-certificates)
+    * [5.2.1 Registration States of the Signing Certificate](#521-registration-states-of-the-signing-certificate)
+    * [5.2.2 Registration States of the Authentication Certificate](#522-registration-states-of-the-authentication-certificate)
+  * [5.3 Validity States of Certificates](#53-validity-states-of-certificates)
+  * [5.4 Activating and Disabling the Certificates](#54-activating-and-disabling-the-certificates)
+  * [5.5 Configuring and Registering an Authentication key and Certificate](#55-configuring-and-registering-an-authentication-key-and-certificate)
+  * [5.6 Deleting a Certificate](#56-deleting-a-certificate)
+    * [5.6.1 Unregistering an Authentication Certificate](#561-unregistering-an-authentication-certificate)
+    * [5.6.2 Deleting a Certificate or a certificate Signing Request notice](#562-deleting-a-certificate-or-a-certificate-signing-request-notice)
+  * [5.7 Deleting a Key](#57-deleting-a-key)
+* [6 X-Road Services](#6-x-road-services)
+  * [6.1 Adding a service description](#61-adding-a-service-description)
+    * [6.1.1 SOAP](#611-soap)
+    * [6.1.2 REST](#612-rest)
+  * [6.2 Refreshing a service description](#62-refreshing-a-service-description)
+  * [6.3 Enabling and Disabling a service description](#63-enabling-and-disabling-a-service-description)
+  * [6.4 Changing the Address of a service description](#64-changing-the-address-of-a-service-description)
+  * [6.5 Deleting a service description](#65-deleting-a-service-description)
+  * [6.6 Changing the Parameters of a Service](#66-changing-the-parameters-of-a-service)
+  * [6.7 Managing REST Endpoints](#67-managing-rest-endpoints)
+* [7 Access Rights](#7-access-rights)
+  * [7.1 Changing the Access Rights of a Service](#71-changing-the-access-rights-of-a-service)
+  * [7.2 Adding a Service Client](#72-adding-a-service-client)
+  * [7.3 Changing the Access Rights of a Service Client](#73-changing-the-access-rights-of-a-service-client)
+* [8 Local Access Right Groups](#8-local-access-right-groups)
+  * [8.1 Adding a Local Group](#81-adding-a-local-group)
+  * [8.2 Displaying and Changing the Members of a Local Group](#82-displaying-and-changing-the-members-of-a-local-group)
+  * [8.3 Changing the description of a Local Group](#83-changing-the-description-of-a-local-group)
+  * [8.4 Deleting a Local Group](#84-deleting-a-local-group)
+* [9 Communication with the Client Information Systems](#9-communication-with-the-client-information-systems)
+* [10 System Parameters](#10-system-parameters)
+  * [10.1 Managing the Configuration Anchor](#101-managing-the-configuration-anchor)
+  * [10.2 Managing the Timestamping Services](#102-managing-the-timestamping-services)
+  * [10.3 Changing the Internal TLS Key and Certificate](#103-changing-the-internal-tls-key-and-certificate)
+  * [10.4 Approved Certificate Authorities](#104-approved-certificate-authorities)
+* [11 Message Log](#11-message-log)
+  * [11.1 Changing the Configuration of the Message Log](#111-changing-the-configuration-of-the-message-log)
+    * [11.1.1 Common Parameters](#1111-common-parameters)
+    * [11.1.2 Logging Parameters](#1112-logging-parameters)
+    * [11.1.3 Messagelog Encryption](#1113-messagelog-encryption)
+    * [11.1.4 Timestamping Parameters](#1114-timestamping-parameters)
+    * [11.1.5 Archiving Parameters](#1115-archiving-parameters)
+    * [11.1.6 Archive Files](#1116-archive-files)
+    * [11.1.7 Archive Encryption and Grouping](#1117-archive-encryption-and-grouping)
+  * [11.2 Transferring the Archive Files from the Security Server](#112-transferring-the-archive-files-from-the-security-server)
+  * [11.3 Using a Remote Database](#113-using-a-remote-database)
+* [12 Audit Log](#12-audit-log)
+  * [12.1 Changing the Configuration of the Audit Log](#121-changing-the-configuration-of-the-audit-log)
+  * [12.2 Archiving the Audit Log](#122-archiving-the-audit-log)
+* [13 Back up and restore](#13-back-up-and-restore)
+  * [13.1 Back up and Restore in the User Interface](#131-back-up-and-restore-in-the-user-interface)
+  * [13.2 Restore from the Command Line](#132-restore-from-the-command-line)
+  * [13.3 Automatic Backups](#133-automatic-backups)
+  * [13.4 Backup Encryption Configuration](#134-backup-encryption-configuration)
+  * [13.5 Verifying Backup Archive Consistency](#135-verifying-backup-archive-consistency)
+* [14 Diagnostics](#14-diagnostics)
+  * [14.1 Examine security server services status information](#141-examine-security-server-services-status-information)
+* [15 Operational Monitoring](#15-operational-monitoring)
+  * [15.1 Operational Monitoring Buffer](#151-operational-monitoring-buffer)
+    * [15.1.1 Stopping the Collecting of Operational Data](#1511-stopping-the-collecting-of-operational-data)
+  * [15.2 Operational Monitoring Daemon](#152-operational-monitoring-daemon)
+    * [15.2.1 Configuring the Health Statistics Period](#1521-configuring-the-health-statistics-period)
+    * [15.2.2 Configuring the Parameters Related to Database Cleanup](#1522-configuring-the-parameters-related-to-database-cleanup)
+    * [15.2.3 Configuring the Parameters related to the HTTP Endpoint of the Operational Monitoring Daemon](#1523-configuring-the-parameters-related-to-the-http-endpoint-of-the-operational-monitoring-daemon)
+    * [15.2.4 Installing an External Operational Monitoring Daemon](#1524-installing-an-external-operational-monitoring-daemon)
+    * [15.2.5 Configuring an External Operational Monitoring Daemon and the Corresponding Security Server](#1525-configuring-an-external-operational-monitoring-daemon-and-the-corresponding-security-server)
+    * [15.2.6 Monitoring Health Data over JMXMP](#1526-monitoring-health-data-over-jmxmp)
+* [16 Environmental Monitoring](#16-environmental-monitoring)
+  * [16.1 Usage via SOAP API](#161-usage-via-soap-api)
+  * [16.2 Usage via JMX API](#162-usage-via-jmx-api)
+  * [16.3 Limiting environmental monitoring remote data set](#163-limiting-environmental-monitoring-remote-data-set)
+* [17 Logs and System Services](#17-logs-and-system-services)
+  * [17.1 System Services](#171-system-services)
+  * [17.2 Logging configuration](#172-logging-configuration)
+  * [17.3 Fault Detail UUID](#173-fault-detail-uuid)
+* [18 Federation](#18-federation)
+* [19 Management REST API](#19-management-rest-api)
+  * [19.1 API key management operations](#191-api-key-management-operations)
+    * [19.1.1 Creating new API keys](#1911-creating-new-api-keys)
+    * [19.1.2 Listing API keys](#1912-listing-api-keys)
+    * [19.1.3 Updating API keys](#1913-updating-api-keys)
+    * [19.1.4 Revoking API keys](#1914-revoking-api-keys)
+    * [19.1.5 API key caching](#1915-api-key-caching)
+  * [19.2 Executing REST calls](#192-executing-rest-calls)
+  * [19.3 Correlation ID HTTP header](#193-correlation-id-http-header)
+  * [19.4 Validation errors](#194-validation-errors)
+  * [19.5 Warning responses](#195-warning-responses)
+* [20 Migrating to Remote Database Host](#20-migrating-to-remote-database-host)
+* [21 Adding command line arguments](#21-adding-command-line-arguments)
 
 <!-- vim-markdown-toc -->
 <!-- tocstop -->
@@ -225,7 +238,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ## 1 Introduction
 
-This document describes the management and maintenance of an X-Road version 6 security server.
+This document describes the management and maintenance of an X-Road version 7 security server.
 
 
 ### 1.1 The X-Road Security Server
@@ -259,7 +272,7 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 1.  <a id="Ref_ASiC" class="anchor"></a>\[ASiC\] ETSI TS 102 918, Electronic Signatures and Infrastructures (ESI); Associated Signature Containers (ASiC)
 
 2.  <a id="Ref_CRON" class="anchor"></a>\[CRON\] Quartz Scheduler CRON expression,  
-    <http://www.quartz-scheduler.org/generated/2.2.1/html/qs-all/#page/Quartz_Scheduler_Documentation_Set%2Fco-trg_crontriggers.html>
+    <http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/tutorial-lesson-06.html>
 
 3.  <a id="Ref_INI" class="anchor"></a>\[INI\] INI file,  
     <http://en.wikipedia.org/wiki/INI_file>
@@ -311,6 +324,9 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 23. <a id="Ref_REST_UI-API" class="anchor"></a>\[REST_UI-API\] X-Road Security Server Admin API OpenAPI Specification, <https://github.com/nordic-institute/X-Road/blob/develop/src/proxy-ui-api/src/main/resources/openapi-definition.yaml>.
 
 24. <a id="Ref_GnuPG" class="anchor"></a>\[GnuPG\] The GNU Privacy Guard, <https://gnupg.org>.
+
+25. <a id="Ref_UG-SIGDOC" class="anchor"></a>\[UG-SIGDOC\] X-Road: Signed Document Download and Verification Manual. Document ID: [UG-SIGDOC](../Manuals/ug-sigdoc_x-road_signed_document_download_and_verification_manual.md).
+
 
 ## 2 User Management
 
@@ -850,7 +866,7 @@ To delete a client, follow these steps.
 
 ### 5.1 Availability States of Security Tokens
 
-**Notice that the colors are a new feature introduced in the upcoming version 6.25.0**
+**Notice that the colors were introduced in version 6.25.0**
 
 To display the availability of tokens, the following colors and labels are used in the "Keys and Certificates" view.
 
@@ -1573,16 +1589,26 @@ Lists approved certificate authorities. The listing contains the following infor
 
 ## 11 Message Log
 
-The purpose of the message log is to provide means to prove the reception of a regular request or response message to a third party. Messages exchanged between security servers are signed and encrypted. For every regular request and response, the security server produces a complete signed and timestamped document (Associated Signature Container \[[ASiC](#Ref_ASiC)\]).
+The purpose of the message log is to provide means to prove the reception of a regular request or response message to a third party. The security server supports three options for configuring message log:
 
-Message log data is stored to the database of the security server during message exchange. According to the configuration (see [11.1](#111-changing-the-configuration-of-the-message-log)), the timestamping of the signatures of the exchanged messages is either synchronous to the message exchange process or is done asynchronously using the time period set by the X-Road governing agency.
+- Full logging
+  - The whole message including both message body and metadata is logged. The log records can be verified afterwards and they can be used as evidence.
+- Metadata logging
+  - Only metadata is logged while message body is not logged. Verifying the log records afterwards is not possible and they cannot be used as evidence.
+- No message logging
+  - Message logging is fully disabled, neither message body nor metadata is logged. No log records are generated.
+  
+Full logging and metadata logging can be configured on security server and subsystem level. When the security server level configuration is used, the same configuration is applied to all the subsystems. Instead, when the subsystem level configuration is used, the configuration is applied to specific subsystems only. In addition, combining the security server and subsystem level configurations is also possible, e.g., set metadata logging on the security server level and enable full logging for specific subsystems only. Instead, message logging is fully disabled on a security server level. Therefore, a subsystem that requires full or metadata logging should not be registered on the same security server with a subsystem that requires fully disabling message logging.
+
+Regardless of how logging is configured, messages exchanged between security servers are always signed and encrypted. Also, when full logging or metadata logging is enabled, the security server produces a signed and timestamped document (Associated Signature Container [ASiC]) for regular requests and responses.
+
+Message log data is stored to the database of the security server during message exchange. When storing messages to the database, the message body can be optionally encrypted, but by default the encryption is switched off. According to the configuration ([11.1.4 Timestamping Parameters](#1114-timestamping-parameters)), the timestamping of the signatures of the exchanged messages is either synchronous to the message exchange process or is done asynchronously using the time period set by the X-Road governing agency. In case message logging is fully disabled, timestamping doesn't occur at all.
 
 In case of synchronous timestamping, the timestamping is an integral part of the message exchange process (one timestamp is taken for the request and another for the response). If the timestamping fails, the message exchange fails as well and the security server responds with an error message.
 
-In case of asynchronous timestamping, all the messages (maximum limit is determined in the configuration, see [11.1](#111-changing-the-configuration-of-the-message-log)) stored in the message log since the last periodical timestamping event are timestamped with a single (batch) timestamp. By default, the security server uses asynchronous timestamping for better performance and availability.
+In case of asynchronous timestamping, all the messages (maximum limit is determined in the configuration, see [11.1.4 Timestamping Parameters](#1114-timestamping-parameters)) stored in the message log since the last periodical timestamping event are timestamped with a single (batch) timestamp. By default, the security server uses asynchronous timestamping for better performance and availability.
 
-The security server periodically composes signed (and timestamped) documents from the message log data and archives them in the local file system. Archive files are ZIP containers containing one or more signed documents and a special linking information file for additional integrity verification purpose.
-
+The security server periodically composes signed (and timestamped) documents from the (optionally encrypted) message log data and archives them in the local file system. Archive files are ZIP containers containing one or more signed documents and a special linking information file for additional integrity verification purpose. Message log archive encryption and grouping can be enabled and configured separately. By default, both are disabled. Message grouping can be configured by member or subsystem. By default, all archive files go to the same default group. Grouping and encryption are enabled/disabled on a security server level - they are either enabled or disabled for all the members and subsystems. It's not possible to enable/disable neither of them for selected members or subsystems only.
 
 ### 11.1 Changing the Configuration of the Message Log
 
@@ -1599,16 +1625,67 @@ Create the `[message-log]` section (if not present) in the file. Below the start
 For example, to configure the parameters `archive-path` and `archive-max-filesize`, the following lines must be added to the configuration file:
 
     [message-log]
-    archive-path=/my/arhcive/path/
+    archive-path=/my/archive/path/
     archive-max-filesize=67108864
 
 
-#### 11.1.1 Common parameters
+#### 11.1.1 Common Parameters
 
 1.  `hash-algo-id` – the hash algorithm that is used for hashing in the message log. Possible choices are `SHA-256`, `SHA-384`, `SHA-512`. Defaults to `SHA-512`.
 
+#### 11.1.2 Logging Parameters
 
-#### 11.1.2 Timestamping parameters
+1.  `message-body-logging` - if set to true, the messages are logged in their original form. If false, the message body is emptied of its contents.
+
+2.  `enabled-body-logging-local-producer-subsystems` - when message-body-logging is set to false, this field contains the overrides for the local producer subsystems.
+
+3.  `enabled-body-logging-remote-producer-subsystems` - when message-body-logging is set to false, this field contains the overrides for the remote producer subsystems.
+
+4.  `disabled-body-logging-local-producer-subsystems` - when message-body-logging is set to true, this field contains the overrides for the local producer subsystems.
+  
+5.  `disabled-body-logging-remote-producer-subsystems` - when message-body-logging is set to true, this field contains the overrides for the remote producer subsystems.
+
+6.  `max-loggable-body-size` - the maximum REST message body size that will be written to the messagelog.
+
+7.  `truncated-body-allowed` - if the REST message body size exceeds the max-loggable-body-size, truncate the body (true) or reject the message (false)
+
+8.  `messagelog-encryption-enabled` - if set to true, the message bodies are written to the database in an encrypted format
+
+9.  `messagelog-keystore` - path to the messagelog keystore
+
+10.  `messagelog-keystore-password` - messagelog keystore password
+
+11.  `messagelog-key-id` - messagelog keystore key id
+
+
+#### 11.1.3 Messagelog Encryption
+
+The message bodies can be encrypted (`messagelog-encryption-enabled = true`) when stored to the database. The encryption is symmetric, the used cipher is AES-CTR, and the encryption is performed using Java code.
+
+When encryption is switched on, the implementation expects to find the keystore in the location pointed by `messagelog-keystore`. The keystore should contain an encryption key with the identifier specified in `messagelog-key-id`. The keystore password is specified in `messagelog-keystore-password`.
+
+For example, add the following to `/etc/xroad/conf.d/local.ini`:
+
+```
+[message-log]
+messagelog-encryption-enabled=true
+messagelog-keystore=/etc/xroad/messagelog/messagelog.p12
+messagelog-keystore-password=somepassword
+messagelog-key-id=key1
+```
+
+Create the password store and import a key:
+
+```
+keytool -keystore /etc/xroad/messagelog/messagelog.p12 -storetype pkcs12 -importpassword -alias key1
+```
+
+Finally, restart `xroad-proxy` service.
+
+To view the encrypted messages at some later stage, use the ASIC web service documented in \[[UG-SIGDOC](#Ref_UG-SIGDOC)\]. The web service performs automatic decryption, where needed.
+
+
+#### 11.1.4 Timestamping Parameters
 
 1.  `timestamp-immediately` – if set to true, the timestamps are created synchronously with the message exchange, i.e., one timestamp is created for a request and another for a response. This is a security policy to guarantee the timestamp at the time of logging the message, but if the timestamping fails, the message exchange fails as well, and if load to the security server increases, then the load to the timestamping service increases as well. The value of this parameter defaults to false for better performance and availability. In case the value of the parameter is false then the timestamping is performed as a periodic background process (the time period is determined in the X-Road governing agency and propagated to the security servers by global configuration) and signatures stored during the time period (see parameter `timestamp-records-limit`) are timestamped in one batch.
 
@@ -1617,28 +1694,98 @@ For example, to configure the parameters `archive-path` and `archive-max-filesiz
 3.  `acceptable-timestamp-failure-period` – time period in seconds, for how long the asynchronous timestamping is allowed to fail before message exchange between security servers is stopped. Set to `0` to disable this check. Defaults to `14400`.
 
 
-#### 11.1.3 Archiving parameters
+#### 11.1.5 Archiving Parameters
 
-1.  `keep-records-for` – time in days for which to keep timestamped and archived records in the database. Defaults to `30`.
+1. `keep-records-for` – time in days for which to keep timestamped and archived records in the database. Defaults to `30`.
+2. `archive-max-filesize` – maximum size for archived files in bytes. Reaching the maximum value triggers the file rotation. Defaults to `33554432` (32 MB).
+3. `archive-interval` – time interval as Cron expression \[[CRON](#Ref_CRON)\] for archiving timestamped records. Defaults to `0 0 0/6 1/1 * ? *` (fire every 6 hours).
+4. `archive-path` – the directory where the timestamped log records are archived. Defaults to `/var/lib/xroad/`.
+5. `clean-interval` – time interval as Cron expression \[[CRON](#Ref_CRON)\] for cleaning archived records from the database. Defaults to `0 0 0/12 1/1 * ? *` (fire every 12 hours).
+6. `archive-transfer-command` – the command executed after the (periodic) archiving process. This enables one to configure an external script to transfer archive files automatically from the security server. Defaults to no operation.
+7. `archive-grouping` - archive file grouping; `none` (default), by `member` or, by `subsystem`.
+8.  `archive-encryption-enabled` - archive file encryption enabled: false (default) or true.
+9.  `archive-gpg-home-directory` - GPG home directory for archive file signing and encryption keyring (default `/etc/xroad/gpghome`).
+10. `archive-encryption-keys-config` - Configuration file for member gpg keys.
+11. `archive-default-encryption-key` - Default archive encryption key id.
 
-2.  `archive-max-filesize` – maximum size for archived files in bytes. Reaching the maximum value triggers the file rotation. Defaults to `33554432` (32 MB).
 
-3.  `archive-interval` – time interval as Cron expression \[[CRON](#Ref_CRON)\] for archiving timestamped records. Defaults to `0 0 0/6 1/1 * ? *` (fire every 6 hours).
+#### 11.1.6 Archive Files
 
-4.  `archive-path` – the directory where the timestamped log records are archived. Defaults to `/var/lib/xroad/`.
+Archive files (ZIP containers) are located in the directory specified by the configuration parameter `archive-path`. File names are in the format `mlog[-grouping]-X-Y-Z.zip[.gpg]`, where X is the timestamp (UTC time in the format `YYYYMMDDHHmmss`) of the first message log record, Y is the timestamp of the last message log record (records are processed in chronological order) and Z is the first 16 characters of the last linking info digest entry. If grouping is enabled, [-grouping] is a (possibly truncated and filename safe) member identifier. If encryption is enabled, the `[.gpg]` suffix is added. Creating archive files is deterministic -- given the same input (grouping, message records, previous archive linking info digest), the output (file name and contents) is the same after possible encryption is removed.
 
-5.  `clean-interval` – time interval as Cron expression \[[CRON](#Ref_CRON)\] for cleaning archived records from the database. Defaults to `0 0 0/12 1/1 * ? *` (fire every 12 hours).
+The most basic example of an archive file name when the encryption and grouping are switched off:
 
-6.  `archive-transfer-command` – the command executed after the (periodic) archiving process. This enables one to configure an external script to transfer archive files automatically from the security server. Defaults to no operation.
+    mlog-20210901100858-20210901100905-95b1f27097524105.zip
 
+When the archive encryption switched on:
+
+    mlog-20210901101923-20210901101926-95b1f27097524105.zip.gpg
+
+Switching on archive grouping by member produces the following:
+
+    mlog-INSTANCE_CLASS_CODE-20210901102251-20210901102254-95b1f27097524105.zip.gpg
+
+Finally, switching to archive grouping by subsystem gives:
+
+    mlog-INSTANCE_CLASS_CODE_CONSUMERSUBSYSTEM-20210901102521-20210901102524-95b1f27097524105.zip.gpg
+    mlog-INSTANCE_CLASS_CODE_PROVIDERSUBSYSTEM-20210901102521-20210901102524-b1f27097524105ac.zip.gpg
+
+
+#### 11.1.7 Archive Encryption and Grouping
+
+Archive files can be encrypted (when `archive-encryption-enabled = true`) using GnuPG ("gpg") which implements the OpenPGP (RFC 4880) specification. Please see e.g. [RFC 4880](https://www.ietf.org/rfc/rfc4880.txt) and [GnuPG](https://gnupg.org/) for more infomation. The encryption is enabled/disabled on a security server level - it's not possible to enable/disable it for specific subsystems only.
+
+By default, the produced archive files contain messages from all the security server's members, but it's possible to group the archives by member or by subsystem if needed. The grouping is controlled by the setting `archive-grouping`. The grouping is enabled/disabled on a security server level - it is either enabled or disabled for all the members and subsystems.
+
+When encryption is enabled, the archiving process expects to find a GnuPG keyring containing the server signing keypair in `archive-gpg-home-directory` (by default this is the same as the backup signing and encryption keypair). This keypair is used to sign the generated archive files, and as a fallback encryption key if no other keys are configured.
+
+The `archive-default-encryption-key` can use used to override the default encryption key id, which is used when `archive-grouping` is `none` or no member gpg key is defined. Changing this parameter requires restarting the xroad-addon-messagelog service.
+
+In case `archive-grouping` is `member` or `subsystem`, gpg keys defined in file `archive-encryption-keys-config` are used (if no key is defined for the member, the default encryption key is used). This file maps member identifiers to gpg key identifiers and has the following format:
+```
+# This is a comment (ignored)
+# One mapping per line (leading, trailing, and around `=` white space is ignored)
+<member identifier> = <key id>
+
+# Escaping (applies only to the member identifier):
+## Member: test/member=class/\=code
+   test/member\=class/\\=code = ABCD....
+## Member #42/CLASS/#123 has two keys:
+   \#42/CLASS/\#123 = ABCD....
+   \#42/CLASS/\#123 = EF12....
+```
+* There can be several mappings (keys) per member (one mapping per line)
+* Lines _starting with_ `#` are ignored
+* Escaping special characters in the _member identifier_ part:
+  * `=` is written as `\=` (a literal `\=` becomes `\\=`)
+  * `#` is written as `\#` (a literal `\#` becomes `\\#`)
+
+Warning. The archiving process fails if a required key is not present in the gpg keyring. Therefore, it is important to verify that the mappings are correct.
+
+For example, generate a keypair for encryption with defaults and no expiration and export the public key:
+```
+gpg [--homedir <member gpghome>] --quick-generate-key INSTANCE/memberClass/memberCode default default never
+gpg [--homedir <member gpghome>] --export INSTANCE/memberClass/memberCode >INSTANCE-memberClass-memberCode.pgp
+```
+
+Import the public key to the gpg keyring in `archive-gpg-home-directory` and take note of the key id.
+```
+gpg --homedir <archive-gpg-home-directory> --import INSTANCE-memberClass-memberCode.pgp
+```
+
+Add the mapping to `archive-encryption-keys-config` file (mappings can be edited without restarting X-Road services), e.g.:
+```
+INSTANCE/memberClass/memberCode = 96F20FF6578A5EF90DFBA18D8C003019508B5637
+```
+
+To decrypt the encrypted archives, use the following syntax:
+```
+gpg [--homedir <gpghome>] --decrypt <archive name> --output <output file name>
+```
 
 ### 11.2 Transferring the Archive Files from the Security Server
 
 In order to save hard disk space, it is recommended to transfer archive files periodically from the security server (manually or automatically) to an external location.
-
-Archive files (ZIP containers) are located in the directory specified by the configuration parameter archive-path. File names are in the format `mlog-X-Y-Z.zip`, where X is the timestamp (UTC time in the format `YYYYMMDDHHmmss`) of the first message log record, Y is the timestamp of the last message log record (records are processed in chronological order) and Z is 10 characters long alphanumeric random. An example of an archive file name is:
-
-    mlog-20150504152559-20150504152559-a7JS05XAJC.zip
 
 The message log package provides a helper script `/usr/share/xroad/scripts/archive-http-transporter.sh` for transferring archive files. This script uses the HTTP/HTTPS protocol (the POST method, the form name is file) to transfer archive files to an archiving server.
 
@@ -1660,7 +1807,7 @@ Override the configuration parameter archive-transfer-command (create or edit th
     [message-log]
     archive-transfer-command=/usr/share/xroad/scripts/archive-http-transporter.sh -r http://my-archiving-server/cgi-bin/upload
 
-The message log package contains the CGI script /usr/share/doc/xroad-addon-messagelog/archive-server/demo-upload.pl for a demo archiving server for the purpose of testing or development.
+The message log package contains the CGI script `/usr/share/doc/xroad-addon-messagelog/archive-server/demo-upload.pl` for a demo archiving server for the purpose of testing or development.
 
 
 ### 11.3 Using a Remote Database
@@ -1775,7 +1922,7 @@ The audit log is rotated monthly by *logrotate*. To configure the audit log rota
 
 In order to save hard disk space and avoid loss of the audit log records during security server crash, it is recommended to archive the audit log files periodically to an external storage or a log server.
 
-The X-Road software does not offer special tools for archiving the audit log. The *rsyslog* can be configured to redirect the audit log to an external location.
+The X-Road software does not offer special tools for archiving the audit log. The `rsyslog` can be configured to redirect the audit log to an external location.
 
 
 ## 13 Back up and restore
@@ -1790,7 +1937,11 @@ following configuration:
   - members' sign keys and certificates (that are stored in soft token)
   - security server's internal TLS key and certificate
   - security server's UI key and certificate
-- database credentials.
+- database credentials
+
+Notice that starting from X-Road v7.0, the backup archive file no longer contains the local override file `/etc/xroad/services/local.conf`, but instead `/etc/xroad/services/local.properties` file will be included.
+
+**N.B.** Message log database encryption keys, and message log archives encryption and signing keys are included in the backups only if they are stored under the `/etc/xroad` directory. However, they should not be stored in the `/etc/xroad/gpghome` subdirectory since it is excluded from the backups.
 
 Backups contain sensitive information that must be kept secret (for example, private keys and database credentials).
 In other words, leaking this information could easily lead to full compromise of security server. Therefore, it is
@@ -1858,9 +2009,14 @@ For example (all on one line):
     -s AA/GOV/TS1OWNER/TS1 \
     –f /var/lib/xroad/backup/conf_backup_20140703-110438.gpg
 
-In case original backup encryption and siging key is lost additional parameters can be specified to skip decryption and/or
+In case original backup encryption and signing key is lost additional parameters can be specified to skip decryption and/or
 signature verification. Use `-P` command line switch when backup archive is already decrypted externally and `-N` switch to
 skip checking archive signature.
+
+If a backup is restored on a new uninitialized (the initial configuration hasn't been completed) security server, the 
+security server's gpg key must be manually created before restoring the backup:
+
+    /usr/share/xroad/scripts/generate_gpg_keypair.sh /etc/xroad/gpghome <security server ID>
 
 If it is absolutely necessary to restore the system from a backup made on a different security server, the forced mode
 of the restore command can be used with the –F option together with unencrypted backup archive flags. For example (all on one line):
@@ -1882,33 +2038,25 @@ automatically removed from the server. If needed, the automatic backup policies 
 Backups are always signed, but backup encryption is initially turned off. To turn encryption on, please override the
 default configuration in the file `/etc/xroad/conf.d/local.ini`, in the `[proxy]` section (add or edit this section).
 
-    [proxy]
-    backup-encrypted=false
-    backup-public-key-path=/etc/xroad/backupkeys
+```
+[proxy]
 
-To turn backup encryption on, please change the `backup-encrypted` property value to true. By default, additional
-encryption keys are stored in the `/etc/xroad/backupkeys` directory. The default directory can be changed by modifying
-the `backup-public-key-path` property value.
+backup-encryption-enabled = true
+backup-encryption-keyids = <keyid1>, <keyid2>, ...
+```
 
-Backup encryption keys folder must contain only GPG public key files. In addition to security servers public key backup
-archives are encrypted with all the keys in this folder. It is recommended to use at least one additional public key,
-otherwise the backups will be unusable in case security servers private key is lost. It is up to security servers administrator
-to check that private keys used are sufficiently strong, there are no automatic checks.
+To turn backup encryption on, change the `backup-encryption-enabled` property to true. Additional
+encryption keys can be imported in the `/etc/xroad/gpghome` keyring and key identifiers listed using the `backup-encryption-keyids` parameter. It is recommended to set up at least one additional key, otherwise the backups will be unusable in case security servers private key is lost. It is up to security servers administrator to check that keys used are sufficiently strong, there are no automatic checks.
+
+Warning. All keys listed in `backup-encryption-keyids` must be present in the gpg keyring or backup fails.
 
 Additional keys for backup encryption should be generated and stored outside security server in a secure environment.
-After gpg keypair has been generated, public key can be exported to a file (backupadmin@organisation.eu is the name of the
+After gpg keypair has been generated, public key can be exported to a file (backupadmin@example.org is the name of the
 key being exported) using this command:
 
-    gpg --output backupadmin.publickey --armor --export backupadmin@organisation.eu
+    gpg --output backupadmin.publickey --armor --export backupadmin@example.org
 
-Resulting file `backupadmin.publickey` should be moved to security server and copied to backup encryption keys folder.
-Transfer of the public key does not have to be secure but administrator has to make sure that file is not changed during
-transfer, for example validating file hash. 
-
-Public keys have to be readable by xroad user. This can be done using these commands:
-
-    chown xroad:xroad backupadmin.publickey
-    chmod ug=r, o= backupadmin.publickey
+Resulting file `backupadmin.publickey` should be moved to security server and imported to backup gpg keyring. Administrator should make sure that the key has not been changed during transfer, for example by validating the key fingerprint.
 
 Private keys corresponding to additional backup encryption public keys must be handled safely and kept in secret. Any of
 them can be used to decrypt backups and thus mount attacks on the security servers.
@@ -1930,10 +2078,10 @@ To export security servers backup encryption public key use the following comman
 
     gpg --homedir /etc/xroad/gpghome --armor --output server-public-key.gpg --export <instanceIdentifier>/<memberClass>/<memberCode>/<serverCode>
 
-where <instanceIdentifier>/<memberClass>/<memberCode>/<serverCode> is the security server id,
-for example, AA/GOV/TS1OWNER/TS1
+where `<instanceIdentifier>/<memberClass>/<memberCode>/<serverCode>` is the security server id,
+for example, `AA/GOV/TS1OWNER/TS1`.
 
-Resulting file (server-public-key.gpg) should then be exported from security server and imported to GPG keystore used
+Resulting file (`server-public-key.gpg`) should then be exported from security server and imported to GPG keystore used
 for backup archive consistency verification.
 
 ## 14 Diagnostics
@@ -2178,7 +2326,7 @@ System services are managed through the *systemd* facility.
     service <service> stop
 
 Services use the [default unit start rate limits](https://www.freedesktop.org/software/systemd/man/systemd-system.conf.html#DefaultStartLimitIntervalSec=).
-An exception to this is `xroad-proxy-ui-api`, which uses a longer start rate limit ([5 starts / 40 seconds](../../src/packages/src/xroad/ubuntu/bionic/debian/xroad-proxy-ui-api.service))
+An exception to this is `xroad-proxy-ui-api`, which uses a longer start rate limit ([5 starts / 40 seconds](../../src/packages/src/xroad/ubuntu/generic/xroad-proxy-ui-api.service))
 to prevent infinite restart-loop in some specific error situations.
 
 ### 17.2 Logging configuration
@@ -2278,12 +2426,11 @@ application properties
 Size limit parameters support formats from Formats from [DataSize](https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/unit/DataSize.html),
 for example `5MB`.
 
-Command line arguments can be modified using configuration file `local.conf`.
-Example from `/etc/xroad/services/local.conf` with modifications:
+New command line arguments can be added, not replaced, using the configuration file `local.properties`.
+Example of `/etc/xroad/services/local.properties` with modifications:
 
 ```
-PROXY_UI_API_PARAMS=" $PROXY_UI_API_PARAMS -Dratelimit.requests.per.second=100"
-PROXY_UI_API_PARAMS=" $PROXY_UI_API_PARAMS -Drequest.sizelimit.binary.upload=1MB"
+XROAD_PROXY_UI_API_PARAMS=-Dratelimit.requests.per.second=100 -Drequest.sizelimit.binary.upload=1MB
 ```
 
 ### 19.1 API key management operations
@@ -2605,3 +2752,27 @@ Since version `6.22.0` Security Server supports using remote databases. In case 
     ```
     systemctl start "xroad*"
     ```
+
+## 21 Adding command line arguments
+
+If you need to add command line arguments for the Security Server, for example if you wish to increase Java's maximum heap size, you can do it with the properties file `/etc/xroad/services/local.properties`. The file is also included in the backup archive file when taking a backup of the Security Server's configuration.
+
+Example of `/etc/xroad/services/local.properties` with modifications that override the default Java memory parameters:
+
+```
+XROAD_PROXY_PARAMS=-Xms150m -Xmx1024m
+```
+
+All possible properties to adjust in this file are
+```
+XROAD_SIGNER_PARAMS
+XROAD_ADDON_PARAMS
+XROAD_CONFCLIENT_PARAM
+XROAD_CONFPROXY_PARAM
+XROAD_JETTY_PARAMS
+XROAD_MONITOR_PARAM
+XROAD_OPMON_PARAM
+XROAD_PROXY_PARAM
+XROAD_PROXY_UI_API_PARAM
+XROAD_SIGNER_CONSOLE_PARAM
+```
