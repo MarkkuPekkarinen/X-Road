@@ -29,6 +29,7 @@ import ee.ria.xroad.common.cert.CertChain;
 import ee.ria.xroad.common.conf.globalconf.AuthKey;
 import ee.ria.xroad.common.conf.globalconf.GlobalConf;
 import ee.ria.xroad.common.conf.serverconf.ServerConf;
+import ee.ria.xroad.proxy.addon.module.HardwareSecurityModuleUtils;
 import ee.ria.xroad.proxy.conf.KeyConf;
 
 import com.google.common.base.Supplier;
@@ -50,13 +51,12 @@ import static ee.ria.xroad.common.util.healthcheck.HealthCheckResult.failure;
 @Slf4j
 public final class HealthChecks {
 
-    //@lombok.UtilityClass did not seem to work
     private HealthChecks() {
+        //Utility class
     }
 
     /**
      * A {@link HealthCheckProvider} that checks the authentication key and its OCSP response status
-     *
      * @return the result of the check
      */
     public static HealthCheckProvider checkAuthKeyOcspStatus() {
@@ -98,15 +98,16 @@ public final class HealthChecks {
     /**
      * A {@link HealthCheckProvider} that checks it can access and retrieve data from the {@link ServerConf}
      * (the database behind it).
-     *
      * @return the result of the check
      */
     public static HealthCheckProvider checkServerConfDatabaseStatus() {
         return () -> {
             try {
-                //this fails if the database connection is not ok
+                if (!ServerConf.isAvailable()) {
+                    return failure("ServerConf is not available");
+                }
+                //this fails if the database has not been initialized
                 ServerConf.getIdentifier();
-
             } catch (RuntimeException e) {
                 log.error("Got exception while checking server configuration db status", e);
                 return failure("Server Conf database did not respond as expected");
@@ -117,7 +118,6 @@ public final class HealthChecks {
 
     /**
      * A {@link HealthCheckProvider} that verifies {@link GlobalConf} validity
-     *
      * @return the result of global conf check
      */
     public static HealthCheckProvider checkGlobalConfStatus() {
@@ -133,10 +133,25 @@ public final class HealthChecks {
     }
 
     /**
+     * A {@link HealthCheckProvider} that check if Hardware Security Modules are operational
+     * @return the result of HSM check
+     */
+    public static HealthCheckProvider checkHSMOperationStatus() {
+        return () -> {
+            try {
+                HardwareSecurityModuleUtils.verifyAllHSMOperational();
+                return OK;
+            } catch (Exception e) {
+                log.error("Exception when verifying HSM status", e);
+                return failure("At least one HSM are non operational");
+            }
+        };
+    }
+
+    /**
      * Caches the result from the {@link HealthCheckProvider} for the specified time. You might want to check
      * often if a previously ok system is still ok but check more rarely if a previously
      * broken system is still broken
-     *
      * @param resultValidFor the time a successful result is cached
      * @param errorResultValidFor the time an error result is cached
      * @param timeUnit the {@link TimeUnit} for the given times
@@ -182,7 +197,6 @@ public final class HealthChecks {
 
     /**
      * As the name implies, caches the given result once and calls the given provider on subsequent calls.
-     *
      * @param provider the provider for {@link HealthCheckResult}s beyond the first result
      * @param cachedOnceResult the first result to return
      * @return a provider wrapping the given provider

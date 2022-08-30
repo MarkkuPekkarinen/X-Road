@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -qq update \
@@ -13,7 +13,7 @@ RUN apt-get -qq update \
   && apt-get -qq install postgresql postgresql-contrib \
   && apt-get -qq clean
 
-ARG DIST=bionic-current
+ARG DIST=jammy-current
 ARG REPO=https://artifactory.niis.org/xroad-release-deb
 ARG REPO_KEY=https://artifactory.niis.org/api/gpg/key/public
 ARG COMPONENT=main
@@ -23,20 +23,19 @@ ADD ["${REPO}/dists/${DIST}/Release","/tmp/Release"]
 RUN echo "deb $REPO $DIST $COMPONENT" >/etc/apt/sources.list.d/xroad.list \
   && apt-key add '/tmp/repokey.gpg'
 
-RUN pg_ctlcluster 10 main start \
+RUN pg_ctlcluster 14 main start \
   && apt-get -qq update \
   && apt-get -qq install xroad-centralserver xroad-autologin \
   && apt-get -qq clean \
-  && pg_ctlcluster 10 main stop \
-  && nginx -s stop \
-  && rm -f /var/run/nginx.pid ||: \
+  && pg_ctlcluster 14 main stop \
+  && { nginx -s stop ||:; } \
+  && rm -f /var/run/nginx.pid \
   && rm -rf /tmp/xroad
 
 # back up read-only config (for volume support)
 RUN mkdir -p /root/etc/xroad \
-  && cp -a /etc/xroad/* /root/etc/xroad/ \
-  && rm -f /root/etc/xroad/services/local.conf \
-     /root/etc/xroad/conf.d/local.ini \
+  && cp -a /etc/xroad /root/etc/ \
+  && rm -f /root/etc/xroad/services/local.properties \
      /root/etc/xroad/conf.d/local.ini \
      /root/etc/xroad/devices.ini \
      /root/etc/xroad/db.properties \
@@ -61,13 +60,8 @@ RUN chown -R ca:ca /home/ca/CA \
   && chmod 0754 /home/ca/CA/ca.py \
   && chmod 0754 /home/ca/CA/sign_req.sh
 
-VOLUME /var/lib/postgresql/10/main
-VOLUME /etc/xroad
-
 COPY files/cs-entrypoint.sh /root/entrypoint.sh
 COPY --chown=root:root files/cs-xroad.conf /etc/supervisor/conf.d/xroad.conf
 CMD ["/root/entrypoint.sh"]
 
-VOLUME /var/lib/postgresql/10/main
-VOLUME /etc/xroad
 EXPOSE 80 4000

@@ -34,9 +34,13 @@ import ee.ria.xroad.common.conf.serverconf.ServerConfProvider;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.proxy.conf.KeyConf;
 import ee.ria.xroad.proxy.conf.KeyConfProvider;
+import ee.ria.xroad.signer.protocol.SignerClient;
+import ee.ria.xroad.signer.protocol.message.GetHSMOperationalInfo;
+import ee.ria.xroad.signer.protocol.message.GetHSMOperationalInfoResponse;
 
 import org.bouncycastle.cert.ocsp.OCSPResp;
 import org.junit.Test;
+import org.mockito.MockedStatic;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -53,8 +57,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -153,6 +159,40 @@ public class HealthChecksTest {
     }
 
     @Test
+    public void checkHSMOperationalShouldReturnOkStatusWhenValid() {
+
+        // prepare
+        try (MockedStatic<SignerClient> client = mockStatic(SignerClient.class)) {
+            client.when(() -> SignerClient.execute(any(GetHSMOperationalInfo.class)))
+                    .thenReturn(new GetHSMOperationalInfoResponse(true));
+
+            // execute
+            HealthCheckProvider testedProvider = HealthChecks.checkHSMOperationStatus();
+
+            // verify
+            assertTrue("result should be OK", testedProvider.get().isOk());
+        }
+    }
+
+    @Test
+    public void checkHSMOperationalShouldFailWhenNotValid() {
+
+        // prepare
+        try (MockedStatic<SignerClient> client = mockStatic(SignerClient.class)) {
+            client.when(() -> SignerClient.execute(any(GetHSMOperationalInfo.class)))
+                    .thenReturn(new GetHSMOperationalInfoResponse(false));
+
+            // execute
+            HealthCheckProvider testedProvider = HealthChecks.checkHSMOperationStatus();
+            HealthCheckResult checkedResult = testedProvider.get();
+
+            // verify
+            assertFalse("health check result should be a failure", checkedResult.isOk());
+            assertThat(checkedResult.getErrorMessage(),
+                    containsString("At least one HSM are non operational"));
+        }
+    }
+    @Test
     public void checkGlobalConfShouldReturnOkStatusWhenValid() {
 
         // prepare
@@ -192,6 +232,7 @@ public class HealthChecksTest {
 
         // prepare
         ServerConfProvider mockProvider = mock(ServerConfProvider.class);
+        when(mockProvider.isAvailable()).thenReturn(true);
         when(mockProvider.getIdentifier()).thenReturn(
                 SecurityServerId.create("XE", "member", "code", "servercode"));
 
@@ -219,8 +260,7 @@ public class HealthChecksTest {
 
         // verify
         assertTrue("health check result should be a failure", !checkedResult.isOk());
-        assertThat(checkedResult.getErrorMessage(),
-                containsString("Server Conf database did not respond as expected"));
+        assertThat(checkedResult.getErrorMessage(), containsString("ServerConf is not available"));
     }
 
     @Test
