@@ -1,71 +1,70 @@
-
-| ![European Union / European Regional Development Fund / Investing in your future](img/eu_rdf_75_en.png "Documents that are tagged with EU/SF logos must keep the logos until 1.1.2022, if it has not stated otherwise in the documentation. If new documentation is created  using EU/SF resources the logos must be tagged appropriately so that the deadline for logos could be found.") |
-| -------------------------: |
-
 # Security Server Installation Guide for Ubuntu <!-- omit in toc -->
 
 **X-ROAD 7**
 
-Version: 2.41  
+Version: 2.45  
 Doc. ID: IG-SS
 
 ---
 
 ## Version history <!-- omit in toc -->
 
- Date       | Version | Description                                                     | Author
- ---------- | ------- | --------------------------------------------------------------- | --------------------
- 01.12.2014 | 1.0     | Initial version                                                 |
- 19.01.2015 | 1.1     | License information added                                       |
- 18.03.2015 | 1.2     | Meta-package for security server added. Legacy securelog module removed |
- 02.04.2015 | 1.3     | “sdsb” change to “xroad”                                        |
- 27.05.2015 | 1.4     | Some typos fixed                                                |
- 30.06.2015 | 1.5     | Minor corrections done                                          |
- 06.07.2015 | 1.6     | New repository address                                          |
- 18.09.2015 | 1.7     | Reference data in [3.2](#32-reference-data) updated                                   |
- 18.09.2015 | 2.0     | Editorial changes made                                          |
- 13.10.2015 | 2.1     | Editorial changes made                                          |
- 10.12.2015 | 2.2     | Updated the installing of the support for hardware tokens ([2.7](#27-installing-the-support-for-hardware-tokens)) |
- 17.12.2015 | 2.3     | Added *xroad-addon-wsdlvalidator* package                       |
- 19.05.2016 | 2.4     | Merged changes from xtee6-doc repo. Updated table [2.2](#22-reference-data) with p 1.12, added chapter [2.8](#28-installing-support-for-monitoring) and updated [3.2](#32-reference-data). |
- 30.09.2016 | 2.5     | Added chapter „[Different versions of xroad-\* package after successful upgrade](#45-different-versions-of-xroad--packages-after-successful-upgrade)“. |
- 07.12.2016 | 2.6     | Added operational data monitoring packages. 2 GB RAM -&gt; 3 GB RAM |
- 23.02.2017 | 2.7     | Converted to Github flavoured Markdown, added license text, adjusted tables for better output in PDF | Toomas Mölder
- 13.04.2017 | 2.8     | Added token ID formatting                                       | Cybernetica AS
- 25.08.2017 | 2.9     | Update environmental monitoring installation information | Ilkka Seppälä
- 15.09.2017 | 2.10    | Added package with configuration specific to Estonia xroad-securityserver-ee | Cybernetica AS
- 05.03.2018 | 2.11    | Added terms and abbreviations reference and document links | Tatu Repo
- 10.04.2018 | 2.12    | Updated chapter "[Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini' | Cybernetica AS
- 14.10.2018 | 2.13    | Update package repository address | Petteri Kivimäki
- 25.10.2018 | 2.14    | Add RHEL7 as supported platform, update section 2.2 Reference data | Petteri Kivimäki
- 15.11.2018 | 2.15    | Add Ubuntu 18 installation instructions | Jarkko Hyöty
- 28.01.2018 | 2.16    | Update port 2080 documentation | Petteri Kivimäki
- 30.05.2019 | 2.17    | Added package installation instructions on chapter "[2.4 Preparing OS](#24-preparing-os)" | Raul Martinez
- 11.09.2019 | 2.18    | Remove Ubuntu 14.04 from supported platforms | Jarkko Hyöty
- 20.09.2019 | 2.19    | Add instructions for using remote databases | Ilkka Seppälä
- 12.04.2020 | 2.20    | Add note about the default value of the *connector-host* property in the EE-package | Petteri Kivimäki
- 29.04.2020 | 2.21    | Add instructions how to use remote database located in Microsoft Azure | Ilkka Seppälä
- 12.06.2020 | 2.22    | Update reference data regarding JMX listening ports | Petteri Kivimäki
- 24.06.2020 | 2.23    | Add repository sign key details in section [2.2 Reference data](#22-reference-data) | Petteri Kivimäki
- 24.06.2020 | 2.24    | Remove environmental and operational monitoring daemon JMX listening ports from section [2.2 Reference data](#22-reference-data) | Petteri Kivimäki
- 09.08.2020 | 2.25    | Update ports information in section [2.2 Reference data](#22-reference-data), add section [2.2.1 Network Diagram](#221-network-diagram) | Petteri Kivimäki
- 17.08.2020 | 2.26    | Update for RHEL 8. | Jarkko Hyöty
- 08.09.2020 | 2.27    | Fix minimum RAM requirement. | Ilkka Seppälä
- 16.09.2020 | 2.28    | Describe deployment options and database customization options. | Ilkka Seppälä
- 29.09.2020 | 2.29    | Add instructions for creating database structure and roles manually. | Ilkka Seppälä
- 19.01.2021 | 2.30    | Add instructions for using an alternative Java distribution. | Jarkko Hyöty
- 04.02.2021 | 2.31    | Minor updates. | Ilkka Seppälä
- 13.04.2021 | 2.32    | Update minimum requirements in section [2.2 Reference data](#22-reference-data) | Petteri Kivimäki
- 16.04.2021 | 2.33    | Update remote database installation instructions                | Jarkko Hyöty
- 18.05.2021 | 2.34    | Update error handling section | Ilkka Seppälä
- 02.06.2021 | 2.35    | Add backup encryption information | Andres Allkivi
- 01.07.2021 | 2.36    | Update 3rd party key server | Petteri Kivimäki
- 11.08.2021 | 2.37    | Minor updates | Petteri Kivimäki
- 18.08.2021 | 2.38    | Minor updates to Annex D | Ilkka Seppälä
- 25.08.2021 | 2.39    | Update X-Road references from version 6 to 7 | Caro Hautamäki
- 26.08.2021 | 2.40    | Add instructions how to disable the messagelog addon before installing, add section [2.7 Disable the Messagelog Addon before Installation (optional)](#27-disable-the-messagelog-addon-before-installation-optional) | Caro Hautamäki
- 03.08.2021 | 2.41    | Minor fixes | Ilkka Seppälä
- 06.09.2021 | 2.42    | Update list of running services | Jarkko Hyöty
+| Date       | Version | Description                                                                                                                                                                                                          | Author           |
+|------------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|
+| 01.12.2014 | 1.0     | Initial version                                                                                                                                                                                                      |                  |
+| 19.01.2015 | 1.1     | License information added                                                                                                                                                                                            |                  |
+| 18.03.2015 | 1.2     | Meta-package for security server added. Legacy securelog module removed                                                                                                                                              |                  |
+| 02.04.2015 | 1.3     | “sdsb” change to “xroad”                                                                                                                                                                                             |                  |
+| 27.05.2015 | 1.4     | Some typos fixed                                                                                                                                                                                                     |                  |
+| 30.06.2015 | 1.5     | Minor corrections done                                                                                                                                                                                               |                  |
+| 06.07.2015 | 1.6     | New repository address                                                                                                                                                                                               |                  |
+| 18.09.2015 | 1.7     | Reference data in [3.2](#32-reference-data) updated                                                                                                                                                                  |                  |
+| 18.09.2015 | 2.0     | Editorial changes made                                                                                                                                                                                               |                  |
+| 13.10.2015 | 2.1     | Editorial changes made                                                                                                                                                                                               |                  |
+| 10.12.2015 | 2.2     | Updated the installing of the support for hardware tokens ([2.7](#27-installing-the-support-for-hardware-tokens))                                                                                                    |                  |
+| 17.12.2015 | 2.3     | Added *xroad-addon-wsdlvalidator* package                                                                                                                                                                            |                  |
+| 19.05.2016 | 2.4     | Merged changes from xtee6-doc repo. Updated table [2.2](#22-reference-data) with p 1.12, added chapter [2.8](#28-installing-support-for-monitoring) and updated [3.2](#32-reference-data).                           |                  |
+| 30.09.2016 | 2.5     | Added chapter „[Different versions of xroad-\* package after successful upgrade](#45-different-versions-of-xroad--packages-after-successful-upgrade)“.                                                               |                  |
+| 07.12.2016 | 2.6     | Added operational data monitoring packages. 2 GB RAM -&gt; 3 GB RAM                                                                                                                                                  |                  |
+| 23.02.2017 | 2.7     | Converted to Github flavoured Markdown, added license text, adjusted tables for better output in PDF                                                                                                                 | Toomas Mölder    |
+| 13.04.2017 | 2.8     | Added token ID formatting                                                                                                                                                                                            | Cybernetica AS   |
+| 25.08.2017 | 2.9     | Update environmental monitoring installation information                                                                                                                                                             | Ilkka Seppälä    |
+| 15.09.2017 | 2.10    | Added package with configuration specific to Estonia xroad-securityserver-ee                                                                                                                                         | Cybernetica AS   |
+| 05.03.2018 | 2.11    | Added terms and abbreviations reference and document links                                                                                                                                                           | Tatu Repo        |
+| 10.04.2018 | 2.12    | Updated chapter "[Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini'                        | Cybernetica AS   |
+| 14.10.2018 | 2.13    | Update package repository address                                                                                                                                                                                    | Petteri Kivimäki |
+| 25.10.2018 | 2.14    | Add RHEL7 as supported platform, update section 2.2 Reference data                                                                                                                                                   | Petteri Kivimäki |
+| 15.11.2018 | 2.15    | Add Ubuntu 18 installation instructions                                                                                                                                                                              | Jarkko Hyöty     |
+| 28.01.2018 | 2.16    | Update port 2080 documentation                                                                                                                                                                                       | Petteri Kivimäki |
+| 30.05.2019 | 2.17    | Added package installation instructions on chapter "[2.4 Preparing OS](#24-preparing-os)"                                                                                                                            | Raul Martinez    |
+| 11.09.2019 | 2.18    | Remove Ubuntu 14.04 from supported platforms                                                                                                                                                                         | Jarkko Hyöty     |
+| 20.09.2019 | 2.19    | Add instructions for using remote databases                                                                                                                                                                          | Ilkka Seppälä    |
+| 12.04.2020 | 2.20    | Add note about the default value of the *connector-host* property in the EE-package                                                                                                                                  | Petteri Kivimäki |
+| 29.04.2020 | 2.21    | Add instructions how to use remote database located in Microsoft Azure                                                                                                                                               | Ilkka Seppälä    |
+| 12.06.2020 | 2.22    | Update reference data regarding JMX listening ports                                                                                                                                                                  | Petteri Kivimäki |
+| 24.06.2020 | 2.23    | Add repository sign key details in section [2.2 Reference data](#22-reference-data)                                                                                                                                  | Petteri Kivimäki |
+| 24.06.2020 | 2.24    | Remove environmental and operational monitoring daemon JMX listening ports from section [2.2 Reference data](#22-reference-data)                                                                                     | Petteri Kivimäki |
+| 09.08.2020 | 2.25    | Update ports information in section [2.2 Reference data](#22-reference-data), add section [2.2.1 Network Diagram](#221-network-diagram)                                                                              | Petteri Kivimäki |
+| 17.08.2020 | 2.26    | Update for RHEL 8.                                                                                                                                                                                                   | Jarkko Hyöty     |
+| 08.09.2020 | 2.27    | Fix minimum RAM requirement.                                                                                                                                                                                         | Ilkka Seppälä    |
+| 16.09.2020 | 2.28    | Describe deployment options and database customization options.                                                                                                                                                      | Ilkka Seppälä    |
+| 29.09.2020 | 2.29    | Add instructions for creating database structure and roles manually.                                                                                                                                                 | Ilkka Seppälä    |
+| 19.01.2021 | 2.30    | Add instructions for using an alternative Java distribution.                                                                                                                                                         | Jarkko Hyöty     |
+| 04.02.2021 | 2.31    | Minor updates.                                                                                                                                                                                                       | Ilkka Seppälä    |
+| 13.04.2021 | 2.32    | Update minimum requirements in section [2.2 Reference data](#22-reference-data)                                                                                                                                      | Petteri Kivimäki |
+| 16.04.2021 | 2.33    | Update remote database installation instructions                                                                                                                                                                     | Jarkko Hyöty     |
+| 18.05.2021 | 2.34    | Update error handling section                                                                                                                                                                                        | Ilkka Seppälä    |
+| 02.06.2021 | 2.35    | Add backup encryption information                                                                                                                                                                                    | Andres Allkivi   |
+| 01.07.2021 | 2.36    | Update 3rd party key server                                                                                                                                                                                          | Petteri Kivimäki |
+| 11.08.2021 | 2.37    | Minor updates                                                                                                                                                                                                        | Petteri Kivimäki |
+| 18.08.2021 | 2.38    | Minor updates to Annex D                                                                                                                                                                                             | Ilkka Seppälä    |
+| 25.08.2021 | 2.39    | Update X-Road references from version 6 to 7                                                                                                                                                                         | Caro Hautamäki   |
+| 26.08.2021 | 2.40    | Add instructions how to disable the messagelog addon before installing, add section [2.7 Disable the Messagelog Addon before Installation (optional)](#27-disable-the-messagelog-addon-before-installation-optional) | Caro Hautamäki   |
+| 03.08.2021 | 2.41    | Minor fixes                                                                                                                                                                                                          | Ilkka Seppälä    |
+| 06.09.2021 | 2.42    | Update list of running services                                                                                                                                                                                      | Jarkko Hyöty     |
+| 26.09.2022 | 2.43    | Remove Ubuntu 18.04 support                                                                                                                                                                                          | Andres Rosenthal |
+| 23.05.2023 | 2.44    | Minor backup encryption configuration fixes                                                                                                                                                                          | Eneli Reimets    |
+| 01.06.2023 | 2.45    | Update references                                                                                                                                                                                                    | Petteri Kivimäki |
 
 ## License
 
@@ -137,7 +136,7 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 ### 1.3 References
 
-1.  <a id="Ref_UG-SS" class="anchor"></a>\[UG-SS\] Cybernetica AS. X-Road 7. Security Server User Guide. Document ID: [UG-SS](ug-ss_x-road_6_security_server_user_guide.md)
+1.  <a id="Ref_UG-SS" class="anchor"></a>\[UG-SS\] X-Road 7. Security Server User Guide. Document ID: [UG-SS](ug-ss_x-road_6_security_server_user_guide.md)
 
 2.  <a id="Ref_TERMS" class="anchor"></a>\[TA-TERMS\] X-Road Terms and Abbreviations. Document ID: [TA-TERMS](../terms_x-road_docs.md).
 
@@ -157,7 +156,7 @@ There are multiple alternatives how the security server can be deployed. The opt
 
 The security server is officially supported on the following platforms:
 
-* Ubuntu Server 18.04 or 20.04 Long-Term Support (LTS) operating system on a x86-64 platform.
+* Ubuntu Server 20.04 or 22.04 Long-Term Support (LTS) operating system on a x86-64 platform.
 * Red Hat Enterprise Linux (RHEL) 7 and 8 (x86-64). See [IG-SS-RHEL](ig-ss_x-road_v6_security_server_installation_guide_for_rhel.md) for more information.
 
 The software can be installed both on physical and virtualized hardware (of the latter, Xen and Oracle VirtualBox have been tested).
@@ -170,29 +169,29 @@ The software can be installed both on physical and virtualized hardware (of the 
 **Caution**: Data necessary for the functioning of the operating system is not included.
 
 
- **Ref** |                                        | **Explanation**
- ------ | --------------------------------------- | ----------------------------------------------------------
- 1.0    | Ubuntu 18.04, Ubuntu 20.04 (x86-64)<br>3 GB RAM, 3 GB free disk space | Minimum requirements without the `monitoring` and `op-monitoring` add-ons. With the add-ons minimum of 4 GB of RAM is required.
- 1.1    | https://artifactory.niis.org/xroad-release-deb               | X-Road package repository
- 1.2    | https://artifactory.niis.org/api/gpg/key/public | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index)
- 1.3    |                                         | Account name in the user interface
- 1.4    | **Inbound ports from external network** | Ports for inbound connections from the external network to the security server
- &nbsp; | TCP 5500                                | Message exchange between security servers
- &nbsp; | TCP 5577                                | Querying of OCSP responses between security servers
- 1.5    | **Outbound ports to external network**  | Ports for outbound connections from the security server to the external network
- &nbsp; | TCP 5500                                | Message exchange between security servers
- &nbsp; | TCP 5577                                | Querying of OCSP responses between security servers
- &nbsp; | TCP 4001                                | Communication with the central server
- &nbsp; | TCP 80                                  | Downloading global configuration from the central server
- &nbsp; | TCP 80,443                              | Most common OCSP and time-stamping services
- 1.6    | **Inbound ports from internal network** | Ports for inbound connections from the internal network to the security server
- &nbsp; | TCP 4000                                | User interface and management REST API (local network). **Must not be accessible from the internet!**
- &nbsp; | TCP 80, 443                             | Information system access points (in the local network). **Must not be accessible from the external network without strong authentication. If open to the external network, IP filtering is strongly recommended.**
- 1.7    | **Outbound ports to internal network**  | Ports for inbound connections from the internal network to the security server
- &nbsp; | TCP 80, 443, *other*                    | Producer information system endpoints
- &nbsp; | TCP 2080                                | Message exchange between security server and operational data monitoring daemon (by default on localhost)
- 1.8  |                                           | Security server internal IP address(es) and hostname(s)
- 1.9  |                                           | Security server public IP address, NAT address
+ **Ref** |                                                                                                                      | **Explanation**
+ ------ |----------------------------------------------------------------------------------------------------------------------| ----------------------------------------------------------
+ 1.0    | Ubuntu 20.04, Ubuntu 22.04 (x86-64)<br>3 GB RAM, 3 GB free disk space                                                | Minimum requirements without the `monitoring` and `op-monitoring` add-ons. With the add-ons minimum of 4 GB of RAM is required.
+ 1.1    | https://artifactory.niis.org/xroad-release-deb                                                                       | X-Road package repository
+ 1.2    | https://artifactory.niis.org/api/gpg/key/public                                                                      | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index)
+ 1.3    |                                                                                                                      | Account name in the user interface
+ 1.4    | **Inbound ports from external network**                                                                              | Ports for inbound connections from the external network to the security server
+ &nbsp; | TCP 5500                                                                                                             | Message exchange between security servers
+ &nbsp; | TCP 5577                                                                                                             | Querying of OCSP responses between security servers
+ 1.5    | **Outbound ports to external network**                                                                               | Ports for outbound connections from the security server to the external network
+ &nbsp; | TCP 5500                                                                                                             | Message exchange between security servers
+ &nbsp; | TCP 5577                                                                                                             | Querying of OCSP responses between security servers
+ &nbsp; | TCP 4001                                                                                                             | Communication with the central server
+ &nbsp; | TCP 80                                                                                                               | Downloading global configuration from the central server
+ &nbsp; | TCP 80,443                                                                                                           | Most common OCSP and time-stamping services
+ 1.6    | **Inbound ports from internal network**                                                                              | Ports for inbound connections from the internal network to the security server
+ &nbsp; | TCP 4000                                                                                                             | User interface and management REST API (local network). **Must not be accessible from the internet!**
+ &nbsp; | TCP 80, 443                                                                                                          | Information system access points (in the local network). **Must not be accessible from the external network without strong authentication. If open to the external network, IP filtering is strongly recommended.**
+ 1.7    | **Outbound ports to internal network**                                                                               | Ports for inbound connections from the internal network to the security server
+ &nbsp; | TCP 80, 443, *other*                                                                                                 | Producer information system endpoints
+ &nbsp; | TCP 2080                                                                                                             | Message exchange between security server and operational data monitoring daemon (by default on localhost)
+ 1.8  |                                                                                                                      | Security server internal IP address(es) and hostname(s)
+ 1.9  |                                                                                                                      | Security server public IP address, NAT address
  1.10 | &lt;by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field&gt; | Information about the user interface TLS certificate
  1.11 | &lt;by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field&gt; | Information about the services TLS certificate
 
@@ -233,7 +232,7 @@ Minimum recommended hardware parameters:
 
 Requirements to software and settings:
 
-* an installed and configured Ubuntu 18.04 LTS or 20.04 LTS x86-64 operating system;
+* an installed and configured Ubuntu 20.04 LTS or 22.04 LTS x86-64 operating system;
 * if the security server is separated from other networks by a firewall and/or NAT, the necessary connections to and from the security server are allowed (**reference data: 1.4; 1.5; 1.6; 1.7**). The enabling of auxiliary services which are necessary for the functioning and management of the operating system (such as DNS, NTP, and SSH) stay outside the scope of this guide;
 * if the security server has a private IP address, a corresponding NAT record must be created in the firewall (**reference data: 1.9**).
 
@@ -490,18 +489,16 @@ for backup encryption and verification. Backups are always signed, but backup en
 To turn encryption on, please override the default configuration in the file `/etc/xroad/conf.d/local.ini`, in the `[proxy]` section (add or edit this section).
 
     [proxy]
-    backup-encrypted=true
-    backup-public-key-path=/etc/xroad/backupkeys
+    backup-encryption-enabled = true
+    backup-encryption-keyids = <keyid1>, <keyid2>, ...
 
-To turn backup encryption on, please change the `backup-encrypted` property value to `true`.
-By default, additional encryption keys are stored in the `/etc/xroad/backupkeys` directory.
-The default directory can be changed by modifying the `backup-public-key-path` property value.
+To turn backup encryption on, please change the `backup-encryption-enabled` property value to `true`.
+By default, backups are encrypted using security server's backup encryption key. Additional encryption keys can be imported in the /etc/xroad/gpghome keyring and key identifiers listed using the backup-encryption-keyids parameter. It is recommended to set up at least one additional key, otherwise the backups will be unusable in case security server's private key is lost. It is up to security server's administrator to check that keys used are sufficiently strong, there are no automatic checks.
 
-By default, backups are encrypted using security server's backup encryption key. Before turning backup encryption on, it
-is strongly recommended to copy additional GPG public keys to backup public key folder. All these keys are used to
-encrypt backups so that ANY of these keys can decrypt the backups. This is useful both for verifying encrypted backups'
+Warning. All keys listed in backup-encryption-keyids must be present in the gpg keyring or backup fails.
+
+All these keys are used to encrypt backups so that ANY of these keys can decrypt the backups. This is useful both for verifying encrypted backups'
 consistency and decrypting backups in case security server's backup encryption key gets lost for whatever reason.
-Do not place any other files into backup keys folder, otherwise backing up configuration will fail.
 
 To externally verify a backup archive's consistency, security server's backup encryption public key has to be exported
 and imported into external GPG keyring. Note that this can be done only after security server has been initialised - the
@@ -624,26 +621,26 @@ For example, the following security server packages are currently installed.
 
 ```bash
 root@test-ss:~# dpkg -l | grep xroad
-ii  xroad-addon-messagelog          7.0.0-1.ubuntu18.04 all          X-Road AddOn: messagelog
-ii  xroad-addon-metaservices        7.0.0-1.ubuntu18.04 all          X-Road AddOn: metaservices
-ii  xroad-addon-proxymonitor        7.0.0-1.ubuntu18.04 all          X-Road AddOn: proxy monitoring metaservice
-ii  xroad-addon-wsdlvalidator       7.0.0-1.ubuntu18.04 all          X-Road AddOn: wsdlvalidator
-ii  xroad-base                      7.0.0-1.ubuntu18.04 amd64        X-Road base components
-ii  xroad-confclient                7.0.0-1.ubuntu18.04 amd64        X-Road configuration client components
-ii  xroad-database-local            7.0.0-1.ubuntu18.04 all          Meta-package for X-Road local database dependencies
-ii  xroad-monitor                   7.0.0-1.ubuntu18.04 all          X-Road monitoring service
-ii  xroad-proxy                     7.0.0-1.ubuntu18.04 all          X-Road security server
-ii  xroad-proxy-ui-api              7.0.0-1.ubuntu18.04 all          X-Road proxy UI REST API
-ii  xroad-securityserver            7.0.0-1.ubuntu18.04 all          X-Road security server
-ii  xroad-signer                    7.0.0-1.ubuntu18.04 amd64        X-Road signer component
+ii  xroad-addon-messagelog          7.1.2-1.ubuntu20.04 all          X-Road AddOn: messagelog
+ii  xroad-addon-metaservices        7.1.2-1.ubuntu20.04 all          X-Road AddOn: metaservices
+ii  xroad-addon-proxymonitor        7.1.2-1.ubuntu20.04 all          X-Road AddOn: proxy monitoring metaservice
+ii  xroad-addon-wsdlvalidator       7.1.2-1.ubuntu20.04 all          X-Road AddOn: wsdlvalidator
+ii  xroad-base                      7.1.2-1.ubuntu20.04 amd64        X-Road base components
+ii  xroad-confclient                7.1.2-1.ubuntu20.04 amd64        X-Road configuration client components
+ii  xroad-database-local            7.1.2-1.ubuntu20.04 all          Meta-package for X-Road local database dependencies
+ii  xroad-monitor                   7.1.2-1.ubuntu20.04 all          X-Road monitoring service
+ii  xroad-proxy                     7.1.2-1.ubuntu20.04 all          X-Road security server
+ii  xroad-proxy-ui-api              7.1.2-1.ubuntu20.04 all          X-Road proxy UI REST API
+ii  xroad-securityserver            7.1.2-1.ubuntu20.04 all          X-Road security server
+ii  xroad-signer                    7.1.2-1.ubuntu20.04 amd64        X-Road signer component
 ```
 
 The following packages are available in the repository.
 
 ```bash
 root@test-ss:~# apt-cache madison xroad-securityserver
-xroad-securityserver | 7.3.0-1.ubuntu18.04 | https://artifactory.niis.org/xroad-release-deb bionic-current/main amd64 Packages
-xroad-securityserver | 7.1.0-1.ubuntu18.04 | https://artifactory.niis.org/xroad-release-deb bionic-current/main amd64 Packages
+xroad-securityserver | 7.3.0-1.ubuntu20.04 | https://artifactory.niis.org/xroad-release-deb focal-current/main amd64 Packages
+xroad-securityserver | 7.1.2-1.ubuntu20.04 | https://artifactory.niis.org/xroad-release-deb focal-current/main amd64 Packages
 ```
 
 Now trying to upgrade the security server packages directly will produce the following error.
@@ -651,17 +648,17 @@ Now trying to upgrade the security server packages directly will produce the fol
 ```bash
 root@test-ss:~# apt-get upgrade xroad-securityserver
 ...
-Preparing to unpack .../0-xroad-securityserver_7.3.0-1.ubuntu18.04_all.deb ...
-ERROR: Upgrade supported from version 7.1.0 or newer.
+Preparing to unpack .../0-xroad-securityserver_7.3.0-1.ubuntu20.04_all.deb ...
+ERROR: Upgrade supported from version 7.1.2 or newer.
 ```
 
 The fix is to upgrade the security server in two separate steps. First, upgrade to 7.1.x with the following command.
 
 ```bash
-apt install xroad-securityserver=7.1.0-1.ubuntu18.04 xroad-proxy=7.1.0-1.ubuntu18.04 xroad-monitor=7.1.0-1.ubuntu18.04 xroad-addon-metaservices=7.1.0-1.ubuntu18.04 xroad-addon-messagelog=7.1.0-1.ubuntu18.04 xroad-addon-proxymonitor=7.1.0-1.ubuntu18.04 xroad-addon-wsdlvalidator=7.1.0-1.ubuntu18.04 xroad-proxy-ui-api=7.1.0-1.ubuntu18.04 xroad-confclient=7.1.0-1.ubuntu18.04 xroad-signer=7.1.0-1.ubuntu18.04 xroad-database-local=7.1.0-1.ubuntu18.04 xroad-base=7.1.0-1.ubuntu18.04
+apt install xroad-securityserver=7.1.2-1.ubuntu20.04 xroad-proxy=7.1.2-1.ubuntu20.04 xroad-monitor=7.1.2-1.ubuntu20.04 xroad-addon-metaservices=7.1.2-1.ubuntu20.04 xroad-addon-messagelog=7.1.2-1.ubuntu20.04 xroad-addon-proxymonitor=7.1.2-1.ubuntu20.04 xroad-addon-wsdlvalidator=7.1.2-1.ubuntu20.04 xroad-proxy-ui-api=7.1.2-1.ubuntu20.04 xroad-confclient=7.1.2-1.ubuntu20.04 xroad-signer=7.1.2-1.ubuntu20.04 xroad-database-local=7.1.2-1.ubuntu20.04 xroad-base=7.1.2-1.ubuntu20.04
 ```
 
-An alternative approach to the previous command is to temporarily configure the server to use a repository that contains only the specific version of X-Road software we want to upgrade to. For example, configure the repository as `deb https://artifactory.niis.org/xroad-release-deb bionic-7.1.0 main` and then use the `apt update` and `apt upgrade xroad-centralserver` commands.
+An alternative approach to the previous command is to temporarily configure the server to use a repository that contains only the specific version of X-Road software we want to upgrade to. For example, configure the repository as `deb https://artifactory.niis.org/xroad-release-deb focal-7.1.2 main` and then use the `apt update` and `apt upgrade xroad-centralserver` commands.
 
 Finally, we can upgrade to our target version 7.3.x as follows.
 
@@ -679,7 +676,7 @@ apt upgrade xroad-securityserver
 
 serverconf.hibernate.connection.url = jdbc:postgresql://127.0.0.1:5432/serverconf
 serverconf.hibernate.connection.username = serverconf
-serverconf.hibernate.connection.password = <randomly generated password> 
+serverconf.hibernate.connection.password = <randomly generated password>
 serverconf.hibernate.connection.driver_class = org.postgresql.Driver
 serverconf.hibernate.dialect = ee.ria.xroad.common.db.CustomPostgreSQLDialect
 serverconf.hibernate.hikari.dataSource.currentSchema = serverconf,public
@@ -779,61 +776,81 @@ Login to the database server(s) as the superuser (`postgres` by default) to run 
 psql -h <database host>:<port> -U <superuser> -d postgres
 ```
 
-Run the following commands to create the necessary database structures. If necessary, customize the database and role names to suit your environment (e.g when the same database server is shared between several security server instances, it is necessary to have separate database names and roles for each server). By default, the database, database user, and schema use the same name (e.g. serverconf), and the admin user is named with \_admin prefix (e.g. serverconf_admin).
+Run the following commands to create the necessary database structures.
+If necessary, customize the database and role names to suit your environment (e.g when the same database server is shared between several security server instances, it is necessary to have separate database names and roles for each server).
 
 **serverconf** (required)
+
+By default, the database, database user, and schema use the same name of `serverconf`, and the admin user is named with `_admin` suffix (e.g. `serverconf_admin`).
+
 ```sql
-CREATE DATABASE serverconf ENCODING 'UTF8';
-REVOKE ALL ON DATABASE serverconf FROM PUBLIC;
-CREATE ROLE serverconf_admin LOGIN PASSWORD '<serverconf_admin password>';
-GRANT serverconf_admin to <superuser>;
-GRANT CREATE,TEMPORARY,CONNECT ON DATABASE serverconf TO serverconf_admin;
-\c serverconf
+CREATE DATABASE <serverconf_database> ENCODING 'UTF8';
+REVOKE ALL ON DATABASE <serverconf_database> FROM PUBLIC;
+CREATE ROLE <serverconf_admin_user> LOGIN PASSWORD '<serverconf_admin_user password>';
+GRANT <serverconf_admin_user> TO <superuser>;
+GRANT CREATE,TEMPORARY,CONNECT ON DATABASE <serverconf_database> TO <serverconf_admin_user>;
+\c <serverconf_database>
 CREATE EXTENSION hstore;
-CREATE SCHEMA serverconf AUTHORIZATION serverconf_admin;
+CREATE SCHEMA <serverconf_schema> AUTHORIZATION <serverconf_admin_user>;
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public to serverconf_admin;
-CREATE ROLE serverconf LOGIN PASSWORD '<serverconf password>';
-GRANT serverconf to <superuser>;
-GRANT TEMPORARY,CONNECT ON DATABASE serverconf TO serverconf;
-GRANT USAGE ON SCHEMA public to serverconf;
+GRANT USAGE ON SCHEMA public TO <serverconf_admin_user>;
+CREATE ROLE <serverconf_database_user> LOGIN PASSWORD '<serverconf_database_user password>';
+GRANT <serverconf_database_user> TO <superuser>;
+GRANT TEMPORARY,CONNECT ON DATABASE <serverconf_database> TO <serverconf_database_user>;
+GRANT USAGE ON SCHEMA public TO <serverconf_database_user>;
+GRANT USAGE ON SCHEMA <serverconf_schema> TO <serverconf_database_user>;
+GRANT SELECT,UPDATE,INSERT,DELETE ON ALL TABLES IN SCHEMA <serverconf_schema> TO <serverconf_database_user>;
+GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA <serverconf_schema> TO <serverconf_database_user>;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA <serverconf_schema> TO <serverconf_database_user>;
 ```
 
 **messagelog** (required by xroad-addon-messagelog)
+
+By default, the database, database user, and schema use the same name of `messagelog`, and the admin user is named with `_admin` suffix (e.g. `messagelog_admin`).
+
 ```sql
-CREATE DATABASE messagelog ENCODING 'UTF8';
-REVOKE ALL ON DATABASE messagelog FROM PUBLIC;
-CREATE ROLE messagelog_admin LOGIN PASSWORD '<messagelog_admin password>';
-GRANT messagelog_admin to <superuser>;
-GRANT CREATE,TEMPORARY,CONNECT ON DATABASE messagelog TO messagelog_admin;
-\c messagelog
-CREATE SCHEMA messagelog AUTHORIZATION messagelog_admin;
+CREATE DATABASE <messagelog_database> ENCODING 'UTF8';
+REVOKE ALL ON DATABASE <messagelog_database> FROM PUBLIC;
+CREATE ROLE <messagelog_admin_user> LOGIN PASSWORD '<messagelog_admin_user password>';
+GRANT <messagelog_admin_user> TO <superuser>;
+GRANT CREATE,TEMPORARY,CONNECT ON DATABASE <messagelog_database> TO <messagelog_admin_user>;
+\c <messagelog_database>
+CREATE SCHEMA <messagelog_schema> AUTHORIZATION <messagelog_admin_user>;
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public to messagelog_admin;
-CREATE ROLE messagelog LOGIN PASSWORD '<messagelog password>';
-GRANT messagelog to <superuser>;
-GRANT TEMPORARY,CONNECT ON DATABASE messagelog TO messagelog;
-GRANT USAGE ON SCHEMA public to messagelog;
+GRANT USAGE ON SCHEMA public TO <messagelog_admin_user>;
+CREATE ROLE <messagelog_database_user> LOGIN PASSWORD '<messagelog_database_user password>';
+GRANT <messagelog_database_user> TO <superuser>;
+GRANT TEMPORARY,CONNECT ON DATABASE <messagelog_database> TO <messagelog_database_user>;
+GRANT USAGE ON SCHEMA public TO <messagelog_database_user>;
+GRANT USAGE ON SCHEMA <messagelog_schema> TO <messagelog_database_user>;
+GRANT SELECT,UPDATE,INSERT,DELETE ON ALL TABLES IN SCHEMA <messagelog_schema> TO <messagelog_database_user>;
+GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA <messagelog_schema> TO <messagelog_database_user>;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA <messagelog_schema> TO <messagelog_database_user>;
 ```
 
 **op-monitor** (optional, required by xroad-opmonitor)
 
 If operational monitoring is going to be installed, run additionally the following commands. Again, the database and role names can be customized to suit your environment.
+By default, the database is named `op-monitor`, database user and schema both are named `opmonitor`, and the admin user is named with `_admin` suffix (e.g. `opmonitor_admin`).
 
 ```sql
-CREATE DATABASE "op-monitor" ENCODING 'UTF8';
-REVOKE ALL ON DATABASE "op-monitor" FROM PUBLIC;
-CREATE ROLE opmonitor_admin LOGIN PASSWORD '<opmonitor_admin password>';
-GRANT opmonitor_admin to <superuser>;
-GRANT CREATE,TEMPORARY,CONNECT ON DATABASE "op-monitor" TO opmonitor_admin;
-\c "op-monitor"
-CREATE SCHEMA opmonitor AUTHORIZATION opmonitor_admin;
+CREATE DATABASE <opmonitor_database> ENCODING 'UTF8';
+REVOKE ALL ON DATABASE <opmonitor_database> FROM PUBLIC;
+CREATE ROLE <opmonitor_admin_user> LOGIN PASSWORD '<opmonitor_admin_user password>';
+GRANT <opmonitor_admin_user> TO <superuser>;
+GRANT CREATE,TEMPORARY,CONNECT ON DATABASE <opmonitor_database> TO <opmonitor_admin_user>;
+\c <opmonitor_database>
+CREATE SCHEMA <opmonitor_schema> AUTHORIZATION <opmonitor_admin_user>;
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public to opmonitor_admin;
-CREATE ROLE opmonitor LOGIN PASSWORD '<opmonitor password>';
-GRANT opmonitor to <superuser>;
-GRANT TEMPORARY,CONNECT ON DATABASE "op-monitor" TO opmonitor;
-GRANT USAGE ON SCHEMA public to opmonitor;
+GRANT USAGE ON SCHEMA public TO <opmonitor_admin_user>;
+CREATE ROLE <database_user> LOGIN PASSWORD '<opmonitor_database_user password>';
+GRANT <opmonitor_database_user> TO <superuser>;
+GRANT TEMPORARY,CONNECT ON DATABASE <opmonitor_database> TO <opmonitor_database_user>;
+GRANT USAGE ON SCHEMA public TO <opmonitor_database_user>;
+GRANT USAGE ON SCHEMA <opmonitor_schema> TO <opmonitor_database_user>;
+GRANT SELECT,UPDATE,INSERT,DELETE ON ALL TABLES IN SCHEMA <opmonitor_schema> TO <opmonitor_database_user>;
+GRANT SELECT,UPDATE ON ALL SEQUENCES IN SCHEMA <opmonitor_schema> TO <opmonitor_database_user>;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA <opmonitor_schema> TO <opmonitor_database_user>;
 ```
 
 Lastly, customize the database connection properties to match the values used when creating the database.
@@ -849,12 +866,12 @@ sudo chmod 600 /etc/xroad.properties
 
 Edit `/etc/xroad.properties` and add/update the following properties (if you customized the role names, use your own). The admin users are used to run database migrations during the install and upgrades.
 ```properties
-serverconf.database.admin_user = serverconf_admin
-serverconf.database.admin_password = <serverconf_admin password>
-op-monitor.database.admin_user = opmonitor_admin
-op-monitor.database.admin_password = <opmonitor_admin password>
-messagelog.database.admin_user = messagelog_admin
-messagelog.database.admin_password = <messagelog_admin password>
+serverconf.database.admin_user = <serverconf_admin_user>
+serverconf.database.admin_password = <serverconf_admin_user password>
+messagelog.database.admin_user = <messagelog_admin_user>
+messagelog.database.admin_password = <messagelog_admin_user password>
+op-monitor.database.admin_user = <opmonitor_admin_user>
+op-monitor.database.admin_password = <opmonitor_admin_user password>
 ```
 
 Create the `/etc/xroad/db.properties` file
@@ -870,18 +887,18 @@ sudo chown xroad:xroad /etc/xroad/db.properties
 Edit the `/etc/xroad/db.properties` file and add/update the following connection properties (if you customized the database, user, and/or role names, use the customized values).
 The database connection url format is `jdbc:postgresql://<database host>:<port>/<database name>`
 ```properties
-serverconf.hibernate.connection.url = jdbc:postgresql://<database host>:<port>/serverconf
-serverconf.hibernate.connection.username = serverconf
-serverconf.hibernate.connection.password = <serverconf password> 
-serverconf.hibernate.hikari.dataSource.currentSchema = serverconf,public
+serverconf.hibernate.connection.url = jdbc:postgresql://<database host>:<port>/<serverconf_database>
+serverconf.hibernate.connection.username = <serverconf_database_user>
+serverconf.hibernate.connection.password = <serverconf_database_user password>
+serverconf.hibernate.hikari.dataSource.currentSchema = <serverconf_schema>,public
 
-messagelog.hibernate.connection.url = jdbc:postgresql://<database host>:<port>/messagelog
-messagelog.hibernate.connection.username = messagelog
-messagelog.hibernate.connection.password = <messagelog password>
-messagelog.hibernate.hikari.dataSource.currentSchema = messagelog,public
+messagelog.hibernate.connection.url = jdbc:postgresql://<database host>:<port>/<messagelog_database>
+messagelog.hibernate.connection.username = <messagelog_database_user>
+messagelog.hibernate.connection.password = <messagelog_database_user password>
+messagelog.hibernate.hikari.dataSource.currentSchema = <messagelog_schema>,public
 
-op-monitor.hibernate.connection.url = jdbc:postgresql://<database host>:<port>/op-monitor
-op-monitor.hibernate.connection.username = opmonitor
-op-monitor.hibernate.connection.password = <opmonitor password>
-op-monitor.hibernate.hikari.dataSource.currentSchema = opmonitor,public
+op-monitor.hibernate.connection.url = jdbc:postgresql://<database host>:<port>/<opmonitor_database>
+op-monitor.hibernate.connection.username = <opmonitor_database_user>
+op-monitor.hibernate.connection.password = <opmonitor_database_user password>
+op-monitor.hibernate.hikari.dataSource.currentSchema = <opmonitor_schema>,public
 ```

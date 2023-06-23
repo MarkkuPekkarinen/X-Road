@@ -1,6 +1,6 @@
 # X-Road: External Load Balancer Installation Guide
 
-Version: 1.15  
+Version: 1.17 
 Doc. ID: IG-XLB
 
 
@@ -22,7 +22,8 @@ Doc. ID: IG-XLB
 | 25.08.2021 | 1.13    | Update X-Road references from version 6 to 7                                                                             | Caro Hautamäki               |
 | 17.09.2021 | 1.14    | Add note about the proxy health check now also checking global conf validity                                             | Caro Hautamäki               |
 | 17.06.2022 | 1.15    | Replace the word "replica" with "secondary"                                                                              | Petteri Kivimäki             |
-
+| 26.09.2022 | 1.16    | Remove Ubuntu 18.04 support                                                                                              | Andres Rosenthal             |
+| 01.03.2023 | 1.17    | Updates for user groups in secondary nodes                                                                               | Petteri Kivimäki             |
 ## Table of Contents
 
 <!-- toc -->
@@ -280,8 +281,8 @@ In order to properly set up the data replication, the secondary nodes must be ab
 1. Install security server packages using the normal installation procedure. Alternatively you can also install only the packages
    required for secondary nodes. `xroad-proxy-ui-api` package can be omitted, but the admin graphical user interface
    (which is provided by this package) can be handy for diagnostics. It should be noted that changing a secondary's
-   configuration via the admin gui is not possible.
-2. Stop the xroad services.
+   configuration via the admin gui is not possible (except entering token PIN).
+2. Stop the `xroad` services.
 3. Create a separate PostgreSQL instance for the serverconf database (see section
    [4. Database replication setup](#4-database-replication-setup) for details)
 4. Change `/etc/xroad/db.properties` to point to the separate database instance and change password to match the one
@@ -308,16 +309,17 @@ In order to properly set up the data replication, the secondary nodes must be ab
 8. Start the X-Road services.
 9. If you wish to use the secondary security server's admin user interface, you need to implement additional user group restrictions. As noted in step 1, changes to the secondary node security server configuration must not be made through its admin user interface, as any such changes would be overwritten by the replication. To disable UI editing privileges for all users, remove the following user groups from the secondary security server:
 
-   * `xroad-security-officer`
    * `xroad-registration-officer`
    * `xroad-service-administrator`
    * `xroad-system-administrator`
+   
+   Note: `xroad-security-officer` should remain, otherwise you will not be able to enter token PIN codes.
 
-   After removing these groups, the super user created during the security server installation is a member of only one UI privilege group: `xroad-securityserver-observer`. This group allows read-only access to the admin user interface and provides a safe way to use the UI for checking the configuration status of the secondary security server. Since admin UI users are UNIX users that are members of specific privilege groups, more users can be added to the read-only group as necessary. Security server installation scripts detect the node type of existing installations and modify user group creation accordingly so as to not overwrite this configuration step during security server updates.
+   After removing these groups, the super user created during the security server installation is a member of two UI privilege groups: `xroad-securityserver-observer` and `xroad-security-officer`. These groups allow read-only access to the admin user interface and provide a safe way to use the UI for checking the configuration status of the secondary security server. In addition, the groups allow the user to enter the token PIN code. Since admin UI users are UNIX users that are members of specific privilege groups, more users can be added to the groups as necessary. Security server installation scripts detect the node type of existing installations and modify user group creation accordingly. Instead, version upgrades do not overwrite or modify this configuration during security server updates.
 
    For more information on user groups and their effect on admin user interface privileges in the security server, see the  Security Server User Guide \[[UG-SS](#13-references)\].
 
-   Also, the secondary security server's management REST API can be used to read the secondary's configuration. However, modifying the secondary's configuration using the management REST API is blocked. API keys are replicated from the primary to the secondaries, and the keys that are associated with the `xroad-securityserver-observer` role have read-only access to the secondary. The keys that are not associated with the `xroad-securityserver-observer` role, don't have any access to the secondary. See next item for more details.
+   Also, the secondary security server's management REST API can be used to read the secondary's configuration. However, modifying the secondary's configuration using the management REST API is blocked. API keys are replicated from the primary to the secondaries, and the keys that are associated with the `xroad-securityserver-observer` role have read-only access to the secondary. In addition, the keys that are associated with the `xroad-securityserver-observer` and `xroad-security-officer` roles, are able to enter token PIN codes. The keys that are not associated with the `xroad-securityserver-observer` role, don't have any access to the secondary. See next item for more details.
 
    For more information on the management REST API, see the  Security Server User Guide \[[UG-SS](#13-references)\].
 
@@ -418,7 +420,6 @@ this node:
 $ curl -i localhost:5588
    HTTP/1.1 200 OK
    Content-Length: 0
-   Server: Jetty(8.y.z-SNAPSHOT)
 ```
 
 And a health check service response on the same node when the service `xroad-signer` is not running:
@@ -426,7 +427,6 @@ And a health check service response on the same node when the service `xroad-sig
 $ curl -i localhost:5588
 HTTP/1.1 500 Server Error
 Transfer-Encoding: chunked
-Server: Jetty(8.y.z-SNAPSHOT)
 
 Fetching health check response timed out for: Authentication key OCSP status
 ```
@@ -438,8 +438,8 @@ Continue to [chapter 6](#6-verifying-the-setup) to verify the setup.
 
 For technical details on the PostgreSQL replication, refer to the [official documentation](https://www.postgresql.org/docs/10/high-availability.html).
 Note that the versions of PostgreSQL distributed with RHEL and Ubuntu are different. At the time of writing, RHEL 7
-distributes PostgreSQL version 9.2, and RHEL 8 and Ubuntu 18.04 version 10; the replication configuration is the same
-for all these versions. On Ubuntu 20.04 using PostgreSQL 12, the configuration has some differences.
+distributes PostgreSQL version 9.2, and RHEL 8 version 10; the replication configuration is the same
+for these versions. On Ubuntu 20.04 using PostgreSQL version 12 and on 22.04 using version 14, the configuration has some differences.
 
 ### 4.1 Setting up TLS certificates for database authentication
 
@@ -547,11 +547,17 @@ listen_addresses  = '*'  # (default is localhost. Alternatively: localhost, <IP 
 # PostgreSQL 9.2 (RHEL 7)
 wal_level = hot_standby
 
-# PostgreSQL >=10 (RHEL 8, Ubuntu 18.04, Ubuntu 20.04)
+# PostgreSQL 10 & 12 (RHEL 8, Ubuntu 20.04)
 wal_level = replica
 
 max_wal_senders   = 3   # should be ~ number of secondaries plus some small number. Here, we assume there are two secondaries.
 wal_keep_segments = 8   # keep some wal segments so that secondaries that are offline can catch up.
+
+# PostgreSQL >=14 (Ubuntu 22.04)
+wal_level = replica
+
+max_wal_senders = 3   # should be ~ number of secondaries plus some small number. Here, we assume there are two secondaries.
+wal_keep_size   = 8   # keep some wal size so that secondaries that are offline can catch up.
 ```
 
 For more information about the streaming replication configuration options,
@@ -570,16 +576,16 @@ The `samenet` above assumes that the secondaries will be in the same subnet as t
 
 Start the primary instance:
 
-**Ubuntu 18.04:**
-
-```bash
-systemctl start postgresql@10-serverconf
-```
-
 **Ubuntu 20.04:**
 
 ```bash
 systemctl start postgresql@12-serverconf
+```
+
+**Ubuntu 22.04:**
+
+```bash
+systemctl start postgresql@14-serverconf
 ```
 
 **RHEL:**
@@ -639,7 +645,7 @@ Where `<primary>` is the DNS or IP address of the primary node and `<nodename>` 
 NOTICE: WAL archiving is not enabled; you must ensure that all required WAL segments are copied through other means to complete the backup
 ```
 
-On *RHEL 7/8 or Ubuntu 18.04 (PostgreSQL <12)*, add the following `recovery.conf` to the data directory. Set the owner of the file to `postgres:postgres`, mode `0600`.
+On *RHEL 7/8 (PostgreSQL <12)*, add the following `recovery.conf` to the data directory. Set the owner of the file to `postgres:postgres`, mode `0600`.
 ```properties
 standby_mode = 'on'
 primary_conninfo = 'host=<primary> port=5433 user=<nodename> sslmode=verify-ca sslcert=/etc/xroad/postgresql/server.crt sslkey=/etc/xroad/postgresql/server.key sslrootcert=/etc/xroad/postgresql/ca.crt'
@@ -647,11 +653,11 @@ trigger_file = '/var/lib/xroad/postgresql.trigger'
 ```
 Where, as above, `<primary>` is the DNS or IP address of the primary node and `<nodename>` is the node name (the replication user name added to the primary database).
 
-On *Ubuntu 20.04 (PostgreSQL >=12)*, create an empty `standby.signal` file in the data directory. Set the owner of the file to `postgres:postgres`, mode `0600`.
+On *Ubuntu 20.04 & 22.04 (PostgreSQL >=12)*, create an empty `standby.signal` file in the data directory. Set the owner of the file to `postgres:postgres`, mode `0600`.
 
 Next, modify `postgresql.conf`:
 >On RHEL, PostgreSQL config files are located in the `PGDATA` directory `/var/lib/pgql/serverconf`.  
->Ubuntu keeps the config in `/etc/postgresql/<version>/<cluster name>`, e.g. `/etc/postgresql/10/serverconf`)
+>Ubuntu keeps the config in `/etc/postgresql/<version>/<cluster name>`, e.g. `/etc/postgresql/12/serverconf`)
 ```properties
 ssl = on
 ssl_ca_file   = '/etc/xroad/postgresql/ca.crt'
@@ -669,7 +675,7 @@ hot_standby = on
 hot_standby_feedback = on
 ```
 
-*On Ubuntu 20.04 (PostgreSQL 12) only*, add the primary_conninfo to postgresql.conf:
+*On Ubuntu 20.04 & 22.04 (PostgreSQL >=12) only*, add the primary_conninfo to postgresql.conf:
 ```properties
 primary_conninfo = 'host=<primary> port=5433 user=<nodename> sslmode=verify-ca sslcert=/etc/xroad/postgresql/server.crt sslkey=/etc/xroad/postgresql/server.key sslrootcert=/etc/xroad/postgresql/ca.crt'
 ```
@@ -685,14 +691,14 @@ Finally, start the database instance
 systemctl start postgresql-serverconf
 ```
 
-**Ubuntu 18.04:**
-```bash
-systemctl start postgresql@10-serverconf
-```
-
 **Ubuntu 20.04:**
 ```bash
 systemctl start postgresql@12-serverconf
+```
+
+**Ubuntu 22.04:**
+```bash
+systemctl start postgresql@14-serverconf
 ```
 
 ## 5. Configuring data replication with rsync over SSH
