@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,121 +25,106 @@
    THE SOFTWARE.
  -->
 <template>
-  <div>
-    <ValidationObserver ref="form1" v-slot="{ invalid }">
-      <div class="wizard-step-form-content">
-        <div class="wizard-row-wrap">
-          <xrd-form-label
-            :label-text="$t('csr.usage')"
-            :help-text="$t('csr.helpUsage')"
+  <XrdWizardStep>
+    <XrdFormBlock>
+      <XrdFormBlockRow description="csr.helpUsage" adjust-against-content>
+        <v-select
+          v-model="selectedUsage"
+          v-bind="selectedUsageAttr"
+          :items="usageList"
+          class="xrd"
+          :disabled="isUsageReadOnly || !permissionForUsage"
+          data-test="csr-usage-select"
+          :label="$t('csr.usage')"
+        />
+      </XrdFormBlockRow>
+
+      <v-slide-y-transition>
+        <XrdFormBlockRow v-if="showClient" key="csr-client-field" description="csr.helpClient" adjust-against-content>
+          <v-combobox
+            v-model="selectedCsrClient"
+            v-bind="selectedCsrClientAttr"
+            variant="underlined"
+            :items="memberIdItems"
+            :return-object="false"
+            auto-select-first
+            class="xrd"
+            data-test="csr-client-select"
+            :label="$t('csr.client')"
           />
+        </XrdFormBlockRow>
+      </v-slide-y-transition>
+      <XrdFormBlockRow description="csr.helpCertificationService" adjust-against-content>
+        <v-select
+          v-model="selectedCertService"
+          v-bind="selectedCertServiceAttr"
+          :items="filteredServiceList"
+          item-title="name"
+          item-value="name"
+          class="xrd"
+          data-test="csr-certification-service-select"
+          :label="$t('csr.certificationService')"
+          @update:model-value="onCertServiceChange"
+        />
+      </XrdFormBlockRow>
 
-          <ValidationProvider v-slot="{}" name="csr.usage" rules="required">
-            <v-select
-              v-model="usage"
-              :items="usageList"
-              class="wizard-form-input"
-              :disabled="isUsageReadOnly || !permissionForUsage"
-              data-test="csr-usage-select"
-              outlined
-            ></v-select>
-          </ValidationProvider>
-        </div>
-
-        <div v-if="usage === usageTypes.SIGNING" class="wizard-row-wrap">
-          <xrd-form-label
-            :label-text="$t('csr.client')"
-            :help-text="$t('csr.helpClient')"
-          />
-
-          <ValidationProvider v-slot="{}" name="csr.client" rules="required">
-            <v-select
-              v-model="csrClient"
-              :items="memberIds"
-              item-text="id"
-              item-value="id"
-              class="wizard-form-input"
-              data-test="csr-client-select"
-              outlined
-            ></v-select>
-          </ValidationProvider>
-        </div>
-
-        <div class="wizard-row-wrap">
-          <xrd-form-label
-            :label-text="$t('csr.certificationService')"
-            :help-text="$t('csr.helpCertificationService')"
-          />
-
-          <ValidationProvider
-            v-slot="{}"
-            name="csr.certService"
-            rules="required"
-          >
-            <v-select
-              v-model="certificationService"
-              :items="filteredServiceList"
-              item-text="name"
-              item-value="name"
-              class="wizard-form-input"
-              data-test="csr-certification-service-select"
-              outlined
-            ></v-select>
-          </ValidationProvider>
-        </div>
-
-        <div class="wizard-row-wrap">
-          <xrd-form-label
-            :label-text="$t('csr.csrFormat')"
-            :help-text="$t('csr.helpCsrFormat')"
-          />
-
-          <ValidationProvider v-slot="{}" name="csr.csrFormat" rules="required">
-            <v-select
-              v-model="csrFormat"
-              :items="csrFormatList"
-              class="wizard-form-input"
-              data-test="csr-format-select"
-              outlined
-            ></v-select>
-          </ValidationProvider>
-        </div>
-      </div>
-      <div class="button-footer">
-        <xrd-button outlined data-test="cancel-button" @click="cancel">{{
-          $t('action.cancel')
-        }}</xrd-button>
-
-        <xrd-button
-          v-if="showPreviousButton"
-          outlined
-          class="previous-button"
-          data-test="previous-button"
-          @click="previous"
-          >{{ $t('action.previous') }}</xrd-button
-        >
-        <xrd-button :disabled="invalid" data-test="save-button" @click="done">{{
-          $t(saveButtonText)
-        }}</xrd-button>
-      </div>
-    </ValidationObserver>
-  </div>
+      <XrdFormBlockRow description="csr.helpCsrFormat" adjust-against-content>
+        <v-select
+          v-model="selectedCsrFormat"
+          v-bind="selectedCsrFormatAttr"
+          :items="csrFormatList"
+          :disabled="isCsrFormatReadOnly"
+          class="xrd"
+          data-test="csr-format-select"
+          :label="$t('csr.csrFormat')"
+        />
+      </XrdFormBlockRow>
+    </XrdFormBlock>
+    <template #footer>
+      <XrdBtn data-test="cancel-button" variant="text" text="action.cancel" @click="cancel" />
+      <v-spacer />
+      <XrdBtn
+        v-if="showPreviousButton"
+        data-test="previous-button"
+        variant="outlined"
+        text="action.previous"
+        prepend-icon="arrow_back"
+        class="mr-2"
+        @click="previous"
+      />
+      <XrdBtn data-test="save-button" :text="saveButtonText" append-icon="arrow_forward" :disabled="!meta.valid" @click="done" />
+    </template>
+  </XrdWizardStep>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
+import { defineComponent } from 'vue';
 
-import { ValidationProvider, ValidationObserver } from 'vee-validate';
 import { Permissions } from '@/global';
 import { CsrFormat, KeyUsageType } from '@/openapi-types';
 import { mapActions, mapState, mapWritableState } from 'pinia';
 import { useUser } from '@/store/modules/user';
-import { useCsrStore } from '@/store/modules/certificateSignRequest';
+import { useCsr } from '@/store/modules/certificateSignRequest';
+import { defineRule, useForm } from 'vee-validate';
+import { FieldValidationMetaInfo } from '@vee-validate/i18n';
+import { i18n, XrdWizardStep, XrdBtn, XrdFormBlock, XrdFormBlockRow, useNotifications, veeDefaultFieldConfig } from '@niis/shared-ui';
 
-export default Vue.extend({
+defineRule('requiredIfSigning', (value: string, _, ctx: FieldValidationMetaInfo): string | boolean => {
+  const usage = (ctx.form.csr as Record<string, never>).usage;
+  if (usage === KeyUsageType.SIGNING && (!value || !value.length)) {
+    return i18n.global.t('customValidation.requiredIf', {
+      fieldName: i18n.global.t(`fields.${ctx.field}`),
+    });
+  }
+  return true;
+});
+
+export default defineComponent({
   components: {
-    ValidationObserver,
-    ValidationProvider,
+    XrdWizardStep,
+    XrdBtn,
+    XrdFormBlock,
+    XrdFormBlockRow,
   },
   props: {
     saveButtonText: {
@@ -150,41 +136,91 @@ export default Vue.extend({
       default: true,
     },
   },
+  emits: ['done', 'previous', 'cancel'],
+  setup() {
+    const { addError } = useNotifications();
+    const { usage, csrClient, certificationService, csrFormat } = useCsr();
+    const { meta, values, setFieldValue, defineField } = useForm({
+      validationSchema: {
+        'csr.usage': 'required',
+        'csr.client': 'requiredIfSigning',
+        'csr.certificationService': 'required',
+        'csr.csrFormat': 'required',
+      },
+      initialValues: {
+        csr: {
+          usage: usage,
+          client: csrClient,
+          certificationService: certificationService,
+          csrFormat: csrFormat,
+        },
+      },
+    });
+    const componentConfig = veeDefaultFieldConfig();
+    const [selectedUsage, selectedUsageAttr] = defineField('csr.usage', componentConfig);
+    const [selectedCsrClient, selectedCsrClientAttr] = defineField('csr.client', componentConfig);
+    const [selectedCertService, selectedCertServiceAttr] = defineField('csr.certificationService', componentConfig);
+    const [selectedCsrFormat, selectedCsrFormatAttr] = defineField('csr.csrFormat', componentConfig);
+    return {
+      meta,
+      values,
+      setFieldValue,
+      selectedUsage,
+      selectedUsageAttr,
+      selectedCsrClient,
+      selectedCsrClientAttr,
+      selectedCertService,
+      selectedCertServiceAttr,
+      selectedCsrFormat,
+      selectedCsrFormatAttr,
+      addError,
+    };
+  },
   data() {
     return {
       usageTypes: KeyUsageType,
-      usageList: Object.values(KeyUsageType),
-      csrFormatList: Object.values(CsrFormat),
+      usageList: Object.values(KeyUsageType).map((usageType) => ({
+        title: usageType,
+        value: usageType,
+      })),
+      csrFormatList: Object.values(CsrFormat).map((csrFormat) => ({
+        title: csrFormat,
+        value: csrFormat,
+      })),
       permissionForUsage: true,
     };
   },
   computed: {
-    ...mapState(useCsrStore, [
-      'memberIds',
-      'filteredServiceList',
-      'isUsageReadOnly',
-    ]),
-    ...mapWritableState(useCsrStore, [
-      'usage',
-      'csrClient',
-      'csrFormat',
-      'certificationService',
-    ]),
+    ...mapState(useCsr, ['memberIds', 'filteredServiceList', 'isUsageReadOnly']),
+    ...mapWritableState(useCsr, ['usage', 'csrClient', 'csrFormat', 'certificationService']),
     ...mapState(useUser, ['hasPermission']),
+    memberIdItems() {
+      return this.memberIds.map((id) => ({ title: id, value: id }));
+    },
+    showClient(): boolean {
+      return this.values.csr.usage === this.usageTypes.SIGNING;
+    },
+    isCsrFormatReadOnly(): boolean {
+      return !!this.filteredServiceList.find((certificateAuthority) => certificateAuthority.name == this.values.csr.certificationService)
+        ?.default_csr_format;
+    },
   },
 
   watch: {
     filteredServiceList(val) {
       // Set first certification service selected as default when the list is updated
       if (val?.length === 1) {
-        this.certificationService = val[0].name;
+        this.setFieldValue('csr.certificationService', val[0].name);
       }
     },
     memberIds(val) {
       // Set first client selected as default when the list is updated
       if (val?.length === 1) {
-        this.csrClient = val[0].id;
+        this.setFieldValue('csr.client', val[0].id);
       }
+    },
+    usage(val) {
+      this.setFieldValue('csr.usage', val);
     },
   },
 
@@ -193,29 +229,31 @@ export default Vue.extend({
     this.fetchAllMemberIds();
 
     // Check if the user has permission for only one type of CSR
-    const signPermission = this.hasPermission(
-      Permissions.GENERATE_SIGN_CERT_REQ,
-    );
-    const authPermission = this.hasPermission(
-      Permissions.GENERATE_AUTH_CERT_REQ,
-    );
+    const signPermission = this.hasPermission(Permissions.GENERATE_SIGN_CERT_REQ);
+    const authPermission = this.hasPermission(Permissions.GENERATE_AUTH_CERT_REQ);
 
     if (signPermission && !authPermission) {
       // lock usage type to sign
-      this.usage = KeyUsageType.SIGNING;
+      this.setFieldValue('csr.usage', KeyUsageType.SIGNING);
       this.permissionForUsage = false;
     }
 
     if (!signPermission && authPermission) {
       // lock usage type to auth
-      this.usage = KeyUsageType.AUTHENTICATION;
+      this.setFieldValue('csr.usage', KeyUsageType.AUTHENTICATION);
       this.permissionForUsage = false;
     }
   },
   methods: {
-    ...mapActions(useCsrStore, ['fetchAllMemberIds']),
+    ...mapActions(useCsr, ['fetchAllMemberIds', 'hasAcmeEabCredentials']),
     done(): void {
-      this.$emit('done');
+      this.usage = this.values.csr.usage;
+      this.csrClient = this.values.csr.client;
+      this.certificationService = this.values.csr.certificationService;
+      this.csrFormat = this.values.csr.csrFormat;
+      this.hasAcmeEabCredentials()
+        .catch((error) => this.addError(error, { navigate: true }))
+        .finally(() => this.$emit('done'));
     },
     previous(): void {
       this.$emit('previous');
@@ -223,10 +261,16 @@ export default Vue.extend({
     cancel(): void {
       this.$emit('cancel');
     },
+    onCertServiceChange(): void {
+      const ca = this.filteredServiceList.find((ca) => {
+        return ca.name == this.values.csr.certificationService;
+      });
+      if (ca?.default_csr_format) {
+        this.setFieldValue('csr.csrFormat', ca.default_csr_format);
+      }
+    },
   },
 });
 </script>
 
-<style lang="scss" scoped>
-@import '../../assets/wizards';
-</style>
+<style lang="scss" scoped></style>

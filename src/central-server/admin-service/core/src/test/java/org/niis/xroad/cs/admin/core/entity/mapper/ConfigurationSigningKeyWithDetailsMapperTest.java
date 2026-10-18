@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,16 +26,20 @@
  */
 package org.niis.xroad.cs.admin.core.entity.mapper;
 
+import ee.ria.xroad.common.crypto.identifier.KeyAlgorithm;
+
 import org.junit.jupiter.api.Test;
 import org.niis.xroad.cs.admin.api.domain.ConfigurationSigningKey;
 import org.niis.xroad.cs.admin.api.dto.PossibleKeyAction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ActiveProfiles("test")
 @SpringBootTest(classes = {ConfigurationSigningKeyWithDetailsMapperImpl.class})
 class ConfigurationSigningKeyWithDetailsMapperTest {
     private static final String LABEL = "label1";
@@ -48,10 +52,11 @@ class ConfigurationSigningKeyWithDetailsMapperTest {
         var configurationSigningKey = new ConfigurationSigningKey();
         var possibleKeys = List.of(PossibleKeyAction.ACTIVATE, PossibleKeyAction.DELETE);
 
-        var result = mapper.toTarget(configurationSigningKey, possibleKeys, LABEL, true);
+        var result = mapper.toTarget(configurationSigningKey, possibleKeys, LABEL, true, KeyAlgorithm.RSA);
 
         assertThat(result.getAvailable()).isTrue();
         assertThat(result.getLabel().getLabel()).isEqualTo(LABEL);
+        assertThat(result.getKeyAlgorithm()).isEqualTo(KeyAlgorithm.RSA);
         assertThat(result.getPossibleActions()).containsExactlyInAnyOrder(PossibleKeyAction.ACTIVATE, PossibleKeyAction.DELETE);
     }
 }

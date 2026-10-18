@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,137 +25,109 @@
    THE SOFTWARE.
  -->
 <template>
-  <div class="xrd-tab-max-width dtlv-outer">
-    <ValidationObserver ref="form" v-slot="{ invalid }">
-      <div class="dtlv-content">
-        <div>
-          <xrd-sub-view-title
-            v-if="key.usage == 'SIGNING'"
-            :title="$t('keys.signDetailsTitle')"
-            @close="close"
-          />
-          <xrd-sub-view-title
-            v-else-if="key.usage == 'AUTHENTICATION'"
-            :title="$t('keys.authDetailsTitle')"
-            @close="close"
-          />
-          <xrd-sub-view-title
-            v-else
-            :title="$t('keys.detailsTitle')"
-            @close="close"
-          />
-          <div class="dtlv-tools">
-            <xrd-button
-              v-if="canDelete"
-              :loading="deleting"
-              outlined
-              @click="confirmDelete = true"
-              >{{ $t('action.delete') }}</xrd-button
-            >
-          </div>
-        </div>
+  <XrdElevatedViewFixedWidth :title="titleKey" :breadcrumbs="breadcrumbs" @close="close">
+    <XrdFormBlock>
+      <XrdFormBlockRow>
+        <v-text-field
+          v-if="keyName"
+          v-model="keyName"
+          class="xrd"
+          name="keys.name"
+          autofocus
+          :label="$t('fields.keys.name')"
+          :maxlength="255"
+          :disabled="!canEdit"
+        />
+      </XrdFormBlockRow>
+    </XrdFormBlock>
 
-        <div>
-          <ValidationProvider
-            v-slot="{ errors }"
-            rules="required"
-            name="keys.name"
-            class="validation-provider"
-          >
-            <v-text-field
-              v-model="key.name"
-              class="code-input key-name"
-              name="keys.name"
-              type="text"
-              :label="$t('fields.keys.name')"
-              outlined
-              :maxlength="255"
-              :error-messages="errors"
-              :disabled="!canEdit"
-              @input="touched = true"
-            ></v-text-field>
-          </ValidationProvider>
-        </div>
+    <XrdCard class="mt-4" :loading="loading" title="keys.keyInfo">
+      <XrdCardTable v-if="key">
+        <XrdCardTableRow label="keys.keyId" :value="key.id" />
+        <XrdCardTableRow label="keys.label" :value="key.label" />
+        <XrdCardTableRow label="keys.keyAlgorithm" :value="key.key_algorithm" />
+        <XrdCardTableRow label="keys.readOnly" :value="tokenForCurrentKey.read_only" />
+      </XrdCardTable>
+    </XrdCard>
+    <template #footer>
+      <v-spacer />
+      <XrdBtn
+        v-if="canDelete"
+        variant="outlined"
+        text="action.delete"
+        prepend-icon="delete_forever"
+        :loading="deleting"
+        @click="confirmDelete = true"
+      />
+      <XrdBtn
+        class="ml-2"
+        text="action.save"
+        prepend-icon="check"
+        :disabled="!meta.dirty || !meta.valid"
+        :loading="saving"
+        @click="save()"
+      />
+      <!-- Confirm dialog delete Key -->
+      <XrdConfirmDialog
+        v-if="confirmDelete"
+        title="keys.deleteTitle"
+        text="keys.deleteKeyText"
+        @cancel="confirmDelete = false"
+        @accept="doDeleteKey(false)"
+      />
 
-        <div>
-          <h3 class="info-title">{{ $t('keys.keyInfo') }}</h3>
-          <div class="info-row">
-            <div class="row-title">{{ $t('keys.keyId') }}</div>
-            <div class="row-data">{{ key.id }}</div>
-          </div>
-          <div class="info-row">
-            <div class="row-title">{{ $t('keys.label') }}</div>
-            <div class="row-data">{{ key.label }}</div>
-          </div>
-          <div class="info-row">
-            <div class="row-title">{{ $t('keys.readOnly') }}</div>
-            <div class="row-data">{{ tokenForCurrentKey.read_only }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="dtlv-actions-footer">
-        <xrd-button outlined @click="close()">{{
-          $t('action.cancel')
-        }}</xrd-button>
-        <xrd-button
-          :loading="saveBusy"
-          :disabled="!touched || invalid"
-          @click="save()"
-          >{{ $t('action.save') }}</xrd-button
-        >
-      </div>
-    </ValidationObserver>
-
-    <!-- Confirm dialog delete Key -->
-    <xrd-confirm-dialog
-      :dialog="confirmDelete"
-      title="keys.deleteTitle"
-      text="keys.deleteKeyText"
-      @cancel="confirmDelete = false"
-      @accept="deleteKey(false)"
-    />
-
-    <!-- Warning dialog when key is deleted -->
-    <warningDialog
-      :dialog="warningDialog"
-      :warnings="warningInfo"
-      localization-parent="keys"
-      @cancel="cancelSubmit()"
-      @accept="acceptWarnings()"
-    />
-  </div>
+      <!-- Warning dialog when key is deleted -->
+      <WarningDialog
+        v-if="warningDialog"
+        :warnings="warningInfo"
+        localization-parent="keys"
+        @cancel="cancelSubmit()"
+        @accept="acceptWarnings()"
+      />
+    </template>
+  </XrdElevatedViewFixedWidth>
 </template>
 
 <script lang="ts">
 /***
  * Component for showing the details of a key
  */
-import Vue from 'vue';
-import * as api from '@/util/api';
-import { ValidationProvider, ValidationObserver } from 'vee-validate';
-import { Permissions } from '@/global';
-import {
-  Key,
-  KeyUsageType,
-  PossibleAction,
-  PossibleActions as PossibleActionsList,
-  Token,
-} from '@/openapi-types';
-import { encodePathParameter } from '@/util/api';
+import { defineComponent } from 'vue';
+import { Permissions, RouteName } from '@/global';
+import { CodeWithDetails, Key, KeyUsageType, PossibleAction, Token, PossibleActions } from '@/openapi-types';
 import WarningDialog from '@/components/ui/WarningDialog.vue';
 
-import { PossibleActions } from '@/openapi-types/models/PossibleActions';
 import { isEmpty } from '@/util/helpers';
 import { mapActions, mapState } from 'pinia';
-import { useTokensStore } from '@/store/modules/tokens';
+import { useTokens } from '@/store/modules/tokens';
 import { useUser } from '@/store/modules/user';
-import { useNotifications } from '@/store/modules/notifications';
+import { useField } from 'vee-validate';
+import {
+  XrdElevatedViewFixedWidth,
+  XrdFormBlock,
+  XrdFormBlockRow,
+  XrdBtn,
+  useNotifications,
+  XrdCardTable,
+  XrdCard,
+  XrdCardTableRow,
+  XrdConfirmDialog,
+  veeDefaultFieldConfig,
+} from '@niis/shared-ui';
+import { useKeys } from '@/store/modules/keys';
+import { BreadcrumbItem } from 'vuetify/lib/components/VBreadcrumbs/VBreadcrumbs';
 
-export default Vue.extend({
+export default defineComponent({
   components: {
-    ValidationProvider,
-    ValidationObserver,
+    XrdCardTableRow,
+    XrdCard,
+    XrdCardTable,
+    XrdFormBlock,
+    XrdFormBlockRow,
+    XrdElevatedViewFixedWidth,
+    XrdBtn,
     WarningDialog,
+    XrdConfirmDialog,
   },
   props: {
     id: {
@@ -162,23 +135,51 @@ export default Vue.extend({
       required: true,
     },
   },
+  setup() {
+    const { addError, addSuccessMessage } = useNotifications();
+    const { meta, value, resetField } = useField(
+      'keys.name',
+      {
+        required: true,
+      },
+      {
+        ...veeDefaultFieldConfig(),
+        initialValue: '',
+      },
+    );
+    return {
+      meta,
+      keyName: value,
+      resetField,
+      addError,
+      addSuccessMessage,
+    };
+  },
   data() {
     return {
+      loading: false,
       confirmDelete: false,
-      touched: false,
-      saveBusy: false,
+      saving: false,
       key: {} as Key,
       possibleActions: [] as PossibleActions,
       deleting: false as boolean,
-      warningInfo: [] as string[],
+      warningInfo: [] as CodeWithDetails[],
       warningDialog: false as boolean,
       tokenForCurrentKey: {} as Token,
     };
   },
   computed: {
-    ...mapState(useTokensStore, ['tokens']),
-
+    ...mapState(useTokens, ['tokens']),
     ...mapState(useUser, ['hasPermission']),
+    titleKey() {
+      if (this.key.usage == KeyUsageType.SIGNING) {
+        return 'keys.signDetailsTitle';
+      } else if (this.key.usage == KeyUsageType.AUTHENTICATION) {
+        return 'keys.authDetailsTitle';
+      } else {
+        return 'keys.detailsTitle';
+      }
+    },
     canEdit(): boolean {
       if (!this.possibleActions.includes(PossibleAction.EDIT_FRIENDLY_NAME)) {
         return false;
@@ -201,83 +202,87 @@ export default Vue.extend({
 
       return this.hasPermission(Permissions.DELETE_KEY);
     },
+    breadcrumbs() {
+      const crumbs: BreadcrumbItem[] = [
+        {
+          title: this.$t('tab.keys.signAndAuthKeys'),
+          to: {
+            name: RouteName.SignAndAuthKeys,
+          },
+        },
+      ];
+
+      if (this.key) {
+        crumbs.push({
+          title: this.key.name ?? this.key.id,
+        });
+      }
+
+      return crumbs;
+    },
   },
-  created() {
-    this.fetchData(this.id);
+  watch: {
+    id: {
+      immediate: true,
+      handler() {
+        this.fetchData(this.id);
+      },
+    },
   },
   methods: {
-    ...mapActions(useNotifications, ['showError', 'showSuccess']),
-    ...mapActions(useTokensStore, ['fetchTokens']),
+    ...mapActions(useTokens, ['fetchTokens']),
+    ...mapActions(useKeys, ['fetchKey', 'fetchPossibleActions', 'updateKeyName', 'deleteKey']),
     close(): void {
-      this.$router.go(-1);
+      this.$router.back();
     },
 
     save(): void {
-      this.saveBusy = true;
-
-      api
-        .patch(`/keys/${encodePathParameter(this.id)}`, this.key)
+      this.saving = true;
+      this.key.name = this.keyName;
+      this.updateKeyName(this.id, { name: this.keyName })
         .then(() => {
-          this.saveBusy = false;
-          this.showSuccess(this.$t('keys.keySaved'));
-          this.close();
+          this.addSuccessMessage('keys.keySaved');
+          this.fetchData(this.id);
         })
-        .catch((error) => {
-          this.saveBusy = false;
-          this.showError(error);
-        });
+        .catch((error) => this.addError(error))
+        .finally(() => (this.saving = false));
     },
 
     async fetchData(id: string) {
-      const keyResponse = await api.get<Key>(
-        `/keys/${encodePathParameter(id)}`,
-      );
-
-      this.key = keyResponse.data;
-      this.fetchPossibleActions(id);
-      // If the key has no name, use key id instead
-      this.setKeyName();
+      this.loading = true;
+      this.fetchKey(id)
+        .then((key) => (this.key = key))
+        .then(() => this.setNameField())
+        .then(() => this.doFetchPossibleActions(id))
+        .catch((error) => this.addError(error, { navigate: true }))
+        .finally(() => (this.loading = false));
 
       if (this.tokens?.length === 0) {
         await this.fetchTokens();
       }
 
       // Find the token that contains current key after token and key are fetched
-      this.tokenForCurrentKey = this.tokens.find((token: Token) =>
-        token.keys.find((key: Key) => key.id === this.id),
-      ) as Token;
+      this.tokenForCurrentKey = this.tokens.find((token: Token) => token.keys.find((key: Key) => key.id === this.id)) as Token;
     },
-    fetchPossibleActions(id: string): void {
-      api
-        .get<PossibleActionsList>(
-          `/keys/${encodePathParameter(id)}/possible-actions`,
-        )
-        .then((res) => {
-          this.possibleActions = res.data;
-        })
-        .catch((error) => {
-          this.showError(error);
-        });
+    doFetchPossibleActions(id: string): void {
+      this.fetchPossibleActions(id)
+        .then((data) => (this.possibleActions = data))
+        .catch((error) => this.addError(error));
     },
     cancelSubmit(): void {
       this.warningDialog = false;
     },
     acceptWarnings(): void {
       this.warningDialog = false;
-      this.deleteKey(true);
+      this.doDeleteKey(true);
     },
-    deleteKey(ignoreWarnings: boolean): void {
+    doDeleteKey(ignoreWarnings: boolean): void {
       this.deleting = true;
       this.confirmDelete = false;
 
-      api
-        .remove(
-          `/keys/${encodePathParameter(
-            this.id,
-          )}?ignore_warnings=${ignoreWarnings}`,
-        )
+      this.deleteKey(this.id, ignoreWarnings)
         .then(() => {
-          this.showSuccess(this.$t('keys.keyDeleted'));
+          this.addSuccessMessage('keys.keyDeleted', {}, true);
           this.close();
         })
         .catch((error) => {
@@ -285,35 +290,19 @@ export default Vue.extend({
             this.warningInfo = error.response.data.warnings;
             this.warningDialog = true;
           } else {
-            this.showError(error);
+            this.addError(error);
           }
         })
         .finally(() => (this.deleting = false));
     },
-    setKeyName(): void {
-      if (isEmpty(this.key.name)) {
-        this.key.name = this.key.id;
-      }
+    setNameField(): void {
+      // If the key has no name, use key id instead
+      this.resetField({
+        value: isEmpty(this.key.name) ? this.key.id : this.key.name,
+      });
     },
   },
 });
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/detail-views';
-@import '~styles/wizards';
-
-.info-title {
-  margin-top: 30px;
-  margin-bottom: 10px;
-}
-
-.info-row {
-  display: flex;
-  flex-direction: row;
-}
-
-.key-name {
-  width: 405px;
-}
-</style>
+<style lang="scss" scoped></style>

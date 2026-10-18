@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -29,5 +29,5 @@ package org.niis.xroad.cs.admin.api.dto;
 public enum TokenInitStatus {
     INITIALIZED,
     NOT_INITIALIZED,
-    UNKNOWN;
+    UNKNOWN
 }

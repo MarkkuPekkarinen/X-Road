@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,7 +27,6 @@ package org.niis.xroad.cs.admin.core.service;
 
 import ee.ria.xroad.common.identifier.ClientId;
 
-import io.vavr.control.Option;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -38,8 +37,8 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.common.exception.NotFoundException;
-import org.niis.xroad.common.exception.ValidationFailureException;
 import org.niis.xroad.cs.admin.api.domain.ClientRegistrationRequest;
 import org.niis.xroad.cs.admin.api.domain.MemberClass;
 import org.niis.xroad.cs.admin.api.domain.Origin;
@@ -133,13 +132,12 @@ class ManagementServicesServiceImplTest {
         void shouldReturnWithSubsystem() {
             var serviceProviderClientId = ClientId.Conf.create(INSTANCE, MEMBER_CLASS, MEMBER_CODE, SUBSYSTEM_CODE);
             when(systemParameterService.getManagementServiceProviderId()).thenReturn(serviceProviderClientId);
-            when(memberService.findMember(serviceProviderClientId)).thenReturn(Option.of(xRoadMember));
+            when(memberService.findMember(serviceProviderClientId)).thenReturn(Optional.of(xRoadMember));
 
             when(subsystemService.findByIdentifier(serviceProviderClientId)).thenReturn(Optional.of(subsystem));
             var serverClient = new ServerClient();
             serverClient.setServerId(SecurityServerId.create(serviceProviderClientId, "SS0"));
             when(subsystem.getServerClients()).thenReturn(Set.of(serverClient));
-
 
             var result = managementServicesService.getManagementServicesConfiguration();
 
@@ -155,7 +153,7 @@ class ManagementServicesServiceImplTest {
         @Test
         void shouldReturnWithMember() {
             when(systemParameterService.getManagementServiceProviderId()).thenReturn(clientId);
-            when(memberService.findMember(clientId)).thenReturn(Option.of(xRoadMember));
+            when(memberService.findMember(clientId)).thenReturn(Optional.of(xRoadMember));
 
             var serverClient0 = new ServerClient();
             serverClient0.setServerId(SecurityServerId.create(clientId, "SS0"));
@@ -231,13 +229,13 @@ class ManagementServicesServiceImplTest {
         void shouldRegister() {
             final int requestId = 123;
             when(systemParameterService.getManagementServiceProviderId()).thenReturn(managementServiceProviderId);
-            when(clients.findOneBy(managementServiceProviderId)).thenReturn(Option.of(securityServerClientEntity));
+            when(clients.findOneBy(managementServiceProviderId)).thenReturn(Optional.of(securityServerClientEntity));
             when(securityServerClientEntity.getServerClients()).thenReturn(Set.of());
             when(managementRequestService.add(isA(ClientRegistrationRequest.class))).thenReturn(clientRegistrationRequest);
             when(clientRegistrationRequest.getProcessingStatus()).thenReturn(SUBMITTED_FOR_APPROVAL);
             when(clientRegistrationRequest.getId()).thenReturn(requestId);
 
-            when(memberService.findMember(managementServiceProviderId)).thenReturn(Option.of(xRoadMember));
+            when(memberService.findMember(managementServiceProviderId)).thenReturn(Optional.of(xRoadMember));
             when(subsystemService.findByIdentifier(managementServiceProviderId)).thenReturn(Optional.of(subsystem));
 
             managementServicesService.registerManagementServicesSecurityServer(securityServerId);
@@ -262,19 +260,19 @@ class ManagementServicesServiceImplTest {
             when(systemParameterService.getManagementServiceProviderId()).thenReturn(null);
 
             assertThatThrownBy(() -> managementServicesService.registerManagementServicesSecurityServer(securityServerId))
-                    .isInstanceOf(ValidationFailureException.class)
-                    .hasMessage("Management service provider not set");
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("Error[code=management_service_provider_not_set]");
         }
 
         @Test
         void shouldFailSubsystemRegistered() {
             when(systemParameterService.getManagementServiceProviderId()).thenReturn(managementServiceProviderId);
-            when(clients.findOneBy(managementServiceProviderId)).thenReturn(Option.of(securityServerClientEntity));
+            when(clients.findOneBy(managementServiceProviderId)).thenReturn(Optional.of(securityServerClientEntity));
             when(securityServerClientEntity.getServerClients()).thenReturn(Set.of(mock(ServerClientEntity.class)));
 
             assertThatThrownBy(() -> managementServicesService.registerManagementServicesSecurityServer(securityServerId))
-                    .isInstanceOf(ValidationFailureException.class)
-                    .hasMessage("Subsystem is already registered to the security server.");
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("Error[code=subsystem_already_registered_to_security_server]");
 
             verify(auditData).put(SERVER_CODE, securityServerId.getServerCode());
             verify(auditData).put(OWNER_CLASS, securityServerId.getOwner().getMemberClass());

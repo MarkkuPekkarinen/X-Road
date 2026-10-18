@@ -1,20 +1,20 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,6 +27,7 @@ package ee.ria.xroad.common;
 
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.util.CryptoUtils;
+import ee.ria.xroad.common.util.TimeUtils;
 
 import lombok.SneakyThrows;
 import org.bouncycastle.asn1.x509.Extension;
@@ -35,6 +36,7 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -45,14 +47,13 @@ import java.math.BigInteger;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -226,7 +227,7 @@ public final class TestCertUtil {
         try (InputStream is = getFile(pemFileName)) {
             return CryptoUtils.readCertificate(Base64.getMimeDecoder().wrap(is));
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw XrdRuntimeException.systemException(e);
         }
     }
 
@@ -242,12 +243,12 @@ public final class TestCertUtil {
             X509Certificate cert =
                     (X509Certificate) keyStore.getCertificate(orgName);
             if (cert == null) {
-                throw new RuntimeException(String.format(CERT_ERROR_MSG, orgName));
+                throw XrdRuntimeException.systemInternalError(String.format(CERT_ERROR_MSG, orgName));
             }
 
             return cert;
         } catch (KeyStoreException e) {
-            throw new RuntimeException(e);
+            throw XrdRuntimeException.systemException(e);
         }
     }
 
@@ -262,14 +263,14 @@ public final class TestCertUtil {
         try {
             final Certificate[] chain = keyStore.getCertificateChain(orgName);
             if (chain == null || chain.length == 0) {
-                throw new RuntimeException(String.format(CERT_ERROR_MSG, orgName));
+                throw XrdRuntimeException.systemInternalError(String.format(CERT_ERROR_MSG, orgName));
             }
 
             X509Certificate[] tmp = new X509Certificate[chain.length];
             System.arraycopy(chain, 0, tmp, 0, chain.length);
             return tmp;
         } catch (KeyStoreException e) {
-            throw new RuntimeException(e);
+            throw XrdRuntimeException.systemException(e);
         }
     }
 
@@ -287,13 +288,13 @@ public final class TestCertUtil {
             PrivateKey key = (PrivateKey) keyStore.getKey(orgName,
                     password.toCharArray());
             if (key == null) {
-                throw new RuntimeException(
+                throw XrdRuntimeException.systemInternalError(
                         String.format(CERT_ERROR_WITH_PASSWD_MSG, orgName, password));
             }
 
             return key;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw XrdRuntimeException.systemException(e);
         }
     }
 
@@ -337,7 +338,7 @@ public final class TestCertUtil {
 
             return keyStore;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw XrdRuntimeException.systemException(e);
         }
     }
 
@@ -364,13 +365,13 @@ public final class TestCertUtil {
         return "test".toCharArray();
     }
 
-    public static byte[] generateAuthCert() throws NoSuchAlgorithmException, OperatorCreationException, IOException {
+    public static byte[] generateAuthCert() throws OperatorCreationException, IOException {
         var subjectKey = getKeyPairGenerator().generateKeyPair();
         return generateAuthCert(subjectKey.getPublic());
     }
 
     @SneakyThrows
-    @SuppressWarnings({"checkstyle:MagicNumber", "java:S4426"})
+    @SuppressWarnings({"checkstyle:MagicNumber", "checkstyle:SneakyThrowsCheck", "java:S4426"})
     public static KeyPairGenerator getKeyPairGenerator() {
         var keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(1024);
@@ -387,8 +388,8 @@ public final class TestCertUtil {
         return new JcaX509v3CertificateBuilder(
                 issuer,
                 BigInteger.ONE,
-                Date.from(Instant.now()),
-                Date.from(Instant.now().plus(365, ChronoUnit.DAYS)),
+                Date.from(TimeUtils.now()),
+                Date.from(TimeUtils.now().plus(365, ChronoUnit.DAYS)),
                 subject,
                 subjectKey)
                 .addExtension(Extension.create(
@@ -400,7 +401,7 @@ public final class TestCertUtil {
 
     }
 
-    @SuppressWarnings("checkstyle:MagicNumber")
+    @SuppressWarnings({"checkstyle:MagicNumber", "checkstyle:SneakyThrowsCheck"})
     @SneakyThrows
     public static X509Certificate generateSignCert(PublicKey subjectKey, ClientId id) {
 
@@ -416,8 +417,8 @@ public final class TestCertUtil {
         var cert = new JcaX509v3CertificateBuilder(
                 issuer,
                 BigInteger.TWO,
-                Date.from(Instant.now().minus(1, ChronoUnit.MINUTES)),
-                Date.from(Instant.now().plus(365, ChronoUnit.DAYS)),
+                Date.from(TimeUtils.now().minus(1, ChronoUnit.MINUTES)),
+                Date.from(TimeUtils.now().plus(365, ChronoUnit.DAYS)),
                 subject,
                 subjectKey)
                 .addExtension(Extension.create(
@@ -429,7 +430,7 @@ public final class TestCertUtil {
         return new JcaX509CertificateConverter().getCertificate(cert);
     }
 
-    private static InputStream getFile(String fileName) throws Exception {
+    private static InputStream getFile(String fileName) throws FileNotFoundException {
         InputStream is = TestCertUtil.class.getResourceAsStream(fileName);
         if (is == null) {
             throw new FileNotFoundException(fileName);
@@ -437,4 +438,14 @@ public final class TestCertUtil {
 
         return is;
     }
+
+    @SuppressWarnings("checkstyle:MagicNumber")
+    public static Date getDefaultValidCertDate() {
+        Calendar cal = Calendar.getInstance();
+        cal.clear(); // Let's clear the current time.
+        cal.set(2020, Calendar.JANUARY, 1);
+
+        return cal.getTime();
+    }
+
 }

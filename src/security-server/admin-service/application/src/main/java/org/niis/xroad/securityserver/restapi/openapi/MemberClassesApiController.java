@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,9 +27,9 @@ package org.niis.xroad.securityserver.restapi.openapi;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.exception.NotFoundException;
+import org.niis.xroad.globalconf.GlobalConfProvider;
 import org.niis.xroad.restapi.openapi.ControllerUtil;
-import org.niis.xroad.restapi.openapi.ResourceNotFoundException;
-import org.niis.xroad.securityserver.restapi.facade.GlobalConfFacade;
 import org.niis.xroad.securityserver.restapi.service.GlobalConfService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +39,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.INSTANCE_IDENTIFIER_NOT_FOUND;
 
 /**
  * member classes controller
@@ -50,7 +52,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class MemberClassesApiController implements MemberClassesApi {
 
-    private final GlobalConfFacade globalConfFacade;
+    private final GlobalConfProvider globalConfProvider;
     private final GlobalConfService globalConfService;
 
     @Override
@@ -60,7 +62,7 @@ public class MemberClassesApiController implements MemberClassesApi {
         if (currentInstance) {
             memberClasses = new HashSet<>(globalConfService.getMemberClassesForThisInstance());
         } else {
-            memberClasses = new HashSet<>(globalConfFacade.getMemberClasses());
+            memberClasses = new HashSet<>(globalConfProvider.getMemberClasses());
         }
         return new ResponseEntity<>(memberClasses, HttpStatus.OK);
     }
@@ -68,10 +70,10 @@ public class MemberClassesApiController implements MemberClassesApi {
     @Override
     @PreAuthorize("hasAuthority('VIEW_MEMBER_CLASSES')")
     public ResponseEntity<Set<String>> getMemberClassesForInstance(String instanceId) {
-        if (!globalConfFacade.getInstanceIdentifiers().contains(instanceId)) {
-            throw new ResourceNotFoundException("instance identifier not found: " + instanceId);
+        if (!globalConfProvider.getInstanceIdentifiers().contains(instanceId)) {
+            throw new NotFoundException("instance identifier not found: " + instanceId, INSTANCE_IDENTIFIER_NOT_FOUND.build());
         }
-        Set<String> memberClasses = new HashSet(globalConfFacade.getMemberClasses(instanceId));
+        Set<String> memberClasses = new HashSet<>(globalConfProvider.getMemberClasses(instanceId));
         return new ResponseEntity<>(memberClasses, HttpStatus.OK);
     }
 }

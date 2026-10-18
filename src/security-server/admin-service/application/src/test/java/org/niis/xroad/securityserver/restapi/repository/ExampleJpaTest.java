@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,17 +26,22 @@
  */
 package org.niis.xroad.securityserver.restapi.repository;
 
-import ee.ria.xroad.common.conf.serverconf.model.ServerConfType;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.niis.xroad.serverconf.impl.ServerConfDatabaseCtx;
+import org.niis.xroad.serverconf.impl.entity.ServerConfEntity;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,34 +51,39 @@ import static org.junit.Assert.assertEquals;
  * test ClientRepository
  */
 @RunWith(SpringRunner.class)
-@DataJpaTest
+@SpringBootTest
 @AutoConfigureTestDatabase
 @Slf4j
+@EntityScan(basePackages = {
+        "org.niis.xroad.serverconf.impl.entity",
+        "org.niis.xroad.restapi.entity",
+        "org.niis.xroad.common.identifiers.jpa.entity"})
 @Transactional
+@ActiveProfiles("test")
 public class ExampleJpaTest {
 
-    // TestEntityManager only works with DataJpaTests (?)
-    // and DataJpaTests only inject jpa repositories (which we
-    // dont have at least yet), so not sure how useful this
-    // kind of tests will be
-    @Autowired
-    private TestEntityManager testEntityManager;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @MockitoBean
+    ServerConfDatabaseCtx databaseCtx;
+
     @Test
     public void testTestEntityManager() {
-        ServerConfType conf2 = new ServerConfType();
+        ServerConfEntity conf2 = new ServerConfEntity();
         conf2.setServerCode("from-test");
         conf2.setId(null);
         conf2.setOwner(null);
-        ServerConfType confPersisted = testEntityManager.persistFlushFind(conf2);
+        entityManager.persist(conf2);
+        entityManager.flush();
 
-        ServerConfType confLoad1 = testEntityManager.find(ServerConfType.class, 1L);
+        ServerConfEntity confLoad1 = entityManager.find(ServerConfEntity.class, 1L);
         assertEquals("TEST-INMEM-SS", confLoad1.getServerCode());
 
-        ServerConfType confLoad2 = testEntityManager.find(ServerConfType.class, confPersisted.getId());
+        ServerConfEntity confLoad2 = entityManager.find(ServerConfEntity.class, conf2.getId());
         assertEquals("from-test", confLoad2.getServerCode());
     }
 
@@ -87,7 +98,8 @@ public class ExampleJpaTest {
             jdbcTemplate.update("INSERT INTO CLIENT (id, conf_id, identifier)"
                     + " values (2000, 1000, null)");
 
-        } catch (DataIntegrityViolationException expected) { }
+        } catch (DataIntegrityViolationException expected) {
+        }
     }
 
 }

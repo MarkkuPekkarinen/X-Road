@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,23 +26,22 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.common.conf.serverconf.model.ClientType;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfoAndKeyId;
-import ee.ria.xroad.signer.protocol.dto.TokenStatusInfo;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
-import org.niis.xroad.restapi.service.SignerNotReachableException;
 import org.niis.xroad.securityserver.restapi.dto.TokenInitStatusInfo;
-import org.niis.xroad.securityserver.restapi.facade.SignerProxyFacade;
+import org.niis.xroad.serverconf.model.Client;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.api.dto.TokenInfoAndKeyId;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.protocol.dto.TokenStatusInfo;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,16 +50,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static ee.ria.xroad.common.ErrorCodes.SIGNER_X;
-import static ee.ria.xroad.common.ErrorCodes.X_CERT_NOT_FOUND;
-import static ee.ria.xroad.common.ErrorCodes.X_CSR_NOT_FOUND;
-import static ee.ria.xroad.common.ErrorCodes.X_KEY_NOT_FOUND;
-import static ee.ria.xroad.common.ErrorCodes.X_LOGIN_FAILED;
-import static ee.ria.xroad.common.ErrorCodes.X_PIN_INCORRECT;
-import static ee.ria.xroad.common.ErrorCodes.X_TOKEN_NOT_FOUND;
 import static java.util.stream.Collectors.toList;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_PIN_INCORRECT;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_TOKEN_NOT_ACTIVE;
+import static org.niis.xroad.common.core.exception.ErrorCode.ACTION_NOT_POSSIBLE;
+import static org.niis.xroad.common.core.exception.ErrorCode.CERT_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.CSR_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.KEY_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.LOGIN_FAILED;
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_FETCH_FAILED;
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_PIN_INCORRECT;
 
 /**
  * Service that handles tokens
@@ -70,8 +69,9 @@ import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_TOKEN_NOT_A
 @PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class TokenService {
+    private static final String ERROR_CKR_PIN_INCORRECT = "CKR_PIN_INCORRECT";
 
-    private final SignerProxyFacade signerProxyFacade;
+    private final SignerRpcClient signerRpcClient;
     private final PossibleActionsRuleEngine possibleActionsRuleEngine;
     private final AuditDataHelper auditDataHelper;
     private final TokenPinValidator tokenPinValidator;
@@ -83,42 +83,31 @@ public class TokenService {
      */
     public List<TokenInfo> getAllTokens() {
         try {
-            return signerProxyFacade.getTokens();
+            return signerRpcClient.getTokens();
         } catch (Exception e) {
-            throw new SignerNotReachableException("could not list all tokens", e);
+            throw new InternalServerErrorException(e, TOKEN_FETCH_FAILED.build());
         }
     }
 
     /**
      * get all sign certificates for a given client.
      *
-     * @param clientType client who's member certificates need to be
-     * linked to
+     * @param client client whose member certificates need to be
+     *               linked to
      * @return
      */
-    public List<CertificateInfo> getSignCertificates(ClientType clientType) {
-        return getCertificates(clientType, true);
-    }
-
-    /**
-     * get all certificates for a given client.
-     *
-     * @param clientType client who's member certificates need to be
-     * linked to
-     * @return
-     */
-    public List<CertificateInfo> getAllCertificates(ClientType clientType) {
-        return getCertificates(clientType, false);
+    public List<CertificateInfo> getSignCertificates(Client client) {
+        return getCertificates(client, true);
     }
 
     /**
      * Get all certificates for a given client
      *
-     * @param clientType
+     * @param client
      * @param onlySignCertificates if true, return only signing certificates
      * @return
      */
-    private List<CertificateInfo> getCertificates(ClientType clientType, boolean onlySignCertificates) {
+    private List<CertificateInfo> getCertificates(Client client, boolean onlySignCertificates) {
         List<TokenInfo> tokenInfos = getAllTokens();
         Predicate<KeyInfo> keyInfoPredicate = keyInfo -> true;
         if (onlySignCertificates) {
@@ -128,17 +117,17 @@ public class TokenService {
                 .flatMap(tokenInfo -> tokenInfo.getKeyInfo().stream())
                 .filter(keyInfoPredicate)
                 .flatMap(keyInfo -> keyInfo.getCerts().stream())
-                .filter(certificateInfo -> clientType.getIdentifier().memberEquals(certificateInfo.getMemberId()))
+                .filter(certificateInfo -> client.getIdentifier().memberEquals(certificateInfo.getMemberId()))
                 .collect(toList());
     }
 
     /**
      * Activate a token
      *
-     * @param id id of token
+     * @param id       id of token
      * @param password password for token
-     * @throws TokenNotFoundException if token was not found
-     * @throws PinIncorrectException if token login failed due to wrong ping
+     * @throws TokenNotFoundException     if token was not found
+     * @throws PinIncorrectException      if token login failed due to wrong ping
      * @throws ActionNotPossibleException if token activation was not possible
      */
     public void activateToken(String id, char[] password) throws
@@ -152,9 +141,9 @@ public class TokenService {
         possibleActionsRuleEngine.requirePossibleTokenAction(PossibleActionEnum.TOKEN_ACTIVATE,
                 tokenInfo);
         try {
-            signerProxyFacade.activateToken(id, password);
-        } catch (CodedException e) {
-            if (isCausedByTokenNotFound(e)) {
+            signerRpcClient.activateToken(id, password);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(TOKEN_NOT_FOUND)) {
                 throw new TokenNotFoundException(e);
             } else if (isCausedByIncorrectPin(e)) {
                 throw new PinIncorrectException(e);
@@ -162,7 +151,7 @@ public class TokenService {
                 throw e;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("token activation failed", other);
+            throw new InternalServerErrorException(other);
         }
     }
 
@@ -170,7 +159,7 @@ public class TokenService {
      * Deactivate a token
      *
      * @param id id of token
-     * @throws TokenNotFoundException if token was not found
+     * @throws TokenNotFoundException     if token was not found
      * @throws ActionNotPossibleException if deactivation was not possible
      */
     public void deactivateToken(String id) throws TokenNotFoundException, ActionNotPossibleException {
@@ -184,15 +173,15 @@ public class TokenService {
                 tokenInfo);
 
         try {
-            signerProxyFacade.deactivateToken(id);
-        } catch (CodedException e) {
-            if (isCausedByTokenNotFound(e)) {
+            signerRpcClient.deactivateToken(id);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(TOKEN_NOT_FOUND)) {
                 throw new TokenNotFoundException(e);
             } else {
                 throw e;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("token deactivation failed", other);
+            throw new InternalServerErrorException(other);
         }
     }
 
@@ -204,15 +193,15 @@ public class TokenService {
      */
     public TokenInfo getToken(String id) throws TokenNotFoundException {
         try {
-            return signerProxyFacade.getToken(id);
-        } catch (CodedException e) {
-            if (isCausedByTokenNotFound(e)) {
+            return signerRpcClient.getToken(id);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(TOKEN_NOT_FOUND)) {
                 throw new TokenNotFoundException(e);
             } else {
                 throw e;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("get token failed", other);
+            throw new InternalServerErrorException(other);
         }
     }
 
@@ -234,72 +223,34 @@ public class TokenService {
                 tokenInfo);
 
         try {
-            signerProxyFacade.setTokenFriendlyName(tokenId, friendlyName);
-            tokenInfo = signerProxyFacade.getToken(tokenId);
-        } catch (CodedException e) {
-            if (isCausedByTokenNotFound(e)) {
+            signerRpcClient.setTokenFriendlyName(tokenId, friendlyName);
+            tokenInfo = signerRpcClient.getToken(tokenId);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(TOKEN_NOT_FOUND)) {
                 throw new TokenNotFoundException(e);
             } else {
                 throw e;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("update token friendly name failed", other);
+            throw new InternalServerErrorException(other);
         }
         return tokenInfo;
     }
-
-    private boolean isCausedByIncorrectPin(CodedException e) {
-        if (PIN_INCORRECT_FAULT_CODE.equals(e.getFaultCode())) {
-            return true;
-        } else if (LOGIN_FAILED_FAULT_CODE.equals(e.getFaultCode())) {
-            if (CKR_PIN_INCORRECT_MESSAGE.equals(e.getFaultString())) {
-                // only way to detect HSM pin incorrect is by matching to codedException
-                // fault string.
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static boolean isCausedByTokenNotFound(CodedException e) {
-        return TOKEN_NOT_FOUND_FAULT_CODE.equals(e.getFaultCode());
-    }
-
-    static boolean isCausedByKeyNotFound(CodedException e) {
-        return KEY_NOT_FOUND_FAULT_CODE.equals(e.getFaultCode());
-    }
-
-    static boolean isCausedByCertNotFound(CodedException e) {
-        return CERT_NOT_FOUND_FAULT_CODE.equals(e.getFaultCode());
-    }
-
-    static boolean isCausedByCsrNotFound(CodedException e) {
-        return CSR_NOT_FOUND_FAULT_CODE.equals(e.getFaultCode());
-    }
-
-    // detect a couple of CodedException error codes from core
-    static final String PIN_INCORRECT_FAULT_CODE = SIGNER_X + "." + X_PIN_INCORRECT;
-    static final String TOKEN_NOT_FOUND_FAULT_CODE = SIGNER_X + "." + X_TOKEN_NOT_FOUND;
-    static final String KEY_NOT_FOUND_FAULT_CODE = SIGNER_X + "." + X_KEY_NOT_FOUND;
-    static final String CERT_NOT_FOUND_FAULT_CODE = SIGNER_X + "." + X_CERT_NOT_FOUND;
-    static final String CSR_NOT_FOUND_FAULT_CODE = SIGNER_X + "." + X_CSR_NOT_FOUND;
-    static final String LOGIN_FAILED_FAULT_CODE = SIGNER_X + "." + X_LOGIN_FAILED;
-    static final String CKR_PIN_INCORRECT_MESSAGE = "Login failed: CKR_PIN_INCORRECT";
 
     /**
      * Get TokenInfo for key id
      */
     public TokenInfo getTokenForKeyId(String keyId) throws KeyNotFoundException {
         try {
-            return signerProxyFacade.getTokenForKeyId(keyId);
-        } catch (CodedException e) {
-            if (isCausedByKeyNotFound(e)) {
+            return signerRpcClient.getTokenForKeyId(keyId);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(KEY_NOT_FOUND)) {
                 throw new KeyNotFoundException(e);
             } else {
                 throw e;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("getTokenForKeyId failed", other);
+            throw new InternalServerErrorException(other);
         }
     }
 
@@ -309,17 +260,17 @@ public class TokenService {
     public TokenInfoAndKeyId getTokenAndKeyIdForCertificateHash(String hash) throws KeyNotFoundException,
             CertificateNotFoundException {
         try {
-            return signerProxyFacade.getTokenAndKeyIdForCertHash(hash);
-        } catch (CodedException e) {
-            if (isCausedByKeyNotFound(e)) {
+            return signerRpcClient.getTokenAndKeyIdForCertHash(hash);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(KEY_NOT_FOUND)) {
                 throw new KeyNotFoundException(e);
-            } else if (isCausedByCertNotFound(e)) {
+            } else if (e.isCausedBy(CERT_NOT_FOUND)) {
                 throw new CertificateNotFoundException(e);
             } else {
                 throw e;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("getTokenAndKeyIdForCertHash failed", other);
+            throw new InternalServerErrorException(other);
         }
     }
 
@@ -328,6 +279,7 @@ public class TokenService {
      *
      * @return true/false
      */
+    @PreAuthorize("permitAll()")
     public boolean isSoftwareTokenInitialized() {
         boolean isSoftwareTokenInitialized = false;
         List<TokenInfo> tokens = getAllTokens();
@@ -355,7 +307,7 @@ public class TokenService {
             } else {
                 return TokenInitStatusInfo.NOT_INITIALIZED;
             }
-        } catch (SignerNotReachableException e) {
+        } catch (XrdRuntimeException | InternalServerErrorException e) {
             log.error("Could not get software token status from signer", e);
             return TokenInitStatusInfo.UNKNOWN;
         }
@@ -367,17 +319,17 @@ public class TokenService {
     public TokenInfoAndKeyId getTokenAndKeyIdForCertificateRequestId(String csrId) throws KeyNotFoundException,
             CsrNotFoundException {
         try {
-            return signerProxyFacade.getTokenAndKeyIdForCertRequestId(csrId);
-        } catch (CodedException e) {
-            if (isCausedByKeyNotFound(e)) {
+            return signerRpcClient.getTokenAndKeyIdForCertRequestId(csrId);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(KEY_NOT_FOUND)) {
                 throw new KeyNotFoundException(e);
-            } else if (isCausedByCsrNotFound(e)) {
+            } else if (e.isCausedBy(CSR_NOT_FOUND)) {
                 throw new CsrNotFoundException(e);
             } else {
                 throw e;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("getTokenAndKeyIdForCertHash failed", other);
+            throw new InternalServerErrorException(other);
         }
     }
 
@@ -396,13 +348,14 @@ public class TokenService {
      * Update the pin code for a token and it's keys
      *
      * @param tokenId ID of the token
-     * @param oldPin the old (current) passing pin
-     * @param newPin the new pin
+     * @param oldPin  the old (current) passing pin
+     * @param newPin  the new pin
      * @throws TokenNotFoundException token not found
-     * @throws PinIncorrectException incorrect pin
+     * @throws PinIncorrectException  incorrect pin
      */
-    public void updateSoftwareTokenPin(String tokenId, String oldPin, String newPin) throws TokenNotFoundException,
-            PinIncorrectException, ActionNotPossibleException, InvalidCharactersException,
+    public void updateSoftwareTokenPin(String tokenId, String oldPin, String newPin)
+            throws TokenNotFoundException, PinIncorrectException,
+            ActionNotPossibleException, InvalidCharactersException,
             WeakPinException {
         TokenInfo tokenInfo = getToken(tokenId);
 
@@ -413,39 +366,55 @@ public class TokenService {
         char[] newPinCharArray = newPin.toCharArray();
         tokenPinValidator.validateSoftwareTokenPin(newPinCharArray);
         try {
-            signerProxyFacade.updateSoftwareTokenPin(tokenId, oldPin.toCharArray(), newPinCharArray);
-        } catch (CodedException ce) {
-            if (isCausedByTokenNotFound(ce)) {
-                throw new TokenNotFoundException(ce);
-            } else if (isCausedByIncorrectPin(ce)) {
-                throw new PinIncorrectException(ce);
+            signerRpcClient.updateTokenPin(tokenId, oldPin.toCharArray(), newPinCharArray);
+        } catch (XrdRuntimeException se) {
+            if (se.isCausedBy(TOKEN_NOT_FOUND)) {
+                throw new TokenNotFoundException(se);
+            } else if (isCausedByIncorrectPin(se)) {
+                throw new PinIncorrectException(se);
             } else {
-                throw ce;
+                throw se;
             }
         } catch (Exception other) {
-            throw new SignerNotReachableException("updateSoftwareTokenPin failed", other);
+            throw new InternalServerErrorException(other);
         }
     }
 
-    public static class PinIncorrectException extends ServiceException {
+    /**
+     * Delete inactive token
+     *
+     * @param id ID of the token
+     */
+    public void deleteToken(String id) {
+        try {
+            TokenInfo tokenInfo = getToken(id);
+            auditDataHelper.put(tokenInfo);
+
+            possibleActionsRuleEngine.requirePossibleTokenAction(PossibleActionEnum.TOKEN_DELETE, tokenInfo);
+            signerRpcClient.deleteToken(id);
+        } catch (ActionNotPossibleException e) {
+            throw new ConflictException(e, ACTION_NOT_POSSIBLE.build());
+        } catch (XrdRuntimeException ce) {
+            throw ce;
+        } catch (Exception other) {
+            throw new InternalServerErrorException(other);
+        }
+    }
+
+    private boolean isCausedByIncorrectPin(XrdRuntimeException e) {
+        if (e.isCausedBy(TOKEN_PIN_INCORRECT)) {
+            return true;
+        } else if (e.isCausedBy(LOGIN_FAILED)) {
+            // only way to detect HSM pin incorrect is by matching to xrdRuntimeException
+            // fault string.
+            return e.getMessage().contains(ERROR_CKR_PIN_INCORRECT);
+        }
+        return false;
+    }
+
+    public static class PinIncorrectException extends BadRequestException {
         public PinIncorrectException(Throwable t) {
-            super(t, createError());
+            super(t, TOKEN_PIN_INCORRECT.build());
         }
-
-        private static ErrorDeviation createError() {
-            return new ErrorDeviation(ERROR_PIN_INCORRECT);
-        }
-
-    }
-
-    public static class TokenNotActiveException extends ServiceException {
-        public TokenNotActiveException(Throwable t) {
-            super(t, createError());
-        }
-
-        private static ErrorDeviation createError() {
-            return new ErrorDeviation(ERROR_TOKEN_NOT_ACTIVE);
-        }
-
     }
 }

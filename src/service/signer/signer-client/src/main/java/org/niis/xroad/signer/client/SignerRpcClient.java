@@ -1,0 +1,1041 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.signer.client;
+
+import ee.ria.xroad.common.ServicePrioritizationStrategy;
+import ee.ria.xroad.common.crypto.identifier.KeyAlgorithm;
+import ee.ria.xroad.common.crypto.identifier.SignMechanism;
+import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.SecurityServerId;
+
+import com.google.protobuf.ByteString;
+import io.grpc.ManagedChannel;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.ErrorCode;
+import org.niis.xroad.common.core.exception.ErrorOrigin;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.rpc.client.AbstractRpcClient;
+import org.niis.xroad.common.rpc.client.RpcChannelFactory;
+import org.niis.xroad.common.rpc.mapper.ClientIdMapper;
+import org.niis.xroad.common.rpc.mapper.DiagnosticStatusMapper;
+import org.niis.xroad.common.rpc.mapper.SecurityServerIdMapper;
+import org.niis.xroad.rpc.common.Empty;
+import org.niis.xroad.signer.api.dto.AuthKeyInfo;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.CertificationServiceDiagnostics;
+import org.niis.xroad.signer.api.dto.CertificationServiceStatus;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.OcspResponderStatus;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.api.dto.TokenInfoAndKeyId;
+import org.niis.xroad.signer.proto.ActivateCertReq;
+import org.niis.xroad.signer.proto.ActivateTokenReq;
+import org.niis.xroad.signer.proto.AdminServiceGrpc;
+import org.niis.xroad.signer.proto.Algorithm;
+import org.niis.xroad.signer.proto.CertificateRequestFormat;
+import org.niis.xroad.signer.proto.CertificateServiceGrpc;
+import org.niis.xroad.signer.proto.CertificationServiceDiagnosticsResp;
+import org.niis.xroad.signer.proto.DeleteCertReq;
+import org.niis.xroad.signer.proto.DeleteCertRequestReq;
+import org.niis.xroad.signer.proto.DeleteKeyReq;
+import org.niis.xroad.signer.proto.DeleteTokenReq;
+import org.niis.xroad.signer.proto.GenerateCertRequestReq;
+import org.niis.xroad.signer.proto.GenerateKeyReq;
+import org.niis.xroad.signer.proto.GenerateSelfSignedCertReq;
+import org.niis.xroad.signer.proto.GetAuthKeyReq;
+import org.niis.xroad.signer.proto.GetCertificateInfoForHashReq;
+import org.niis.xroad.signer.proto.GetKeyIdForCertHashReq;
+import org.niis.xroad.signer.proto.GetMemberCertsReq;
+import org.niis.xroad.signer.proto.GetMemberSigningInfoReq;
+import org.niis.xroad.signer.proto.GetOcspResponsesReq;
+import org.niis.xroad.signer.proto.GetSignMechanismReq;
+import org.niis.xroad.signer.proto.GetTokenBatchSigningEnabledReq;
+import org.niis.xroad.signer.proto.GetTokenByCertHashReq;
+import org.niis.xroad.signer.proto.GetTokenByCertRequestIdReq;
+import org.niis.xroad.signer.proto.GetTokenByIdReq;
+import org.niis.xroad.signer.proto.GetTokenByKeyIdReq;
+import org.niis.xroad.signer.proto.ImportCertReq;
+import org.niis.xroad.signer.proto.InitSoftwareTokenReq;
+import org.niis.xroad.signer.proto.IsSoftTokenBasedKeyReq;
+import org.niis.xroad.signer.proto.KeyConfChecksum;
+import org.niis.xroad.signer.proto.KeyServiceGrpc;
+import org.niis.xroad.signer.proto.OcspServiceGrpc;
+import org.niis.xroad.signer.proto.RegenerateCertRequestReq;
+import org.niis.xroad.signer.proto.SetCertStatusReq;
+import org.niis.xroad.signer.proto.SetKeyFriendlyNameReq;
+import org.niis.xroad.signer.proto.SetNextPlannedRenewalReq;
+import org.niis.xroad.signer.proto.SetOcspResponsesReq;
+import org.niis.xroad.signer.proto.SetRenewalErrorReq;
+import org.niis.xroad.signer.proto.SetRenewedCertHashReq;
+import org.niis.xroad.signer.proto.SetTokenFriendlyNameReq;
+import org.niis.xroad.signer.proto.TokenServiceGrpc;
+import org.niis.xroad.signer.proto.UpdateSoftwareTokenPinReq;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
+
+import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static ee.ria.xroad.common.util.CertUtils.isAuthCert;
+import static ee.ria.xroad.common.util.CryptoUtils.loadPkcs12KeyStore;
+import static ee.ria.xroad.common.util.CryptoUtils.readCertificate;
+import static ee.ria.xroad.common.util.SignerProtoUtils.charToByte;
+import static java.time.Instant.ofEpochMilli;
+import static java.util.Arrays.asList;
+import static java.util.Optional.ofNullable;
+import static org.niis.xroad.restapi.util.FormatUtils.fromInstantToOffsetDateTime;
+
+/**
+ * Responsible for managing cryptographic tokens (smartcards, HSMs, etc.) through the signer.
+ */
+@Slf4j
+@RequiredArgsConstructor
+@ApplicationScoped
+public class SignerRpcClient extends AbstractRpcClient {
+    private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
+
+    public static final String SSL_TOKEN_ID = "0";
+
+    private final RpcChannelFactory rpcChannelFactory;
+    private final SignerRpcChannelProperties rpcChannelProperties;
+
+    private ManagedChannel channel;
+    private TokenServiceGrpc.TokenServiceBlockingStub blockingTokenService;
+    private CertificateServiceGrpc.CertificateServiceBlockingStub blockingCertificateService;
+    private KeyServiceGrpc.KeyServiceBlockingStub blockingKeyService;
+
+    private OcspServiceGrpc.OcspServiceBlockingStub blockingOcspService;
+    private AdminServiceGrpc.AdminServiceBlockingStub adminServiceBlockingStub;
+
+    @Override
+    public ErrorOrigin getRpcOrigin() {
+        return ErrorOrigin.SIGNER;
+    }
+
+    @Override
+    public ManagedChannel getChannel() {
+        return channel;
+    }
+
+    @Override
+    public String getHealthCheckName() {
+        return "SIGNER_CHANNEL_READINESS_CHECK";
+    }
+
+    @Override
+    public String getHealthCheckTargetService() {
+        return "signer";
+    }
+
+    @PostConstruct
+    public void init() throws UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException {
+        log.info("Initializing {} rpc client to {}:{}", getClass().getSimpleName(), rpcChannelProperties.host(),
+                rpcChannelProperties.port());
+        channel = rpcChannelFactory.createChannel(rpcChannelProperties);
+
+        blockingTokenService = TokenServiceGrpc.newBlockingStub(channel).withWaitForReady();
+        blockingCertificateService = CertificateServiceGrpc.newBlockingStub(channel).withWaitForReady();
+        blockingKeyService = KeyServiceGrpc.newBlockingStub(channel).withWaitForReady();
+        blockingOcspService = OcspServiceGrpc.newBlockingStub(channel).withWaitForReady();
+        adminServiceBlockingStub = AdminServiceGrpc.newBlockingStub(channel).withWaitForReady();
+    }
+
+    @Override
+    @PreDestroy
+    public void close() {
+        if (channel != null) {
+            log.info("Shutting down signer RPC client...");
+            try {
+                channel.shutdown();
+                if (!channel.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    log.warn("RPC channel did not terminate gracefully within 30 seconds");
+                    channel.shutdownNow();
+                }
+                log.info("Signer RPC client shutdown completed");
+            } catch (Exception e) {
+                log.error("Error shutting down signer RPC client", e);
+                if (channel != null) {
+                    channel.shutdownNow();
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Initialize the software token with the given password.
+     *
+     * @param password software token password
+     */
+    public void initSoftwareToken(char[] password) {
+        log.trace("Initializing software token");
+        exec(
+                () -> blockingTokenService.initSoftwareToken(InitSoftwareTokenReq.newBuilder()
+                        .setPin(ByteString.copyFrom(charToByte(password)))
+                        .build())
+        );
+    }
+
+    /**
+     * Gets information about all configured tokens.
+     *
+     * @return a List of TokenInfo objects
+     */
+    public List<TokenInfo> getTokens() {
+        return exec(
+                () -> blockingTokenService.listTokens(Empty.newBuilder().build())
+                        .getTokensList().stream()
+                        .map(TokenInfo::new)
+                        .toList()
+        );
+    }
+
+    /**
+     * Gets information about all software token keys.
+     * <p>
+     * Retrieves all keys from all software tokens with their private keys
+     * and availability status to softtoken-signer instances.
+     *
+     * @return a List of SoftwareTokenKeyDto objects
+     */
+    public List<SoftwareTokenKeyDto> listSoftwareTokenKeys() {
+        log.debug("Listing software token keys for synchronization");
+        return exec(
+                () -> blockingKeyService.listSoftwareTokenKeys(Empty.newBuilder().build())
+                        .getKeysList().stream()
+                        .map(keyInfo -> new SoftwareTokenKeyDto(
+                                keyInfo.getKeyId(),
+                                keyInfo.getPrivateKey().toByteArray(),
+                                keyInfo.getKeyAvailable(),
+                                keyInfo.getKeyLabel(),
+                                keyInfo.getSignMechanism()
+                        ))
+                        .toList()
+        );
+    }
+
+    /**
+     * Gets information about the token with the specified token ID.
+     *
+     * @param tokenId ID of the token
+     * @return TokenInfo
+     */
+    public TokenInfo getToken(String tokenId) {
+        return exec(
+                () -> blockingTokenService.getTokenById(GetTokenByIdReq.newBuilder()
+                        .setTokenId(tokenId).build()),
+                TokenInfo::new
+        );
+    }
+
+    /**
+     * Activates the token with the given ID using the provided password.
+     *
+     * @param tokenId  ID of the token
+     * @param password token password
+     */
+    public void activateToken(String tokenId, char[] password) {
+        exec(() -> internalActivateToken(tokenId, password));
+    }
+
+    private void internalActivateToken(String tokenId, char[] password) {
+        log.trace("Activating token '{}'", tokenId);
+
+        var activateTokenReq = ActivateTokenReq.newBuilder()
+                .setTokenId(tokenId)
+                .setActivate(true);
+        ofNullable(password).ifPresent(p -> activateTokenReq.setPin(ByteString.copyFrom(charToByte(p))));
+
+        blockingTokenService.activateToken(activateTokenReq.build());
+    }
+
+    /**
+     * Updates the token pin with the provided new one
+     *
+     * @param tokenId ID of the token
+     * @param oldPin  the old (current) pin of the token
+     * @param newPin  the new pin
+     * @throws XrdRuntimeException if any errors occur
+     */
+    public void updateTokenPin(String tokenId, char[] oldPin, char[] newPin) {
+        log.trace("Updating token pin '{}'", tokenId);
+
+        exec(
+                () -> blockingTokenService.updateSoftwareTokenPin(UpdateSoftwareTokenPinReq.newBuilder()
+                        .setTokenId(tokenId)
+                        .setOldPin(ByteString.copyFrom(charToByte(oldPin)))
+                        .setNewPin(ByteString.copyFrom(charToByte(newPin)))
+                        .build())
+        );
+    }
+
+    /**
+     * Deactivates the token with the given ID.
+     *
+     * @param tokenId ID of the token
+     */
+    public void deactivateToken(String tokenId) {
+        log.trace("Deactivating token '{}'", tokenId);
+
+        exec(
+                () -> blockingTokenService.activateToken(ActivateTokenReq.newBuilder()
+                        .setTokenId(tokenId)
+                        .setActivate(false)
+                        .build())
+        );
+    }
+
+    /**
+     * Delete the token with the given ID.
+     *
+     * @param tokenId ID of the token
+     */
+    public void deleteToken(String tokenId) {
+        log.trace("Delete token '{}'", tokenId);
+
+        exec(
+                () -> blockingTokenService
+                        .deleteToken(DeleteTokenReq.newBuilder()
+                                .setTokenId(tokenId)
+                                .build())
+        );
+    }
+
+    /**
+     * Sets the friendly name of the token with the given ID.
+     *
+     * @param tokenId      ID of the token
+     * @param friendlyName new friendly name of the token
+     */
+    public void setTokenFriendlyName(String tokenId, String friendlyName) {
+        log.trace("Setting friendly name '{}' for token '{}'", friendlyName, tokenId);
+
+        exec(
+                () -> blockingTokenService.setTokenFriendlyName(SetTokenFriendlyNameReq.newBuilder()
+                        .setTokenId(tokenId)
+                        .setFriendlyName(friendlyName)
+                        .build())
+        );
+    }
+
+    /**
+     * Sets the friendly name of the key with the given ID.
+     *
+     * @param keyId        ID of the key
+     * @param friendlyName new friendly name of the key
+     */
+    public void setKeyFriendlyName(String keyId, String friendlyName) {
+        log.trace("Setting friendly name '{}' for key '{}'", friendlyName, keyId);
+
+        exec(
+                () -> blockingKeyService.setKeyFriendlyName(SetKeyFriendlyNameReq.newBuilder()
+                        .setKeyId(keyId)
+                        .setFriendlyName(friendlyName)
+                        .build())
+        );
+    }
+
+    /**
+     * Generate a new key for the token with the given ID.
+     *
+     * @param tokenId   ID of the token
+     * @param keyLabel  label of the key
+     * @param algorithm algorithm to use, RSA or EC
+     * @return generated key KeyInfo object
+     */
+    public KeyInfo generateKey(String tokenId, String keyLabel, KeyAlgorithm algorithm) {
+        return exec(() -> internalGenerateKey(tokenId, keyLabel, algorithm));
+    }
+
+    private KeyInfo internalGenerateKey(String tokenId, String keyLabel, KeyAlgorithm algorithm) {
+        log.trace("Generating key for token '{}'", tokenId);
+
+        var builder = GenerateKeyReq.newBuilder()
+                .setTokenId(tokenId)
+                .setKeyLabel(keyLabel);
+        if (algorithm != null) {
+            builder.setAlgorithm(Algorithm.valueOf(algorithm.name()));
+        }
+
+        var response = blockingKeyService.generateKey(builder.build());
+
+        KeyInfo keyInfo = new KeyInfo(response);
+
+        log.trace("Received key with keyId '{}' and public key '{}'", keyInfo.getId(), keyInfo.getPublicKey());
+
+        return keyInfo;
+    }
+
+    /**
+     * Generate a self-signed certificate for the key with the given ID.
+     *
+     * @param keyId      ID of the key
+     * @param memberId   client ID of the certificate owner
+     * @param keyUsage   specifies whether the certificate is for signing or authentication
+     * @param commonName common name of the certificate
+     * @param notBefore  date the certificate becomes valid
+     * @param notAfter   date the certificate becomes invalid
+     * @return byte content of the generated certificate
+     */
+    public byte[] generateSelfSignedCert(String keyId, ClientId.Conf memberId, KeyUsageInfo keyUsage,
+                                         String commonName, Date notBefore, Date notAfter) {
+        return exec(() -> internalGenerateSelfSignedCert(keyId, memberId, keyUsage, commonName, notBefore, notAfter));
+    }
+
+    private byte[] internalGenerateSelfSignedCert(String keyId, ClientId.Conf memberId, KeyUsageInfo keyUsage,
+                                                  String commonName, Date notBefore, Date notAfter) {
+        log.trace("Generate self-signed cert for key '{}'", keyId);
+
+        var builder = GenerateSelfSignedCertReq.newBuilder()
+                .setKeyId(keyId)
+                .setCommonName(commonName)
+                .setDateNotBefore(notBefore.getTime())
+                .setDateNotAfter(notAfter.getTime())
+                .setKeyUsage(keyUsage);
+
+        if (memberId != null) {
+            builder.setMemberId(ClientIdMapper.toDto(memberId));
+        }
+
+        var response = blockingCertificateService.generateSelfSignedCert(builder.build());
+
+        byte[] certificateBytes = response.getCertificateBytes().toByteArray();
+
+        log.trace("Certificate with length of {} bytes generated", certificateBytes.length);
+
+        return certificateBytes;
+    }
+
+    /**
+     * Imports the given byte array as a new certificate with the provided initial status and owner client ID.
+     *
+     * @param certBytes     byte content of the new certificate
+     * @param initialStatus initial status of the certificate
+     * @param clientId      client ID of the certificate owner
+     * @return key ID of the new certificate as a String
+     */
+    public String importCert(byte[] certBytes, String initialStatus, ClientId.Conf clientId, boolean activate) {
+        return exec(() -> internalImportCert(certBytes, initialStatus, clientId, activate));
+    }
+
+    private String internalImportCert(byte[] certBytes, String initialStatus, ClientId.Conf clientId, boolean activate) {
+        log.trace("Importing cert from file with length of '{}' bytes", certBytes.length);
+
+        final ImportCertReq.Builder builder = ImportCertReq.newBuilder()
+                .setCertData(ByteString.copyFrom(certBytes))
+                .setInitialStatus(initialStatus)
+                .setActivate(activate);
+        ofNullable(clientId).map(ClientIdMapper::toDto).ifPresent(builder::setMemberId);
+
+        var response = blockingCertificateService.importCert(builder.build());
+
+        log.trace("Cert imported successfully, keyId received: {}", response.getKeyId());
+
+        return response.getKeyId();
+    }
+
+    public String importCert(byte[] certBytes, String initialStatus, ClientId.Conf clientId) {
+        return exec(() -> {
+            X509Certificate x509Certificate = readCertificate(certBytes);
+            return importCert(certBytes, initialStatus, clientId, !isAuthCert(x509Certificate));
+        });
+    }
+
+    /**
+     * Activates the certificate with the given ID.
+     *
+     * @param certId ID of the certificate
+     */
+    public void activateCert(String certId) {
+        log.trace("Activating cert '{}'", certId);
+
+        exec(
+                () -> blockingCertificateService.activateCert(ActivateCertReq.newBuilder()
+                        .setCertIdOrHash(certId)
+                        .setActive(true)
+                        .build())
+        );
+    }
+
+    /**
+     * Deactivates the certificate with the given ID.
+     *
+     * @param certId ID of the certificate
+     */
+    public void deactivateCert(String certId) {
+        log.trace("Deactivating cert '{}'", certId);
+
+        exec(
+                () -> blockingCertificateService.activateCert(ActivateCertReq.newBuilder()
+                        .setCertIdOrHash(certId)
+                        .setActive(false)
+                        .build())
+        );
+    }
+
+    /**
+     * Generates a certificate request for the given key and with provided parameters.
+     *
+     * @param keyId       ID of the key
+     * @param memberId    client ID of the certificate owner
+     * @param keyUsage    specifies whether the certificate is for signing or authentication
+     * @param subjectName subject name of the certificate
+     * @param format      the format of the request
+     * @return GeneratedCertRequestInfo containing details and content of the certificate request
+     */
+    public GeneratedCertRequestInfo generateCertRequest(String keyId, ClientId.Conf memberId,
+                                                        KeyUsageInfo keyUsage, String subjectName,
+                                                        CertificateRequestFormat format) {
+        return exec(
+                () -> generateCertRequest(keyId, memberId, keyUsage, subjectName, null, format, null)
+        );
+    }
+
+    /**
+     * Generates a certificate request for the given key and with provided parameters.
+     *
+     * @param keyId          ID of the key
+     * @param memberId       client ID of the certificate owner
+     * @param keyUsage       specifies whether the certificate is for signing or authentication
+     * @param subjectName    subject name of the certificate
+     * @param subjectAltName subject alternative name of the certificate
+     * @param format         the format of the request
+     * @return GeneratedCertRequestInfo containing details and content of the certificate request
+     */
+    public GeneratedCertRequestInfo generateCertRequest(String keyId, ClientId.Conf memberId,
+                                                        KeyUsageInfo keyUsage, String subjectName, String subjectAltName,
+                                                        CertificateRequestFormat format, String certificateProfile) {
+        return exec(
+                () -> internalGenerateCertRequest(keyId, memberId, keyUsage, subjectName, subjectAltName, format, certificateProfile)
+        );
+    }
+
+    private GeneratedCertRequestInfo internalGenerateCertRequest(String keyId, ClientId.Conf memberId,
+                                                                 KeyUsageInfo keyUsage, String subjectName, String subjectAltName,
+                                                                 CertificateRequestFormat format, String certificateProfile) {
+        var reqBuilder = GenerateCertRequestReq.newBuilder()
+                .setKeyId(keyId)
+                .setKeyUsage(keyUsage)
+                .setSubjectName(subjectName)
+                .setFormat(format);
+
+        if (subjectAltName != null) {
+            reqBuilder.setSubjectAltName(subjectAltName);
+        }
+
+        if (certificateProfile != null) {
+            reqBuilder.setCertificateProfile(certificateProfile);
+        }
+
+        ofNullable(memberId)
+                .map(ClientIdMapper::toDto)
+                .ifPresent(reqBuilder::setMemberId);
+        var response = blockingCertificateService.generateCertRequest(reqBuilder.build());
+        byte[] certRequestBytes = response.getCertRequest().toByteArray();
+
+        log.trace("Cert request with length of {} bytes generated", certRequestBytes.length);
+
+        return new GeneratedCertRequestInfo(
+                response.getCertReqId(),
+                certRequestBytes,
+                response.getFormat(),
+                memberId,
+                keyUsage);
+    }
+
+    /**
+     * Regenerates a certificate request for the given csr id
+     *
+     * @param certRequestId csr ID
+     * @param format        the format of the request
+     * @return GeneratedCertRequestInfo containing details and content of the certificate request
+     */
+    public GeneratedCertRequestInfo regenerateCertRequest(String certRequestId,
+                                                          CertificateRequestFormat format) {
+        return exec(() -> internalRegenerateCertRequest(certRequestId, format));
+    }
+
+    private GeneratedCertRequestInfo internalRegenerateCertRequest(String certRequestId,
+                                                                   CertificateRequestFormat format) {
+        var response = exec(() -> blockingCertificateService
+                .regenerateCertRequest(RegenerateCertRequestReq.newBuilder()
+                        .setCertRequestId(certRequestId)
+                        .setFormat(format)
+                        .build()));
+
+        log.trace("Cert request with length of {} bytes generated", response.getCertRequest().size());
+
+        return new GeneratedCertRequestInfo(
+                response.getCertReqId(),
+                response.getCertRequest().toByteArray(),
+                response.getFormat(),
+                response.hasMemberId() ? ClientIdMapper.fromDto(response.getMemberId()) : null,
+                response.getKeyUsage());
+    }
+
+    /**
+     * Delete the certificate request with the given ID.
+     *
+     * @param certRequestId ID of the certificate request
+     */
+    public void deleteCertRequest(String certRequestId) {
+        log.trace("Deleting cert request '{}'", certRequestId);
+        exec(
+                () -> blockingCertificateService.deleteCertRequest(DeleteCertRequestReq.newBuilder()
+                        .setCertRequestId(certRequestId)
+                        .build())
+        );
+    }
+
+    /**
+     * Delete the certificate with the given ID.
+     *
+     * @param certId ID of the certificate
+     */
+    public void deleteCert(String certId) {
+        log.trace("Deleting cert '{}'", certId);
+        exec(
+                () -> blockingCertificateService.deleteCert(DeleteCertReq.newBuilder()
+                        .setCertId(certId)
+                        .build())
+        );
+    }
+
+    /**
+     * Delete the key with the given ID from the signer database. Optionally,
+     * deletes it from the token as well.
+     *
+     * @param keyId           ID of the certificate request
+     * @param deleteFromToken whether the key should be deleted from the token
+     */
+    public void deleteKey(String keyId, boolean deleteFromToken) {
+        log.trace("Deleting key '{}', from token = {}", keyId, deleteFromToken);
+        exec(
+                () -> blockingKeyService.deleteKey(DeleteKeyReq.newBuilder()
+                        .setKeyId(keyId)
+                        .setDeleteFromDevice(deleteFromToken)
+                        .build())
+        );
+    }
+
+    /**
+     * Sets the status of the certificate with the given ID.
+     *
+     * @param certId ID of the certificate
+     * @param status new status of the certificate
+     */
+    public void setCertStatus(String certId, String status) {
+        log.trace("Setting cert ('{}') status to '{}'", certId, status);
+        exec(
+                () -> blockingCertificateService.setCertStatus(SetCertStatusReq.newBuilder()
+                        .setCertId(certId)
+                        .setStatus(status)
+                        .build())
+        );
+    }
+
+    /**
+     * Sets the hash of the renewed certificate with the given old cert ID.
+     *
+     * @param certId ID of the old certificate
+     * @param hash   new hash of the renewed certificate
+     */
+    public void setRenewedCertHash(String certId, String hash) {
+        log.trace("Setting cert ('{}') renewed cert hash to '{}'", certId, hash);
+        exec(
+                () -> blockingCertificateService.setRenewedCertHash(SetRenewedCertHashReq.newBuilder()
+                        .setCertId(certId)
+                        .setHash(hash)
+                        .build())
+        );
+    }
+
+    /**
+     * Sets the error of the certificate renewal process.
+     *
+     * @param certId       ID of the certificate to be renewed
+     * @param errorMessage message of the error that was thrown when trying to renew the given certificate
+     */
+    public void setRenewalError(String certId, String errorMessage) {
+        log.trace("Setting cert ('{}') renewal error to '{}'", certId, errorMessage);
+        exec(
+                () -> blockingCertificateService.setRenewalError(SetRenewalErrorReq.newBuilder()
+                        .setCertId(certId)
+                        .setErrorMessage(errorMessage)
+                        .build())
+        );
+    }
+
+    /**
+     * Sets the error of the certificate renewal process.
+     *
+     * @param certId          ID of the certificate to be renewed
+     * @param nextRenewalTime message of the error that was thrown when trying to renew the given certificate
+     */
+    public void setNextPlannedRenewal(String certId, Instant nextRenewalTime) {
+        log.trace("Setting cert ('{}') next planned renewal time to '{}'", certId, nextRenewalTime);
+        exec(() -> {
+            com.google.protobuf.Timestamp nextRenewalTimestamp = com.google.protobuf.Timestamp.newBuilder()
+                    .setSeconds(nextRenewalTime.getEpochSecond())
+                    .setNanos(nextRenewalTime.getNano())
+                    .build();
+            blockingCertificateService.setNextPlannedRenewal(SetNextPlannedRenewalReq.newBuilder()
+                    .setCertId(certId)
+                    .setNextRenewalTime(nextRenewalTimestamp)
+                    .build());
+        });
+    }
+
+    /**
+     * Get a cert by it's hash
+     *
+     * @param hash cert hash. Will be converted to lowercase, which is what signer uses internally
+     * @return CertificateInfo
+     */
+    public CertificateInfo getCertForHash(String hash) {
+        return exec(() -> internalGetCertForHash(hash));
+    }
+
+    private CertificateInfo internalGetCertForHash(String hash) {
+        final String finalHash = hash.toLowerCase();
+        log.trace("Getting cert by hash '{}'", hash);
+
+        var response = blockingCertificateService.getCertificateInfoForHash(GetCertificateInfoForHashReq.newBuilder()
+                .setCertHash(finalHash)
+                .build());
+
+        log.trace("Cert with hash '{}' found", finalHash);
+
+        return new CertificateInfo(response.getCertificateInfo());
+    }
+
+    /**
+     * Get key for a given cert hash
+     *
+     * @param hash cert hash. Will be converted to lowercase, which is what signer uses internally
+     * @return Key id and sign mechanism
+     */
+    public KeyIdInfo getKeyIdForCertHash(String hash) {
+        return exec(() -> internalGetKeyIdForCertHash(hash));
+    }
+
+    private KeyIdInfo internalGetKeyIdForCertHash(String hash) {
+        final String finalHash = hash.toLowerCase();
+        log.trace("Getting cert by hash '{}'", finalHash);
+
+        var response = blockingKeyService.getKeyIdForCertHash(GetKeyIdForCertHashReq.newBuilder()
+                .setCertHash(finalHash)
+                .build());
+        log.trace("Cert with hash '{}' found", finalHash);
+
+        return new KeyIdInfo(response.getKeyId(), SignMechanism.valueOf(response.getSignMechanismName()));
+    }
+
+    /**
+     * Get TokenInfoAndKeyId for a given cert hash
+     *
+     * @param hash cert hash. Will be converted to lowercase, which is what signer uses internally
+     * @return TokenInfoAndKeyId
+     */
+    public TokenInfoAndKeyId getTokenAndKeyIdForCertHash(String hash) {
+        return exec(() -> internalGetTokenAndKeyIdForCertHash(hash));
+    }
+
+    private TokenInfoAndKeyId internalGetTokenAndKeyIdForCertHash(String hash) {
+        String hashLowercase = hash.toLowerCase();
+        log.trace("Getting token and key id by cert hash '{}'", hashLowercase);
+
+        var response = blockingTokenService.getTokenAndKeyIdByCertHash(GetTokenByCertHashReq.newBuilder()
+                .setCertHash(hashLowercase)
+                .build());
+        log.trace("Token and key id with hash '{}' found", hashLowercase);
+
+        return new TokenInfoAndKeyId(new TokenInfo(response.getTokenInfo()), response.getKeyId());
+    }
+
+    /**
+     * Get OCSP responses for certs with given hashes. Hashes are converted to lowercase
+     *
+     * @param certHashes cert hashes to find OCSP responses for
+     * @return base64 encoded OCSP responses. Each array item is OCSP response for
+     * corresponding cert in {@code certHashes}
+     */
+    @WithSpan("SignerProxy#getOcspResponses")
+    public String[] getOcspResponses(String[] certHashes) {
+        return exec(() -> internalGetOcspResponses(certHashes));
+    }
+
+    private String[] internalGetOcspResponses(String[] certHashes) {
+        var response = blockingOcspService.getOcspResponses(GetOcspResponsesReq.newBuilder()
+                .addAllCertHash(toLowerCase(certHashes))
+                .build());
+
+        final Map<String, String> responsesMap = response.getBase64EncodedResponsesMap();
+        String[] result = new String[certHashes.length];
+        for (int i = 0; i < certHashes.length; i++) {
+            if (responsesMap.containsKey(certHashes[i])) {
+                result[i] = responsesMap.get(certHashes[i]);
+            }
+        }
+        return result;
+    }
+
+    public void setOcspResponses(String[] certHashes, String[] base64EncodedResponses) {
+        exec(
+                () -> blockingOcspService.setOcspResponses(SetOcspResponsesReq.newBuilder()
+                        .addAllCertHashes(asList(certHashes))
+                        .addAllBase64EncodedResponses(asList(base64EncodedResponses))
+                        .build())
+        );
+    }
+
+    private List<String> toLowerCase(String[] certHashes) {
+        return Arrays.stream(certHashes)
+                .map(String::toLowerCase)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get Security Server auth key
+     *
+     * @param serverId securityServerId
+     * @return authKeyInfo
+     */
+    public AuthKeyInfo getAuthKey(SecurityServerId serverId) {
+        return exec(
+                () -> internalGetAuthKey(serverId)
+        );
+    }
+
+    public AuthKeyInfo internalGetAuthKey(SecurityServerId serverId)
+            throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, CertificateException {
+        var response = blockingKeyService.getAuthKey(GetAuthKeyReq.newBuilder()
+                .setSecurityServer(SecurityServerIdMapper.toDto(serverId))
+                .build());
+
+        try (var keystoreStream = response.getKeyStore().newInput()) {
+            var password = response.getPassword().toCharArray();
+            var ks = loadPkcs12KeyStore(keystoreStream, password);
+            var privateKey = (PrivateKey) ks.getKey(response.getAlias(),
+                    password);
+            return new AuthKeyInfo(response.getAlias(),
+                    privateKey,
+                    new CertificateInfo(response.getCert()));
+        }
+    }
+
+    public TokenInfoAndKeyId getTokenAndKeyIdForCertRequestId(String certRequestId) {
+        log.trace("Getting token and key id by cert request id '{}'", certRequestId);
+
+        return exec(
+                () -> blockingTokenService.getTokenAndKeyIdByCertRequestId(GetTokenByCertRequestIdReq.newBuilder()
+                        .setCertRequestId(certRequestId)
+                        .build()),
+                response -> {
+                    log.trace("Token and key id with cert request id '{}' found", certRequestId);
+                    return new TokenInfoAndKeyId(new TokenInfo(response.getTokenInfo()), response.getKeyId());
+                }
+        );
+    }
+
+    /**
+     * Gets information about the token which has the specified key.
+     *
+     * @param keyId id of the key
+     * @return TokenInfo
+     */
+    public TokenInfo getTokenForKeyId(String keyId) {
+        return exec(
+                () -> blockingTokenService.getTokenByKey(GetTokenByKeyIdReq.newBuilder().setKeyId(keyId).build()),
+                TokenInfo::new
+        );
+    }
+
+    public SignMechanism getSignMechanism(String keyId) {
+        return exec(
+                () -> blockingKeyService.getSignMechanism(GetSignMechanismReq.newBuilder()
+                        .setKeyId(keyId)
+                        .build()),
+                response -> SignMechanism.valueOf(response.getSignMechanismName())
+        );
+    }
+
+    public Boolean isSoftTokenBased(String keyId) {
+        return exec(
+                () -> blockingKeyService.isSoftwareBasedKey(IsSoftTokenBasedKeyReq.newBuilder()
+                        .setKeyId(keyId)
+                        .build()).getSoftTokenBased()
+        );
+    }
+
+    public Boolean isTokenBatchSigningEnabled(String keyId) {
+        return exec(
+                () -> blockingTokenService.getTokenBatchSigningEnabled(GetTokenBatchSigningEnabledReq.newBuilder()
+                        .setKeyId(keyId)
+                        .build()).getBatchingSigningEnabled()
+        );
+    }
+
+    public MemberSigningInfoDto getMemberSigningInfo(ClientId clientId) {
+        return exec(
+                () -> blockingTokenService.getMemberSigningInfo(GetMemberSigningInfoReq.newBuilder()
+                        .setMemberId(ClientIdMapper.toDto(clientId))
+                        .build()),
+                response -> new MemberSigningInfoDto(response.getKeyId(),
+                        new CertificateInfo(response.getCert()),
+                        SignMechanism.valueOf(response.getSignMechanismName()))
+        );
+    }
+
+    public List<CertificateInfo> getMemberCerts(ClientId memberId) {
+        return exec(
+                () -> blockingCertificateService.getMemberCerts(GetMemberCertsReq.newBuilder()
+                                .setMemberId(ClientIdMapper.toDto(memberId))
+                                .build())
+                        .getCertsList().stream()
+                        .map(CertificateInfo::new)
+                        .toList()
+        );
+    }
+
+    public boolean isHSMOperational() {
+        return exec(
+                () -> blockingTokenService.getHSMOperationalInfo(Empty.getDefaultInstance())
+                        .getOperational()
+        );
+    }
+
+
+    /**
+     * DTO since we don't want to leak signer message objects out
+     *
+     * @param certReqId
+     * @param certRequest
+     * @param format
+     * @param memberId
+     * @param keyUsage
+     */
+    public record GeneratedCertRequestInfo(String certReqId, byte[] certRequest, CertificateRequestFormat format, ClientId memberId,
+                                           KeyUsageInfo keyUsage) {
+    }
+
+    public CertificationServiceDiagnostics getCertificationServiceDiagnostics() {
+        return exec(
+                () -> adminServiceBlockingStub.getCertificationServiceDiagnostics(Empty.newBuilder().build()),
+                CertificationServiceDiagnosticsMapper::fromDto
+        );
+    }
+
+    public int getKeyConfChecksum() {
+        return exec(
+                () -> adminServiceBlockingStub.getKeyConfChecksum(Empty.getDefaultInstance()),
+                KeyConfChecksum::getChecksum
+        );
+    }
+
+    public void refreshModules() {
+        exec(() -> adminServiceBlockingStub.refreshModules(Empty.getDefaultInstance()));
+    }
+
+    public boolean isEnforcedTokenPinPolicy() {
+        return exec(
+                () -> adminServiceBlockingStub.isEnforcedTokenPinPolicy(Empty.getDefaultInstance())
+                        .getEnforced()
+        );
+    }
+
+    public ServicePrioritizationStrategy getOcspPrioritizationStrategy() {
+        var response = exec(() -> blockingOcspService
+                .getOcspPrioritizationStrategy(Empty.getDefaultInstance()));
+        org.niis.xroad.rpc.common.ServicePrioritizationStrategy strategy = response.getStrategy();
+        return org.niis.xroad.rpc.common.ServicePrioritizationStrategy.SERVICE_PRIORITIZATION_STRATEGY_NONE.equals(strategy)
+                ? ServicePrioritizationStrategy.NONE
+                : ServicePrioritizationStrategy.valueOf(strategy.name());    }
+
+    private static final class CertificationServiceDiagnosticsMapper {
+
+        public static CertificationServiceDiagnostics fromDto(CertificationServiceDiagnosticsResp dto) {
+            Map<String, CertificationServiceStatus> statusMap = dto.getCertificationServiceStatusMapMap()
+                    .entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                            entry -> fromDto(entry.getValue())));
+
+            CertificationServiceDiagnostics response = new CertificationServiceDiagnostics();
+            response.update(statusMap);
+            return response;
+        }
+
+        private static CertificationServiceStatus fromDto(org.niis.xroad.signer.proto.CertificationServiceStatus status) {
+            var response = new CertificationServiceStatus(status.getName());
+            status.getOcspResponderStatusMapMap()
+                    .forEach((key, value) -> {
+                        OcspResponderStatus responderStatus = new OcspResponderStatus(DiagnosticStatusMapper.mapStatus(value.getStatus()),
+                                value.getUrl(),
+                                value.hasPrevUpdate() ? fromInstantToOffsetDateTime(ofEpochMilli(value.getPrevUpdate())) : null,
+                                fromInstantToOffsetDateTime(ofEpochMilli(value.getNextUpdate())));
+                        if (value.hasErrorCode()) {
+                            responderStatus.setErrorCode(ErrorCode.valueOf(value.getErrorCode()));
+                        }
+                        response.getOcspResponderStatusMap().put(key, responderStatus);
+                    });
+            return response;
+        }
+
+    }
+
+    public record MemberSigningInfoDto(String keyId, CertificateInfo cert, SignMechanism signMechanismName) {
+    }
+
+    public record KeyIdInfo(String keyId, SignMechanism signMechanismName) {
+    }
+
+    public record SoftwareTokenKeyDto(
+            String keyId,
+            byte[] privateKey,
+            boolean keyAvailable,
+            String keyLabel,
+            String signMechanism
+    ) {
+    }
+
+}

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,9 +27,10 @@ package org.niis.xroad.cs.admin.core.service;
 
 import ee.ria.xroad.common.util.CertUtils;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.common.exception.NotFoundException;
-import org.niis.xroad.common.exception.ValidationFailureException;
 import org.niis.xroad.cs.admin.api.dto.ApprovedCertificationService;
 import org.niis.xroad.cs.admin.api.dto.CertificateAuthority;
 import org.niis.xroad.cs.admin.api.dto.CertificateDetails;
@@ -49,10 +50,10 @@ import org.niis.xroad.cs.admin.core.repository.ApprovedCaRepository;
 import org.niis.xroad.cs.admin.core.repository.CaInfoRepository;
 import org.niis.xroad.cs.admin.core.repository.OcspInfoRepository;
 import org.niis.xroad.cs.admin.core.validation.CertificateProfileInfoValidator;
+import org.niis.xroad.cs.admin.core.validation.IpAddressValidator;
+import org.niis.xroad.cs.admin.core.validation.UrlValidator;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.springframework.stereotype.Service;
-
-import javax.transaction.Transactional;
 
 import java.security.cert.X509Certificate;
 import java.util.Comparator;
@@ -62,18 +63,25 @@ import java.util.Optional;
 import static ee.ria.xroad.common.util.CryptoUtils.DEFAULT_CERT_HASH_ALGORITHM_ID;
 import static ee.ria.xroad.common.util.CryptoUtils.calculateCertHexHashDelimited;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.niis.xroad.common.core.exception.ErrorCode.INVALID_CERTIFICATE;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.CERTIFICATION_SERVICE_NOT_FOUND;
-import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.INVALID_CERTIFICATE;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.ACME_DIRECTORY_URL;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.ACME_IP_ADDRESSES;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.AUTHENTICATION_ONLY;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.AUTH_CERT_PROFILE_ID;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.CA_ID;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.CERTIFICATE_PROFILE_INFO;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.DEFAULT_CSR_FORMAT;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.INTERMEDIATE_CA_CERT_HASH;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.INTERMEDIATE_CA_CERT_HASH_ALGORITHM;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.INTERMEDIATE_CA_ID;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_CERT_HASH;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_CERT_HASH_ALGORITHM;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_COST_TYPE;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_ID;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_URL;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.SIGN_CERT_PROFILE_ID;
 
 @Service
 @Transactional
@@ -87,16 +95,29 @@ public class CertificationServicesServiceImpl implements CertificationServicesSe
     private final OcspResponderConverter ocspResponderConverter;
     private final CaInfoConverter caInfoConverter;
     private final CertificateConverter certConverter;
+    private final UrlValidator urlValidator;
+    private final IpAddressValidator ipAddressValidator;
 
     @Override
     public CertificationService add(ApprovedCertificationService certificationService) {
         CertificateProfileInfoValidator.validate(certificationService.getCertificateProfileInfo());
+        if (isNotBlank(certificationService.getAcmeServerDirectoryUrl())) {
+            urlValidator.validateUrl(certificationService.getAcmeServerDirectoryUrl());
+        }
+        if (isNotBlank(certificationService.getAcmeServerIpAddress())) {
+            ipAddressValidator.validateCommaSeparatedIpAddresses(certificationService.getAcmeServerIpAddress());
+        }
 
         final var approvedCaEntity = new ApprovedCaEntity();
         approvedCaEntity.setCertProfileInfo(certificationService.getCertificateProfileInfo());
         approvedCaEntity.setAuthenticationOnly(certificationService.getTlsAuth());
+        approvedCaEntity.setDefaultCsrFormat(certificationService.getDefaultCsrFormat().name());
         X509Certificate certificate = handledCertificationChainRead(certificationService.getCertificate());
         approvedCaEntity.setName(CertUtils.getSubjectCommonName(certificate));
+        approvedCaEntity.setAcmeServerDirectoryUrl(certificationService.getAcmeServerDirectoryUrl());
+        approvedCaEntity.setAcmeServerIpAddress(certificationService.getAcmeServerIpAddress());
+        approvedCaEntity.setAuthCertProfileId(certificationService.getAuthenticationCertificateProfileId());
+        approvedCaEntity.setSignCertProfileId(certificationService.getSigningCertificateProfileId());
 
         final var caInfo = new CaInfoEntity();
         caInfo.setCert(certificationService.getCertificate());
@@ -115,7 +136,7 @@ public class CertificationServicesServiceImpl implements CertificationServicesSe
         try {
             return CertUtils.readCertificateChain(certificate)[0];
         } catch (Exception e) {
-            throw new ValidationFailureException(INVALID_CERTIFICATE);
+            throw new BadRequestException(e, INVALID_CERTIFICATE.build());
         }
     }
 
@@ -141,6 +162,26 @@ public class CertificationServicesServiceImpl implements CertificationServicesSe
                     persistedApprovedCa.setCertProfileInfo(certProfile);
                 });
         Optional.ofNullable(approvedCa.getTlsAuth()).ifPresent(persistedApprovedCa::setAuthenticationOnly);
+        Optional.ofNullable(approvedCa.getAcmeServerDirectoryUrl())
+                .ifPresent(acmeServerDirectoryUrl -> {
+                    if (isNotBlank(acmeServerDirectoryUrl)) {
+                        urlValidator.validateUrl(acmeServerDirectoryUrl);
+                    }
+                    persistedApprovedCa.setAcmeServerDirectoryUrl(acmeServerDirectoryUrl);
+                });
+        Optional.ofNullable(approvedCa.getAcmeServerIpAddress()).ifPresent(acmeServerIpAddress -> {
+            if (isNotBlank(acmeServerIpAddress)) {
+                ipAddressValidator.validateCommaSeparatedIpAddresses(acmeServerIpAddress);
+            }
+            persistedApprovedCa.setAcmeServerIpAddress(acmeServerIpAddress);
+        });
+        Optional.ofNullable(approvedCa.getAuthenticationCertificateProfileId())
+                .ifPresent(persistedApprovedCa::setAuthCertProfileId);
+        Optional.ofNullable(approvedCa.getSigningCertificateProfileId())
+                .ifPresent(persistedApprovedCa::setSignCertProfileId);
+        Optional.ofNullable(approvedCa.getDefaultCsrFormat())
+                .map(Enum::name)
+                .ifPresent(persistedApprovedCa::setDefaultCsrFormat);
         final ApprovedCaEntity updatedApprovedCa = approvedCaRepository.save(persistedApprovedCa);
         addAuditData(updatedApprovedCa);
 
@@ -149,7 +190,7 @@ public class CertificationServicesServiceImpl implements CertificationServicesSe
 
     private ApprovedCaEntity getById(Integer id) {
         return approvedCaRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(CERTIFICATION_SERVICE_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(CERTIFICATION_SERVICE_NOT_FOUND.build()));
     }
 
     @Override
@@ -158,7 +199,7 @@ public class CertificationServicesServiceImpl implements CertificationServicesSe
                 .map(ApprovedCaEntity::getCaInfo)
                 .map(CaInfoEntity::getCert)
                 .map(certConverter::toCertificateDetails)
-                .orElseThrow(() -> new NotFoundException(CERTIFICATION_SERVICE_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(CERTIFICATION_SERVICE_NOT_FOUND.build()));
     }
 
     @Override
@@ -216,14 +257,31 @@ public class CertificationServicesServiceImpl implements CertificationServicesSe
         auditDataHelper.putCertificationServiceData(Integer.toString(approvedCa.getId()), approvedCa.getCaInfo().getCert());
         auditDataHelper.put(AUTHENTICATION_ONLY, approvedCa.getAuthenticationOnly());
         auditDataHelper.put(CERTIFICATE_PROFILE_INFO, approvedCa.getCertProfileInfo());
+        auditDataHelper.put(DEFAULT_CSR_FORMAT, approvedCa.getDefaultCsrFormat());
+        if (approvedCa.getAcmeServerDirectoryUrl() != null) {
+            auditDataHelper.put(ACME_DIRECTORY_URL, approvedCa.getAcmeServerDirectoryUrl());
+        }
+        if (approvedCa.getAcmeServerIpAddress() != null) {
+            auditDataHelper.put(ACME_IP_ADDRESSES, approvedCa.getAcmeServerIpAddress());
+        }
+        if (approvedCa.getAuthCertProfileId() != null) {
+            auditDataHelper.put(AUTH_CERT_PROFILE_ID, approvedCa.getAuthCertProfileId());
+        }
+        if (approvedCa.getSignCertProfileId() != null) {
+            auditDataHelper.put(SIGN_CERT_PROFILE_ID, approvedCa.getSignCertProfileId());
+        }
     }
 
     private void addOcspAuditData(OcspInfoEntity ocspInfo) {
         auditDataHelper.put(CA_ID, ocspInfo.getCaInfo().getId());
         auditDataHelper.put(OCSP_ID, ocspInfo.getId());
         auditDataHelper.put(OCSP_URL, ocspInfo.getUrl());
-        auditDataHelper.put(OCSP_CERT_HASH, calculateCertHexHashDelimited(ocspInfo.getCert()));
-        auditDataHelper.put(OCSP_CERT_HASH_ALGORITHM, DEFAULT_CERT_HASH_ALGORITHM_ID);
+        auditDataHelper.put(OCSP_COST_TYPE, ocspInfo.getCostType());
+
+        if (ocspInfo.getCert() != null) {
+            auditDataHelper.put(OCSP_CERT_HASH, calculateCertHexHashDelimited(ocspInfo.getCert()));
+            auditDataHelper.put(OCSP_CERT_HASH_ALGORITHM, DEFAULT_CERT_HASH_ALGORITHM_ID);
+        }
     }
 
 }

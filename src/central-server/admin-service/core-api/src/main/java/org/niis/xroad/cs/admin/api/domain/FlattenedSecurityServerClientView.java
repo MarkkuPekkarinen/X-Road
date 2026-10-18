@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -40,11 +40,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class FlattenedSecurityServerClientView extends Auditable {
-    private int id;
+    private long id;
     private String xroadInstance;
     private MemberClass memberClass;
     private String memberCode;
     private String subsystemCode;
+    private String subsystemName;
     private String memberName;
     private XRoadObjectType type;
 }

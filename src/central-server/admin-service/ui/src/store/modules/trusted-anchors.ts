@@ -26,11 +26,12 @@
  */
 
 import { defineStore } from 'pinia';
-import { saveResponseAsFile } from '@/util/helpers';
+import { saveResponseAsFile, buildFileFormData, multipartFormDataConfig } from '@niis/shared-ui';
 import axios from 'axios';
 import { TrustedAnchor } from '@/openapi-types';
+import { encodePathParameter } from '@/util/api';
 
-export const trustedAnchorStore = defineStore('trustedAnchor', {
+export const useTrustedAnchor = defineStore('trustedAnchor', {
   actions: {
     fetchTrustedAnchors() {
       return axios.get<TrustedAnchor[]>('/trusted-anchors').catch((error) => {
@@ -38,36 +39,20 @@ export const trustedAnchorStore = defineStore('trustedAnchor', {
       });
     },
     previewTrustedAnchors(file: File) {
-      const formData = new FormData();
-      formData.append('anchor', file, file.name);
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      };
       return axios
-        .post<TrustedAnchor>('/trusted-anchors/preview', formData, config)
+        .post<TrustedAnchor>('/trusted-anchors/preview', buildFileFormData('anchor', file), multipartFormDataConfig())
         .catch((error) => {
           throw error;
         });
     },
     uploadTrustedAnchor(file: File) {
-      const formData = new FormData();
-      formData.append('anchor', file, file.name);
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      };
-      return axios
-        .post<TrustedAnchor>('/trusted-anchors', formData, config)
-        .catch((error) => {
-          throw error;
-        });
+      return axios.post<TrustedAnchor>('/trusted-anchors', buildFileFormData('anchor', file), multipartFormDataConfig()).catch((error) => {
+        throw error;
+      });
     },
     downloadTrustedAnchor(hash: string) {
       return axios
-        .get(`/trusted-anchors/${hash}/download`, {
+        .get(`/trusted-anchors/${encodePathParameter(hash)}/download`, {
           responseType: 'blob',
         })
         .then((resp) => {
@@ -79,7 +64,7 @@ export const trustedAnchorStore = defineStore('trustedAnchor', {
     },
     deleteTrustedAnchor(hash: string) {
       return axios
-        .delete(`/trusted-anchors/${hash}`, {
+        .delete(`/trusted-anchors/${encodePathParameter(hash)}`, {
           responseType: 'blob',
         })
         .catch((error) => {

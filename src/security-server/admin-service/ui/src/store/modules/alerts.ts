@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,14 +26,17 @@
  */
 
 import { defineStore } from 'pinia';
-import { useNotifications } from './notifications';
 import * as api from '@/util/api';
+import { useNotifications } from '@niis/shared-ui';
 
 export interface AlertStatus {
   currentTime?: string;
   backupRestoreRunningSince?: string;
   globalConfValid: boolean;
   softTokenPinEntered: boolean;
+  certificateRenewalJobSuccess: boolean;
+  authCertificateIdsWithErrors: string[];
+  signCertificateIdsWithErrors: string[];
 }
 
 type AlertsResponse = {
@@ -40,6 +44,9 @@ type AlertsResponse = {
   soft_token_pin_entered: boolean;
   backup_restore_running_since?: string;
   current_time: string;
+  certificate_renewal_job_success: boolean;
+  auth_certificate_ids_with_errors: string[];
+  sign_certificate_ids_with_errors: string[];
 };
 
 export const useAlerts = defineStore('alerts', {
@@ -65,11 +72,20 @@ export const useAlerts = defineStore('alerts', {
     showSoftTokenPinEnteredAlert(state): boolean {
       return state.queried && !state.alertStatus.softTokenPinEntered;
     },
+    showCertificateRenewalJobFailureAlert(state): boolean {
+      return state.queried && !state.alertStatus.certificateRenewalJobSuccess;
+    },
+    authCertificateIdsWithErrors(state): string[] {
+      return state.alertStatus.authCertificateIdsWithErrors || '';
+    },
+    signCertificateIdsWithErrors(state): string[] {
+      return state.alertStatus.signCertificateIdsWithErrors || '';
+    },
   },
 
   actions: {
-    checkAlertStatus(): void {
-      api
+    async checkAlertStatus() {
+      return api
         .get<AlertsResponse>('/notifications/alerts')
         .then((resp) => {
           this.alertStatus = {
@@ -77,13 +93,16 @@ export const useAlerts = defineStore('alerts', {
             softTokenPinEntered: resp.data.soft_token_pin_entered,
             backupRestoreRunningSince: resp.data.backup_restore_running_since,
             currentTime: resp.data.current_time,
+            certificateRenewalJobSuccess: resp.data.certificate_renewal_job_success,
+            authCertificateIdsWithErrors: resp.data.auth_certificate_ids_with_errors,
+            signCertificateIdsWithErrors: resp.data.sign_certificate_ids_with_errors,
           };
 
           this.queried = true;
         })
         .catch((error) => {
-          const notifications = useNotifications();
-          notifications.showError(error);
+          const { addError } = useNotifications();
+          addError(error);
         });
     },
     clearAlerts(): void {

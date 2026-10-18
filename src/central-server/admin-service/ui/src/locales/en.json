@@ -1,167 +1,100 @@
 {
-  "403": {
-    "goBack": "Go back",
-    "mainTitle": "Permission denied",
-    "text": "Seems like you do not have the permission to view this page. If you think this is a mistake, check if you are logged into the correct account or contact your administrator to inquire about your permissions.",
-    "topTitle": "Forbidden"
-  },
   "action": {
-    "activate": "Activate",
-    "add": "Add",
-    "addClient": "Add client",
-    "addMember": "Add member",
-    "addSubsystem": "Add subsystem",
+    "addName": "Add subsystem name",
     "approve": "Approve",
-    "cancel": "Cancel",
-    "close": "Close",
-    "confirm": "Confirm",
-    "continue": "Continue",
-    "copy": "Copy",
-    "copyId": "Copy ID",
-    "deactivate": "Disable",
     "decline": "Decline",
-    "delete": "Delete",
-    "done": "Done",
-    "download": "Download",
-    "edit": "Edit",
-    "emptySearch": "Your search for {msg} found no results.",
-    "export": "Export",
-    "finish": "Finish",
-    "goToFront": "Go to the front page",
-    "next": "Next",
-    "no": "No",
-    "noData": "No data",
-    "ok": "Ok",
-    "previous": "Previous",
-    "refresh": "Refresh",
-    "register": "Register",
-    "remove": "Remove",
-    "removeAll": "Remove All",
-    "restore": "Restore",
-    "save": "Save",
-    "search": "Search",
-    "searching": "Searching...",
-    "submit": "Submit",
-    "unregister": "Unregister",
-    "upload": "Upload",
-    "yes": "Yes",
+    "order": "Order",
+    "rename": "Rename",
     "select": "Select"
   },
-  "alert": {
-    "count": "Amount of same errors:",
-    "id": "ID"
-  },
   "apiKey": {
-    "createApiKey": {
-      "button": "CREATE API KEY",
-      "step": {
-        "keyDetails": {
-          "apiKey": "API key",
-          "apiKeyID": "API key ID",
-          "assignedRoles": "Roles assigned",
-          "createKeyButton": "Create Key",
-          "name": "Key Details",
-          "note": "NOTE: save the API key in a secure place. The API key is visible only at the time of key generation. It will not be presented again and cannot be retrieved later."
-        },
-        "roles": {
-          "description": "Please select the roles associated with the API key. The roles define the permissions granted to the API key.",
-          "name": "Roles",
-          "selectRoles": "Select roles"
-        }
-      },
-      "success": "API key successfully created",
-      "title": "Create API key"
-    },
     "role": {
-      "XROAD_REGISTRATION_OFFICER": "Registration Officer",
-      "XROAD_SECURITY_OFFICER": "Security Officer",
-      "XROAD_SYSTEM_ADMINISTRATOR": "System Administrator",
       "XROAD_MANAGEMENT_SERVICE": "Management Services"
-    },
-    "table": {
-      "action": {
-        "edit": {
-          "button": "Edit",
-          "dialog": {
-            "message": "Roles associated with the API key:",
-            "title": "Edit API Key (ID: {id})"
-          },
-          "success": "API key with ID {id} saved"
-        },
-        "revoke": {
-          "button": "Revoke key",
-          "confirmationDialog": {
-            "message": "Are you sure you want to revoke the API key with ID {id}?",
-            "title": "Are you sure?"
-          },
-          "success": "API key with ID {id} successfully revoked"
-        }
-      },
-      "header": {
-        "id": "ID",
-        "roles": "Roles"
-      }
-    }
-  },
-  "backup": {
-    "createBackup": {
-      "button": "Back up config.",
-      "messages": {
-        "success": "Backup {file} successfully created"
-      }
-    },
-    "uploadBackup": {
-      "button": "Upload backup",
-      "confirmationDialog": {
-        "confirmation": "File {name} already exists, are you sure you want to overwrite it?",
-        "title": "File already exists"
-      },
-      "success": "Backup {file} uploaded successfully"
-    },
-    "deleteBackup": {
-      "dialog": {
-        "confirmation": "Are you sure you want to delete backup {file}?",
-        "title": "Are you sure?"
-      },
-      "success": "Backup {file} deleted"
-    },
-    "restoreFromBackup": {
-      "dialog": {
-        "confirmation": "Are you sure you want to restore from {file}?",
-        "title": "Are you sure?"
-      },
-      "success": "Configuration restored from {file}"
     }
   },
   "customValidation": {
-    "invalidUrl": "URL is invalid, examples of valid URL formats: 'http://www.example.com', 'https://www.example.com'"
+    "invalidIpAddress": "Field must contain IP address or multiple addresses separated by comma",
+    "invalidUrl": "URL is invalid, examples of valid URL formats: 'http://www.example.com', 'https://www.example.com'",
+    "description": "Use valid description characters only"
+  },
+  "dsTlsCertificates": {
+    "downloadSuccess": "Dataspace TLS certificate successfully downloaded",
+    "generateCsr": {
+      "example": "CN=mycentralserver.example.com, O=My Organization, C=EE"
+    },
+    "generateKey": {
+      "confirmation": "Generate a new Dataspace TLS key and certificate?",
+      "explanation": "The system will generate a new Dataspace TLS key and a self-signed certificate, replacing the existing key and certificate. The Issuer Service endpoints of this Central Server will start serving the new certificate.",
+      "success": "New Dataspace TLS key and certificate generated successfully",
+      "title": "Dataspace TLS Key"
+    },
+    "title": "Dataspace TLS Key",
+    "uploadCertificate": {
+      "success": "Dataspace TLS certificate successfully uploaded",
+      "title": "Upload Dataspace TLS certificate"
+    }
   },
   "error_code": {
+    "backup_deletion_failed": "Failed to delete backup",
+    "cannot_add_member_to_owners_group": "Cannot add members to server owner group",
+    "cannot_convert_bytes_to_certificate": "Cannot convert bytes to certificate",
+    "cannot_read_certificate": "Cannot read TLS certificate",
+    "certificate_already_exists": "The imported certificate already exists",
+    "certificate_import_failed": "Cannot import TLS certificate",
     "certificate_profile_info_class_not_found": "Certificate profile info class was not found",
+    "certificate_writing_failed": "Writing certificate to file failed",
     "certification_service_not_found": "Certification service not found.",
+    "conf_verification.anchor_not_for_external_source": "Configuration verification failed: anchor_not_for_external_source",
+    "conf_verification.missing_private_params": "Configuration verification failed: missing_private_params",
+    "conf_verification.other": "Configuration verification failed: other",
+    "conf_verification.outdated": "Configuration verification failed: outdated",
+    "conf_verification.signature_invalid": "Configuration verification failed: signature_invalid",
+    "conf_verification.unreachable": "Configuration verification failed: unreachable",
     "configuration_not_found": "Configuration Source not found",
     "configuration_part_file_not_found": "Configuration part file not found",
     "configuration_part_validation_failed": "Configuration part validation failed",
     "configuration_part_validator_not_found": "Configuration part validator not found",
+    "csr_generation_failed": "CSR generation failed",
+    "double_file_extension": "Double file extension is not allowed",
+    "ds_tls_acme_order_failed": "Ordering the Dataspace TLS certificate failed",
+    "ds_tls_ca_not_found": "The named certification authority is not a designated, ACME-capable Dataspace TLS CA",
+    "ds_tls_certificate_expired": "The Dataspace TLS certificate has expired",
+    "ds_tls_certificate_not_configured": "No Dataspace TLS certificate has been provisioned yet",
+    "ds_tls_certificate_not_yet_valid": "The Dataspace TLS certificate is not yet valid",
+    "ds_tls_certificate_parse_failed": "Cannot read the Dataspace TLS certificate",
+    "ds_tls_invalid_subject_alt_name": "The subject alternative name must be a single name with no whitespace",
+    "ds_tls_key_certificate_mismatch": "The uploaded certificate does not match the Dataspace TLS key",
+    "ds_tls_key_not_generated": "Generate a Dataspace TLS key before requesting a CSR or uploading a certificate",
     "error_activating_signing_key": "Error activating signing key",
     "error_deleting_signing_key": "Error deleting signing key",
     "error_recreating_anchor": "Error re-creating anchor file",
+    "generate_key_cert_interrupted": "Key and certificate generation has been interrupted",
     "global_group_exists": "Global group with the same code already exists.",
     "global_group_not_found": "Global group by given code does not exist",
+    "id_not_a_number": "Id is not a number",
     "init_already_initialized": "Central server Initialization failed, already fully initialized",
     "init_invalid_params": "Empty, missing or redundant parameters provided for initialization",
     "init_signer_pin_policy_failed": "Token pin policy failure at Signer",
     "init_software_token_failed": "Software token initialization failed",
     "instance_identifier_not_set": "System parameter for instance identifier not set",
     "intermediate_ca_not_found": "Intermediate CA not found",
-    "invalid_certificate": "Invalid X.509 certificate",
+    "invalid_address_char": "Address field contains invalid characters",
+    "invalid_encoded_id": "Invalid encoded id",
+    "invalid_file_content_type": "Invalid content type of uploaded file",
+    "invalid_file_extension": "Invalid file extension",
+    "invalid_ip_address": "Invalid ip address",
     "invalid_member_id": "Invalid member id",
     "invalid_pagination_properties": "Pagination has invalid properties",
+    "invalid_parameters": "Validation failure",
+    "invalid_role": "Invalid role",
     "invalid_service_provider_id": "Invalid service provider id",
     "invalid_sort_properties": "Invalid sort parameter",
     "invalid_subsystem_id": "Invalid subsystem id",
     "invalid_url": "Invalid url",
+    "key_and_cert_generation_failed": "Failed to generate TLS key and certificate",
     "key_generation_failed": "Signing key generation failed",
+    "key_not_found": "The imported certificate does not match the TLS key",
+    "malformed_anchor": "Malformed anchor file",
     "management_request_cannot_register_owner": "Cannot register owner as a client",
     "management_request_client_already_owner": "Client is already owner of the security server",
     "management_request_client_already_registered": "Client already registered to a server",
@@ -190,6 +123,7 @@
     "ocsp_responder_not_found": "OCSP Responder not found",
     "owners_global_group_cannot_be_deleted": "Cannot perform delete action on server owners group",
     "owners_global_group_member_cannot_be_deleted": "Cannot perform delete action on server owners group member",
+    "security_server_not_found": "Security server not found",
     "signer_proxy_error": "Signer proxy exception",
     "signing_key_action_not_possible": "Signing key action not possible",
     "signing_key_not_found": "Signing key not found",
@@ -203,46 +137,21 @@
     "token_action_not_possible": "Token action not possible",
     "token_activation_failed": "Token activation failed",
     "token_deactivation_failed": "Token deactivation failed",
-    "token_fetch_failed": "Error getting tokens",
     "token_incorrect_pin_format": "Incorrect PIN format",
     "token_invalid_characters": "The provided pin code contains invalid characters",
-    "token_not_found": "Token not found",
     "token_pin_final_try": "Tries left: 1",
     "token_pin_locked": "Token PIN locked",
-    "token_weak_pin": "The provided pin code was too weak",
-    "unknown_configuration_part": "Unknown configuration part",
-    "malformed_anchor": "Malformed anchor file",
-    "trusted_anchor_verification_failed": "Trusted anchor verification failed",
     "trusted_anchor_not_found": "Trusted anchor not found",
-    "internal_error": "Internal error. See server logs for more details",
-    "invalid_parameters": "Validation failure",
-    "security_server_not_found": "Security server not found",
-    "invalid_encoded_id": "Invalid encoded id",
-    "id_not_a_number": "Id is not a number",
-    "api_key_not_found": "Api key not found",
-    "invalid_role": "Invalid role",
-    "invalid_file_content_type": "Invalid content type of uploaded file",
-    "invalid_file_extension": "Invalid file extension",
-    "double_file_extension": "Double file extension is not allowed",
-    "invalid_filename": "Invalid filename",
-    "invalid_backup_file": "Invalid backup file",
-    "backup_file_not_found": "Backup was not found",
-    "backup_generation_failed": "Failed to generate backup",
-    "generate_backup_interrupted": "Backup generation has been interrupted",
-    "restore_process_failed": "Restore process failed",
-    "backup_restore_interrupted": "Backup restoration has been interrupted",
-    "backup_deletion_failed": "Failed to delete backup",
-    "resource_read_failed": "Failed to read resource",
-    "conf_verification.anchor_not_for_external_source": "Configuration verification failed: anchor_not_for_external_source",
-    "conf_verification.missing_private_params": "Configuration verification failed: missing_private_params",
-    "conf_verification.other": "Configuration verification failed: other",
-    "conf_verification.outdated": "Configuration verification failed: outdated",
-    "conf_verification.signature_invalid": "Configuration verification failed: signature_invalid",
-    "conf_verification.unreachable": "Configuration verification failed: unreachable",
-    "cannot_add_member_to_owners_group": "Cannot add members to server owner group",
-    "validation_failure": "Validation failure"
+    "trusted_anchor_verification_failed": "Trusted anchor verification failed",
+    "unknown_configuration_part": "Unknown configuration part"
   },
   "fields": {
+    "acmeServerDirectoryUrl": "ACME server directory URL",
+    "acmeServerIpAddress": "ACME server IP address(es)",
+    "authenticationCertificateProfileId": "Authentication certificate profile id",
+    "certFile": "Certificate File",
+    "certProfile": "Certificate Profile Info",
+    "dsTlsCertificateProfileId": "Dataspace TLS certificate profile id",
     "init": {
       "address": "Central Server Address",
       "confirmPin": "Repeat PIN",
@@ -254,15 +163,18 @@
       "centralServerAddress": "Central Server Address",
       "instanceIdentifier": "Instance Identifier"
     },
-    "password": "Password",
-    "username": "Username",
-    "url": "URL",
-    "tokenPin": "Token PIN",
     "keyLabel": "Key friendly name",
     "memberCode": "Member Code",
+    "memberName": "Member Name",
+    "name": "Name",
     "securityServerAddress": "Security server address",
     "serverCode": "Server code",
-    "securityServerCode": "Security server code"
+    "serviceAddress": "Central Server address",
+    "signingCertificateProfileId": "Signing certificate profile id",
+    "subsystemCode": "Subsystem Code",
+    "tokenPin": "Token PIN",
+    "url": "URL",
+    "username": "Username"
   },
   "filters": {
     "apply": "Apply",
@@ -270,11 +182,10 @@
     "clearFields": "Clear fields",
     "groupMembers": {
       "byClass": "By class",
-      "byCode": "By code",
       "byInstance": "By instance",
-      "bySubsystem": "By subsystem",
       "byType": "By type",
       "class": "Class",
+      "code": "Code",
       "instance": "Instance",
       "member": "Member",
       "subsystem": "Subsystem"
@@ -290,19 +201,8 @@
       "byStatus": "By status"
     }
   },
-  "footer": {
-    "copyright": {
-      "company": "Nordic Institute for Interoperability Solutions (NIIS)",
-      "licenceInfo": "Licence info",
-      "title": "Copyright"
-    },
-    "software": {
-      "feedback": "Feedback",
-      "title": "Software",
-      "versionPrefix": "X-Road"
-    }
-  },
   "global": {
+    "appTitle": "X-Road Central Server",
     "approve": "Approve",
     "class": "Class",
     "code": "Code",
@@ -313,7 +213,6 @@
     "memberClass": "Member class",
     "memberCode": "Member code",
     "memberName": "Member name",
-    "name": "Name",
     "navigation": {
       "back": "Back"
     },
@@ -325,38 +224,42 @@
     "type": "Type"
   },
   "globalConf": {
-    "globalConf": "Global Configuration",
-    "internalConf": "Internal Configuration",
-    "trustedAnchors": "Trusted Anchor",
-    "cfgParts": {
-      "title": "Configuration Parts",
-      "file": "File",
-      "contentIdentifier": "Content Identifier",
-      "version": "Version",
-      "allVersions": "All versions",
-      "updated": "Updated",
-      "dialog": {
-        "upload": {
-          "title": "Upload Configuration Part",
-          "uploadConfigurationPart": "Upload the configuration file from your computer",
-          "success": "Configuration Part uploaded successfully."
-        }
-      }
-    },
     "anchor": {
-      "title": "Anchor",
       "certificateHash": "Certificate Hash (SHA-224)",
       "created": "Created",
       "download": "Download",
       "recreate": "Re-create",
-      "recreateSuccess": "{configurationType} configuration anchor generated successfully"
+      "recreateSuccess": "{configurationType} configuration anchor generated successfully",
+      "title": "Anchor"
+    },
+    "cfgParts": {
+      "allVersions": "All versions",
+      "contentIdentifier": "Content Identifier",
+      "dialog": {
+        "upload": {
+          "success": "Configuration Part uploaded successfully.",
+          "title": "Upload Configuration Part",
+          "uploadConfigurationPart": "Upload the configuration file from your computer"
+        }
+      },
+      "file": "File",
+      "title": "Configuration Parts",
+      "updated": "Updated",
+      "version": "Version"
     },
     "downloadUrl": {
       "title": "Download URL",
       "urlAddress": "URL Address"
     },
+    "globalConf": "Global Configuration",
+    "internalConf": "Internal Configuration",
     "trustedAnchor": {
       "dialog": {
+        "delete": {
+          "confirmation": "Delete {identifier} anchor with Hash (SHA-224) {hash}?",
+          "success": "Successfully deleted Trusted anchor",
+          "title": "Delete Anchor"
+        },
         "upload": {
           "confirmation": "Continue with upload?",
           "field": {
@@ -366,49 +269,46 @@
           "info": "Trusted anchor details:",
           "success": "Successfully uploaded Trusted anchor",
           "title": "Confirm trusted anchor details"
-        },
-        "delete": {
-          "confirmation": "Delete {identifier} anchor with Hash (SHA-224) {hash}?",
-          "success": "Successfully deleted Trusted anchor",
-          "title": "Delete Anchor"
         }
       }
-    }
+    },
+    "trustedAnchors": "Trusted Anchor"
   },
   "globalGroup": {
-    "added": "Added",
     "addMembers": "Add Members",
+    "added": "Added",
     "areYouSure": "Are you sure you want to remove the global group {group}?",
-    "code": "Code",
     "class": "Class",
+    "code": "Code",
     "deleteGroup": "Delete Group",
     "description": "Description",
     "descriptionSaved": "Description saved successfully.",
+    "dialog": {
+      "addMembers": {
+        "success": "Members with identifiers: {identifiers} are added to this global group",
+        "title": "Add Members"
+      },
+      "deleteMember": {
+        "confirmation": "Are you sure you want to delete the group member with identifier \"{identifier}\" from this global group? Enter the member code to confirm.",
+        "placeholder": "Enter Member Code",
+        "success": "Member with identifier \"{identifier}\" is deleted from this global group",
+        "title": "Delete Member"
+      }
+    },
     "editDescription": "Edit Description",
     "groupDeletedSuccessfully": "Global group deleted successfully.",
     "groupMembers": "Group members ({memberCount})",
     "instance": "Instance",
     "memberName": "Member Name",
     "subsystem": "Subsystem",
-    "type": "Type",
-    "dialog": {
-      "addMembers": {
-        "title": "Add Members",
-        "success": "Members with identifiers: {identifiers} are added to this global group"
-      },
-      "deleteMember": {
-        "title": "Delete Member",
-        "confirmation": "Are you sure you want to delete the group member with identifier \"{identifier}\" from this global group? Enter the member code to confirm.",
-        "placeholder": "Enter Member Code",
-        "success": "Member with identifier \"{identifier}\" is deleted from this global group"
-      }
-    }
+    "title": "Global group",
+    "type": "Type"
   },
   "globalResources": {
     "addGlobalGroup": "Add Global Group",
-    "globalGroupSuccessfullyAdded": "Global group added successfully.",
     "code": "Code",
     "description": "Description",
+    "globalGroupSuccessfullyAdded": "Global group added successfully.",
     "globalGroups": "Global Groups",
     "memberCount": "Member Count",
     "updated": "Updated"
@@ -432,128 +332,93 @@
   },
   "keys": {
     "addKey": "Add key",
+    "algorithm": "Key algorithm",
     "created": "Created",
+    "dialog": {
+      "activate": {
+        "confirmButton": "Activate",
+        "success": "Sign Key '{label}' activated successfully",
+        "text": "Activate key '{label}'?",
+        "title": "Activate key"
+      },
+      "add": {
+        "confirmButton": "Add",
+        "labelField": "Key friendly name",
+        "success": "Sign Key '{label}' added successfully. Please do not activate the key immediately. Please see the Central Server user guide before activating the key.",
+        "title": "Add key"
+      },
+      "delete": {
+        "confirmButton": "Delete",
+        "success": "Signing key deleted successfully",
+        "text": "Delete key '{label}'?",
+        "title": "Delete key"
+      }
+    },
     "logIn": "Log in",
     "logOut": "Log out",
     "signKey": "Sign key",
-    "token": "Token:",
-    "dialog": {
-      "delete": {
-        "title": "Delete key",
-        "text": "Delete key '{label}'?",
-        "confirmButton": "Delete",
-        "success": "Signing key deleted successfully"
-      },
-      "add": {
-        "title": "Add key",
-        "labelField": "Key friendly name",
-        "confirmButton": "Add",
-        "success": "Sign Key '{label}' added successfully"
-      },
-      "activate": {
-        "title": "Activate key",
-        "text": "Activate key '{label}'?",
-        "confirmButton": "Activate",
-        "success": "Sign Key '{label}' activated successfully"
-      }
-    }
+    "title": "Signing Keys"
   },
-  "tokens": {
-    "keysInfoMessage": "A maximum of two configuration source signing keys is allowed on a security token",
-    "logIn": "Log in",
-    "pin": "Token PIN",
-    "loginDialog": {
-      "title": "Log in",
-      "success": "Logged in token"
-    },
-    "logout": {
-      "title": "Log out",
-      "confirmButton": "Log out",
-      "text": "Are you sure you want to log out from the token?",
-      "success": "Logged out of token"
-    },
-    "errors": {
-      "Signer": {
-        "PinIncorrect": "Invalid PIN"
-      }
-    }
-  },
-  "cert": {
-    "certificate": "Certificate",
-    "hashInfo": "Hash (SHA-1)",
-    "rsaExp": "RSA Public Key Exponent",
-    "rsaModulus": "RSA Public Key Modulus",
-    "keyUsage": {
-      "CRL_SIGN": "CRL Sign",
-      "DATA_ENCIPHERMENT": "Data Encipherment",
-      "DECIPHER_ONLY": "Decipher Only",
-      "DIGITAL_SIGNATURE": "Digital Signature",
-      "ENCIPHER_ONLY": "Encipher Only",
-      "KEY_AGREEMENT": "Key Agreement",
-      "KEY_CERT_SIGN": "Certificate Sign",
-      "KEY_ENCIPHERMENT": "Key Encipherment",
-      "NON_REPUDIATION": "Non Repudiation"
-    }
-  },
-  "login": {
-    "errorMsg401": "Wrong username or password",
-    "generalError": "Login failed. Please try again.",
-    "logIn": "Log in",
-    "logOut": "Log out"
-  },
-  "logout": {
-    "idleWarning": "You have been idle for 30 minutes and your session has expired. For security reasons, you will be logged out.",
-    "sessionExpired": "Session expired"
+  "managementRequestDetails": {
+    "address": "Address",
+    "ca": "CA",
+    "certificateformation": "Authentication Certificate Submitted for Registration",
+    "clientDisableInformation": "Disabled client",
+    "clientEnableInformation": "Enabled client",
+    "clientInformation": "Client Submitted for Registration",
+    "clientRenameInformation": "Renamed client",
+    "comments": "Comments",
+    "expires": "Expires",
+    "ownerChangeInformation": "New Owner Submitted for Registration",
+    "ownerClass": "Owner Class",
+    "ownerCode": "Owner Code",
+    "ownerName": "Owner Name",
+    "received": "Received",
+    "requestId": "Request ID",
+    "requestInformation": "Request Information",
+    "securityServerInformation": "Affected Security Server Information",
+    "serialNumber": "Serial number",
+    "serverCode": "Server Code",
+    "source": "Source",
+    "status": "Status",
+    "subject": "Subject",
+    "subsystemCode": "Subsystem Code",
+    "subsystemName": "Subsystem Name"
   },
   "managementRequests": {
     "addCertificate": "Add Certificate",
     "addClient": "Add Client",
     "approved": "Approved",
-    "submitted": "Submitted for approval",
+    "changeAddress": "Change address",
     "changeOwner": "Change Owner",
+    "clientDisable": "Disable client",
+    "clientEnable": "Enable client",
+    "dialog": {
+      "approve": {
+        "bodyMessage": "Are you sure you want to approve the management request ID {id} from server {serverId}?",
+        "newMemberWarning": "The specified member does not currently exist. It will be created automatically when this request is approved.",
+        "successMessage": "Management request ID {id} from {serverId} approved",
+        "title": "Approve management request"
+      },
+      "decline": {
+        "bodyMessage": "Are you sure you want to decline the management request ID {id} from server {serverId}?",
+        "successMessage": "Management request ID {id} from {serverId} declined",
+        "title": "Decline management request"
+      }
+    },
+    "maintenanceModeDisable": "Disable maintenance mode",
+    "maintenanceModeEnable": "Enable maintenance mode",
     "pending": "Pending",
     "rejected": "Rejected",
-    "revoked": "Revoked",
-    "unknown": "Unknown",
     "removeCertificate": "Remove Certificate",
     "removeClient": "Remove Client",
+    "renameClient": "Rename client",
+    "revoked": "Revoked",
     "securityServerId": "Server Identifier",
     "securityServerOwnerName": "Server Owner Name",
     "showOnlyPending": "Show only pending requests",
-    "dialog": {
-      "approve": {
-        "title": "Approve management request",
-        "bodyMessage": "Are you sure you want to approve the management request ID {id} from server {serverId}?",
-        "successMessage": "Management request ID {id} from {serverId} approved"
-      },
-      "decline": {
-        "title": "Decline management request",
-        "bodyMessage": "Are you sure you want to decline the management request ID {id} from server {serverId}?",
-        "successMessage": "Management request ID {id} from {serverId} declined"
-      }
-    }
-  },
-  "managementRequestDetails": {
-    "requestInformation": "Request Information",
-    "requestId": "Request ID",
-    "received": "Received",
-    "source": "Source",
-    "status": "Status",
-    "comments": "Comments",
-    "securityServerInformation": "Affected Security Server Information",
-    "ownerName": "Owner Name",
-    "ownerClass": "Owner Class",
-    "ownerCode": "Owner Code",
-    "serverCode": "Server Code",
-    "address": "Address",
-    "clientInformation": "Client Submitted for Registration",
-    "ownerChangeInformation": "New Owner Submitted for Registration",
-    "subsystemCode": "Subsystem Code",
-    "certificateformation": "Authentication Certificate Submitted for Registration",
-    "ca": "CA",
-    "serialNumber": "Serial number",
-    "subject": "Subject",
-    "expires": "Expires"
+    "submitted": "Submitted for approval",
+    "unknown": "Unknown"
   },
   "members": {
     "addMember": "Add member",
@@ -561,16 +426,20 @@
     "member": {
       "details": {
         "addedToGroup": "Added to the group",
+        "areYouSureUnregister": "Are you sure you want to unregister the Member {memberCode} from server {serverCode} from the system configuration?",
+        "confirmDelete": "Are you sure you want to delete the Member {member} from the system configuration? Enter the member code to confirm.",
+        "deleteMember": "Delete member",
+        "editMemberName": "Edit Member's name",
+        "enterCode": "Enter Member Code",
         "globalGroups": "Global Groups",
         "group": "Group",
+        "memberDeleted": "Member deleted successfully",
+        "memberNameSaved": "Member name successfully saved",
+        "memberSuccessfullyUnregistered": "Member {memberCode} from server {serverCode} has been unregistered",
         "ownedServers": "Owned Servers",
         "server": "Server",
-        "enterCode": "Enter Member Code",
-        "deleteMember": "Delete member",
-        "confirmDelete": "Are you sure you want to delete the Member {member} from the system configuration? Enter the member code to confirm.",
-        "editMemberName": "Edit Member's name",
-        "memberNameSaved": "Member name successfully saved",
-        "memberDeleted": "Member deleted successfully"
+        "unregisterMember": "Unregister member",
+        "usedServers": "Used Servers"
       },
       "managementRequests": {
         "created": "Created",
@@ -585,122 +454,300 @@
         "subsystems": "Subsystems"
       },
       "subsystems": {
-        "addClient": "Add new subsystem to database",
+        "addClient": "Add subsystem",
+        "areYouSureDelete": "Are you sure you want to delete the Subsystem {subsystemCode} from the X-Road member {memberId} from the system configuration?",
+        "areYouSureUnregister": "Are you sure you want to delete the Subsystem {subsystemCode} from server {serverCode} from the system configuration?",
         "deleteSubsystem": "Delete Subsystem",
+        "renameSubsystem": "Rename Subsystem",
         "serverOwner": "Server owner",
         "servercode": "Server code",
         "status": "Status",
-        "subsystemcode": "Subsystem code",
         "subsystemSuccessfullyAdded": "Subsystem {subsystemCode} is added to the system configuration",
-        "areYouSureDelete": "Are you sure you want to delete the Subsystem {subsystemCode} from the X-Road member {memberId} from the system configuration?",
         "subsystemSuccessfullyDeleted": "Subsystem {subsystemCode} has been deleted from the system configuration",
-        "areYouSureUnregister": "Are you sure you want to delete the Subsystem {subsystemCode} from server {serverCode} from the system configuration?",
-        "subsystemSuccessfullyUnregistered": "Subsystem {subsystemCode} from server {serverCode} has been deleted"
+        "subsystemSuccessfullyRenamed": "Subsystem name successfully saved",
+        "subsystemSuccessfullyUnregistered": "Subsystem {subsystemCode} from server {serverCode} has been deleted",
+        "subsystemcode": "Subsystem code",
+        "subsystemname": "Subsystem name"
       }
     },
     "memberSuccessfullyAdded": "Member {memberName} is added to the system configuration."
   },
   "noData": {
-    "loading": "Loading... Please wait",
-    "noBackups": "No backups yet",
-    "noCertificate": "No certificate",
-    "noCertificates": "No certificates",
-    "noData": "No data",
-    "noMatches": "No items matching criteria",
     "noMemberClasses": "No member classes",
-    "noServices": "No services",
-    "noTokens": "No tokens",
     "noSecurityServers": "No security servers"
   },
   "securityServers": {
     "address": "Address",
+    "dialogs": {
+      "deleteAddress": {
+        "areYouSure": "Are you sure you want to delete the Security Server {securityServer} from the system configuration? Enter the server code to confirm.",
+        "enterCode": "Enter Security Server Code",
+        "success": "Security Server deleted.",
+        "title": "Delete Security Server"
+      },
+      "editAddress": {
+        "addressField": "Security server address",
+        "success": "Security server address successfully updated",
+        "title": "Edit Security Server address"
+      }
+    },
+    "disabled": "Temporarily disabled",
+    "maintenanceMode": "In maintenance mode",
     "ownerClass": "Owner Class",
     "ownerCode": "Owner Code",
     "ownerName": "Owner Name",
-    "registered": "Registered",
-    "unregistered": "Unregistered",
     "pending": "Pending approval",
+    "registered": "Registered",
     "securityServer": {
       "certificationAuthority": "Certification Authority",
+      "deleteSecurityServer": "Delete Security Server",
       "deleteServer": "Delete server",
+      "dialog": {
+        "deleteAuthCertificate": {
+          "content": "Are you sure you want to delete the Authentication Certificate Test CA from the system configuration? Enter the server code to confirm.",
+          "securityServerCode": "Enter Security Server Code",
+          "success": "Security server authentication certificate deleted successfully",
+          "title": "Delete Authentication Certificate"
+        }
+      },
       "expires": "Expires",
       "serialNumber": "Serial Number",
       "subject": "Subject",
-      "deleteSecurityServer": "Delete Security Server",
       "tabs": {
         "authCertificates": "Authentication Certificates",
         "clients": "Clients",
         "details": "Details",
         "managementRequests": "Management Requests"
+      }
+    },
+    "serverCode": "Server Code",
+    "unregistered": "Unregistered"
+  },
+  "status": {
+    "dataspace_tls_acme": {
+      "enrollment_failing": "Dataspace TLS certificate ACME enrollment failing: {0}",
+      "renewal_failing": "Dataspace TLS certificate ACME renewal failing: {0}",
+      "status_check_failed": "Failed to check Dataspace TLS certificate ACME status"
+    },
+    "global_conf_generation": {
+      "failing": "Global configuration generation failing since {0}",
+      "global_conf_expired": "Global configuration expired",
+      "status_not_found": "Global configuration generations status is unknown"
+    },
+    "signer_error": "Invocation of signer client failed",
+    "signing_key": {
+      "external": {
+        "key_not_available": "Signing of external configuration failed - active key not available",
+        "missing": "Signing of external configuration failed - active key missing",
+        "token_not_active": "Signing of external configuration failed - PIN of active key not entered",
+        "token_not_found": "Signing of external configuration failed - active key not found"
       },
-      "dialog": {
-        "deleteAuthCertificate": {
-          "title": "Delete Authentication Certificate",
-          "content": "Are you sure you want to delete the Authentication Certificate Test CA from the system configuration? Enter the server code to confirm.",
-          "securityServerCode": "Enter Security Server Code",
-          "success": "Security server authentication certificate deleted successfully"
+      "internal": {
+        "key_not_available": "Signing of internal configuration failed - active key not available",
+        "missing": "Signing of internal configuration failed - active key missing",
+        "token_not_active": "Signing of internal configuration failed - PIN of active key not entered",
+        "token_not_found": "Signing of internal configuration failed - active key not found"
+      }
+    }
+  },
+  "systemParameters": {
+    "configurableProperties": {
+      "descriptions": {
+        "xroad": {
+          "admin-service": {
+            "auto-approve-auth-cert-reg-requests": "If enabled, authentication certificate registration requests are approved automatically instead of waiting for administrator approval.",
+            "auto-approve-client-reg-requests": "If enabled, client registration requests are approved automatically instead of waiting for administrator approval.",
+            "auto-approve-owner-change-requests": "If enabled, owner change requests are approved automatically instead of waiting for administrator approval.",
+            "authentication-provider": "Authentication provider used for UI login. Possible values are PAM or DATABASE.",
+            "cache-api-key-ttl": "Configures API key cache expiration in seconds. Setting the value to -1 disables the cache.",
+            "cache-default-ttl": "Configures default cache expiration in seconds. Cache is hit during authentication requests. Setting the value to -1 disables the cache.",
+            "enforce-user-password-policy": "When enabled, user passwords must meet the configured password policy.",
+            "global-configuration-generation-rate-in-seconds": "How often, in seconds, the Central Server regenerates global configuration.",
+            "rate-limit-cache-size": "Controls how many IP addresses can be remembered in the rate-limit cache. Tradeoff between memory usage and protection from a large attack.",
+            "rate-limit-enabled": "Enables request rate limiting for the Admin API.",
+            "rate-limit-expire-after-access-minutes": "Controls how long the rate-limit cache entries are valid.",
+            "rate-limit-requests-per-minute": "Admin API request rate limit per minute. Rate limits apply per each requesting IP.",
+            "rate-limit-requests-per-second": "Admin API request rate limit per second. Rate limits apply per each requesting IP.",
+            "request-size-limit-binary-upload": "Maximum size of Admin API requests for file uploads.",
+            "request-size-limit-regular": "Maximum size of Admin API requests.",
+            "strict-identifier-checks": "Configures identifier input validation (member code, subsystem code etc). Values: true - identifiers must match pattern ^[a-zA-Z0-9'()+,-.=?]*. false - identifiers must not contain colon (:), semicolon (;), slashes (/\\), percent (%) or control characters.",
+            "trusted-anchors-allowed": "If enabled, allows uploading additional trusted configuration anchors besides the Central Server's own."
+          },
+          "management-service": {
+            "rate-limit-cache-size": "Controls how many IP addresses can be remembered in the rate-limit cache. Tradeoff between memory usage and protection from a large attack.",
+            "rate-limit-enabled": "Enables request rate limiting for the management service.",
+            "rate-limit-expire-after-access-minutes": "Controls how long the rate-limit cache entries are valid.",
+            "rate-limit-requests-per-minute": "Management service request rate limit per minute. Rate limits apply per each requesting IP.",
+            "rate-limit-requests-per-second": "Management service request rate limit per second. Set to -1 to disable. Rate limits apply per each requesting IP.",
+            "http-client-properties": {
+              "connection-request-timeout-seconds": "Seconds to wait for a connection to become available from the connection pool.",
+              "connection-timeout-seconds": "Seconds to wait when establishing a connection to the Admin API.",
+              "max-connections-per-route": "Maximum number of simultaneous connections the management service's HTTP client keeps open per route.",
+              "max-connections-total": "Maximum number of simultaneous connections the management service's HTTP client keeps open in total.",
+              "response-timeout-seconds": "Seconds to wait for a response from the Admin API."
+            }
+          },
+          "registration-service": {
+            "rate-limit-cache-size": "Controls how many IP addresses can be remembered in the rate-limit cache. Tradeoff between memory usage and protection from a large attack.",
+            "rate-limit-enabled": "Enables request rate limiting for the registration service.",
+            "rate-limit-expire-after-access-minutes": "Controls how long the rate-limit cache entries are valid.",
+            "rate-limit-requests-per-minute": "Registration service request rate limit per minute. Rate limits apply per each requesting IP.",
+            "rate-limit-requests-per-second": "Registration service request rate limit per second. Set to -1 to disable. Rate limits apply per each requesting IP.",
+            "http-client-properties": {
+              "connection-request-timeout-seconds": "Seconds to wait for a connection to become available from the connection pool.",
+              "connection-timeout-seconds": "Seconds to wait when establishing a connection to the Admin API.",
+              "max-connections-per-route": "Maximum number of simultaneous connections the registration service's HTTP client keeps open per route.",
+              "max-connections-total": "Maximum number of simultaneous connections the registration service's HTTP client keeps open in total.",
+              "response-timeout-seconds": "Seconds to wait for a response from the Admin API."
+            },
+            "vault-retry": {
+              "retry-delay": "Delay before the first retry of a failed Vault (OpenBao) request.",
+              "retry-exponential-backoff-multiplier": "Multiplier applied to the retry delay after each failed Vault (OpenBao) request attempt.",
+              "retry-max-attempts": "Maximum number of retry attempts when a Vault (OpenBao) request fails."
+            }
+          },
+          "common-global-conf": {
+            "source": "Source backend for global configuration. Possible values: FILESYSTEM (read from local files, the default) or REMOTE (used in containerized deployments).",
+            "refresh-rate": "How often the shared global configuration cache is refreshed from the configured source (e.g. 60S).",
+            "configuration-path": "File system path where the global configuration files are stored."
+          },
+          "common-ocsp-verifier": {
+            "cache-period": "How long (in seconds) OCSP verification results are cached before being re-checked."
+          },
+          "common-rpc": {
+            "use-tls": "When enabled, mutual TLS is used for gRPC communication between the Central Server's co-located services.",
+            "certificate-provisioning": {
+              "refresh-interval": "How often services check whether their gRPC TLS certificate needs to be renewed (e.g. 5H).",
+              "retry-delay": "Initial delay between gRPC TLS certificate provisioning retry attempts (e.g. 5S).",
+              "retry-exponential-backoff-multiplier": "Multiplier applied to the retry delay on each subsequent certificate provisioning attempt.",
+              "retry-max-attempts": "Maximum number of gRPC TLS certificate provisioning retry attempts.",
+              "retry-timeout": "Total time limit for all gRPC TLS certificate provisioning retry attempts (e.g. 60S)."
+            },
+            "channel": {
+              "op-monitor": {
+                "host": "Hostname used to connect to the operational monitoring daemon gRPC server.",
+                "port": "Port used to connect to the operational monitoring daemon gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the operational monitoring daemon times out."
+              },
+              "env-monitor": {
+                "host": "Hostname used to connect to the env-monitor gRPC server.",
+                "port": "Port used to connect to the env-monitor gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the env-monitor times out."
+              },
+              "configuration-client": {
+                "host": "Hostname used to connect to the configuration client gRPC server.",
+                "port": "Port used to connect to the configuration client gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the configuration client times out."
+              },
+              "proxy": {
+                "host": "Hostname used to connect to the proxy gRPC server.",
+                "port": "Port used to connect to the proxy gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the proxy times out."
+              },
+              "auxiliary-service": {
+                "host": "Hostname used to connect to the auxiliary service gRPC server.",
+                "port": "Port used to connect to the auxiliary service gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the auxiliary service times out."
+              }
+            }
+          },
+          "signer": {
+            "selfsigned-cert-digest-algorithm": "Digest algorithm used when creating self-signed certificates.",
+            "csr-signature-digest-algorithm": "Certificate Signing Request signature digest algorithm. Possible values are - SHA-256, SHA-384, SHA-512.",
+            "enforce-token-pin-policy": "Controls enforcing the token pin policy. When set to true, software token pin is required to be at least 10 ASCII characters from at least tree character classes (lowercase letters, uppercase letters, digits, special characters). (since version 6.7.7)",
+            "ocsp-response-retrieval-active": "This property is used as an override to deactivate periodic OCSP-response retrieval for components that don't need that functionality, but still use signer. Values: false - OCSP-response retrieval jobs are never scheduled. true - periodic OCSP-response retrieval is active based on ocspFetchInterval. Note that if the entire property is missing, it is interpreted as true. This property is delivered as an override and only for the components where the OCSP-response retrieval jobs need to be deactivated. The property is missing for components that require OCSP-response retrieval to be activated.",
+            "ocsp-retry-delay": "OCSP retry delay for signer when fetching OCSP responses fail. After failing to fetch OCSP responses signer waits for the time period defined by \"ocsp-retry-delay\" before trying again. This is repeated until fetching OCSP responses succeeds. After successfully fetching OCSP responses signer returns to normal OCSP refresh schedule defined by \"ocspFetchInterval\". If the value of \"ocsp-retry-delay\" is higher than \"ocspFetchInterval\", the value of \"ocspFetchInterval\" is used as OCSP retry delay.",
+            "ocsp-cache-path": "Absolute path to the directory where the cached OCSP responses are stored.",
+            "ocsp-prioritization-strategy": "OCSP prioritization strategy, that determines what OCSP responders and in what order are used to get OCSP responses. Possible values are: ONLY_FREE - Only free OCSP responders are used. ONLY_PAID - only paid OCSP responders are used. FREE_FIRST - free OCSP responders are used first, then if no successful responses, then paid responders are used next, finally OCSP responders whose cost type is undefined are used last. PAID_FIRST - paid OCSP responders are used first, then if no successful responses, then free responders are used next, finally OCSP responders whose cost type is undefined are used last. NONE - no new ordering nor filtering is added (same as before adding cost type to OCSP endpoints.)",
+            "module-manager-update-interval": "HSM module manager update interval in seconds.",
+            "soft-token-rsa-sign-mechanism": "PKCS#11 mechanism used for RSA signing on the software token.",
+            "soft-token-ec-sign-mechanism": "PKCS#11 mechanism used for EC signing on the software token.",
+            "soft-token-pin-keystore-algorithm": "Key algorithm used for creating PIN keystore for software token. Possible values are RSA and EC. (since version 7.6)",
+            "key-length": "Key length for generating authentication and signing keys (since version 6.7)",
+            "key-named-curve": "Named curve for generating authentication and signing keys in case EC algorithms are used (since version 7.6)",
+            "autologin": {
+              "enabled": "Enable automatic token login on startup.",
+              "retry": {
+                "retry-delay": "Initial delay between autologin retry attempts (e.g. 3S).",
+                "retry-exponential-backoff-multiplier": "Multiplier applied to the retry delay on each subsequent autologin attempt.",
+                "retry-max-attempts": "Maximum number of autologin retry attempts.",
+                "retry-timeout": "Total time limit for all autologin retry attempts (e.g. 60S)."
+              }
+            },
+            "addon": {
+              "hwtoken": {
+                "enabled": "Enable the hardware token (HSM) add-on.",
+                "session-pool-enabled": "Enable pooling of PKCS#11 sessions for the hardware token.",
+                "session-pool-max-total": "Maximum total PKCS#11 sessions in the hardware token session pool.",
+                "session-pool-min-idle": "Minimum number of idle PKCS#11 sessions kept in the hardware token pool.",
+                "session-pool-max-idle": "Maximum number of idle PKCS#11 sessions kept in the hardware token pool.",
+                "session-acquire-timeout": "Maximum time to wait when acquiring a PKCS#11 session from the pool (e.g. 15S)."
+              }
+            },
+            "rpc": {
+              "enabled": "Enable the Signer gRPC server.",
+              "listen-address": "IP address on which the Signer gRPC server listens.",
+              "port": "Port on which the Signer gRPC server listens."
+            },
+            "pin-hasher": {
+              "iterations": "Argon2 iteration count used when hashing token PINs.",
+              "memory-kb": "Argon2 memory cost in kilobytes used when hashing token PINs.",
+              "parallelism": "Argon2 parallelism degree used when hashing token PINs.",
+              "hash-length": "Output hash length in bytes used when hashing token PINs.",
+              "salt-length": "Salt length in bytes used when hashing token PINs."
+            }
+          }
         }
       }
-    },
-    "dialogs": {
-      "editAddress": {
-        "title": "Edit Security Server address",
-        "addressField": "Security server address",
-        "success": "Security server address successfully updated"
-      },
-      "deleteAddress": {
-        "title": "Delete Security Server",
-        "enterCode": "Enter Security Server Code",
-        "areYouSure": "Are you sure you want to delete the Security Server {securityServer} from the system configuration? Enter the server code to confirm.",
-        "success": "Security Server deleted."
-      }
-    },
-    "serverCode": "Server Code"
+    }
   },
   "systemSettings": {
-    "centralServerAddress": "Central Server address",
+    "addMemberClassTitle": "Add member class",
+    "centralServerAddress": "Central Server Address",
     "code": "Code",
+    "deleteMemberClass": "Delete member class?",
     "description": "Description",
-    "editCentralServerAddressSuccess": "Central server address successfully updated",
+    "editCentralServerAddressSuccess": "Central Server address successfully updated",
     "editCentralServerAddressTitle": "Edit Central Server address",
+    "editMemberClassTitle": "Edit member class",
     "instanceIdentifier": "Instance Identifier",
-    "managementServiceSecurityServer": "Management Services' Security Server",
-    "managementServices": "Management Services",
-    "selectSubsystem": {
-      "title": "Select Subsystem",
-      "search": "Search",
-      "name": "Name",
-      "memberClass": "Class",
-      "memberCode": "Code",
-      "subsystemCode": "Subsystem",
-      "xroadInstance": "Instance",
-      "type": "Type"
+    "managementServices": {
+      "securityServer": "Management Services' Security Server",
+      "title": "Management Services"
     },
+    "managementServicesAddress": "Management Services Address",
+    "memberClassDeleted": "Member class deleted.",
+    "memberClassSaved": "Member class saved.",
+    "memberClasses": "Member Classes",
+    "securityServerOwnerGroupCode": "Security Server Owners Group Code",
     "selectSecurityServer": {
-      "title": "Select Security Server",
-      "search": "Search",
-      "name": "Name",
       "memberClass": "Class",
       "memberCode": "Code",
+      "name": "Name",
+      "search": "Search",
       "subsystemCode": "Subsystem",
-      "xroadInstance": "Instance",
-      "type": "Type"
+      "title": "Select Security Server",
+      "type": "Type",
+      "xroadInstance": "Instance"
+    },
+    "selectSubsystem": {
+      "memberClass": "Class",
+      "memberCode": "Code",
+      "name": "Name",
+      "search": "Search",
+      "subsystemCode": "Subsystem",
+      "title": "Select Subsystem",
+      "type": "Type",
+      "xroadInstance": "Instance"
     },
     "serviceProvider": {
       "changedSuccess": "Service Provider changed successfully",
       "registeredSuccess": "Management service provider '{subsystemId}' registered as security server '{securityServerId}' client"
     },
-    "memberClasses": "Member Classes",
-    "securityServerOwnerGroupCode": "Security Server Owners Group Code",
     "serviceProviderIdentifier": "Service Provider Identifier",
     "serviceProviderName": "Service Provider Name",
     "systemParameters": "System Parameters",
-    "wsdlAddress": "WSDL Address",
-    "editMemberClassTitle": "Edit member class",
-    "addMemberClassTitle": "Add member class",
-    "deleteMemberClass": "Delete member class?",
-    "memberClassSaved": "Member class saved.",
-    "memberClassDeleted": "Member class deleted."
+    "wsdlAddress": "WSDL Address"
   },
   "tab": {
     "globalConf": {
@@ -709,7 +756,7 @@
       "trustedAnchors": "Trusted Anchors"
     },
     "main": {
-      "globalConfiguration": "Global Configuration",
+      "globalConfiguration": "Global Conf.",
       "managementRequests": "Management Requests",
       "members": "Members",
       "securityServers": "Security Servers",
@@ -720,81 +767,112 @@
       "apiKeys": "API Keys",
       "backupAndRestore": "Backup And Restore",
       "globalResources": "Global Resources",
-      "systemSettings": "System Settings"
+      "systemParameters": "System Parameters",
+      "systemSettings": "System Settings",
+      "tlsCertificates": "TLS Certificates",
+      "dsTlsCertificate": "Dataspace TLS Certificate"
     }
   },
+  "tlsCertificates": {
+    "downloadSuccess": "Management service TLS certificate successfully downloaded",
+    "generateCsr": {
+      "example": "CN=mycentralserver.example.com, O=My Organization, C=EE"
+    },
+    "generateKey": {
+      "confirmation": "Generate a new Management service TLS key and certificate?",
+      "explanation": "The system will generate a new Management service TLS key and a self-signed certificate, replacing the existing key and certificate.",
+      "success": "New Management service TLS key and certificate generated successfully",
+      "title": "Management Service TLS key"
+    },
+    "key": "Management Service TLS key",
+    "title": "Management Service TLS certificate",
+    "uploadCertificate": {
+      "success": "Management service TLS certificate successfully uploaded",
+      "title": "Upload Management Service TLS certificate"
+    }
+  },
+  "tokens": {
+    "keysInfoMessage": "A maximum of two configuration source signing keys is allowed on a security token",
+    "logIn": "Log in",
+    "loginDialog": {
+      "success": "Logged in token",
+      "title": "Log in"
+    },
+    "logout": {
+      "confirmButton": "Log out",
+      "success": "Logged out of token",
+      "text": "Are you sure you want to log out from the token?",
+      "title": "Log out"
+    },
+    "pin": "Token PIN"
+  },
   "trustServices": {
-    "addCertificationService": "Add certification service",
+    "acmeServerAuthProfileIdExplanation": "Profile ID used for some ACME servers to let them know the certificate usage type when ordering an authentication certificate.",
+    "acmeServerDirectoryUrlExplanation": "Used by the Security Servers to do certificate related operations via the ACME Server API.",
+    "acmeServerIpAddressExplanation": "A list of ACME Server source IPs that are used to complete the ACME HTTP challenge with the Security Server. Multiple addresses are separated by a comma. This information is shown in the Security Server UI.",
+    "acmeServerSignProfileIdExplanation": "Profile ID used for some ACME servers to let them know the certificate usage type when ordering a signing certificate.",
     "addCASettingsCheckbox": "This CA can only be used for TLS authentication (mark if true)",
+    "addCertificationService": "Add certification service",
     "approvedCertificationService": "Approved Certification service",
     "caSettings": "CA Settings",
-    "certificationServices": "Certification Services",
     "certImportedSuccessfully": "Certificate imported successfully",
     "certProfileInput": "Certificate profile info",
     "certProfileInputExplanation": "Fully qualified class name that implements the ee.ria.xroad.common.certificateprofile.CertificateProfileInfoProvider interface",
-    "timestampingServices": "Timestamping Services",
-    "validFrom": "Valid from",
-    "validTo": "Valid to",
-    "viewCertificate": "View Certificate",
-    "uploadCertificate": "Upload the certificate file from your computer",
+    "certificationServices": "Certification Services",
+    "defaultCsrFormat": "Default CSR format",
+    "dsTls": {
+      "addDsTlsCertificationAuthority": "Add Dataspace TLS certification authority",
+      "delete": {
+        "confirmationDialog": {
+          "message": "Are you sure you want to delete the Dataspace TLS certification authority \"{name}\"?",
+          "title": "Are you sure?"
+        },
+        "success": "Dataspace TLS certification authority deleted successfully"
+      },
+      "dsTlsCertificateProfileIdExplanation": "Profile ID used for some ACME servers to let them know the certificate usage type when ordering a Dataspace TLS certificate.",
+      "dsTlsCertificationAuthorities": "Dataspace TLS Certification Authorities",
+      "dsTlsCertificationAuthority": "Dataspace TLS Certification Authority",
+      "nameExplanation": "A free-form name identifying this certification authority, for example \"Let's Encrypt\".",
+      "settings": {
+        "title": "Dataspace TLS CA Settings"
+      }
+    },
     "timestampingService": {
-      "url": "URL",
+      "addedSuccessfully": "Timestamping service added successfully",
       "dialog": {
         "add": {
-          "title": "Add timestamping service",
-          "success": "Timestamping service added successfully"
+          "success": "Timestamping service added successfully",
+          "title": "Add timestamping service"
         },
         "edit": {
+          "success": "Timestamping service edited successfully",
           "title": "Edit Timestamping Service",
-          "uploadCertificate": "Upload new certificate",
-          "success": "Timestamping service edited successfully"
+          "uploadCertificate": "Upload new certificate"
         }
       },
-      "addedSuccessfully": "Timestamping service added successfully"
+      "url": "URL"
     },
+    "timestampingServices": "Timestamping Services",
     "trustService": {
-      "details": {
-        "subjectDistinguishedName": "Subject distinguished name",
-        "issuerDistinguishedName": "Issuer distinguished name"
+      "cost": "Cost",
+      "costType": {
+        "FREE": "Free",
+        "PAID": "Paid",
+        "UNDEFINED": "Undefined"
       },
       "delete": {
         "action": "Delete trust service",
         "confirmationDialog": {
-          "title": "Are you sure?",
-          "message": "Are you sure you want to delete the trust service \"{name}\"?"
+          "message": "Are you sure you want to delete the trust service \"{name}\"?",
+          "title": "Are you sure?"
         },
         "success": "Trust service deleted successfully"
       },
-      "settings": {
-        "tlsAuth": "This CA can only be used for TLS authentication",
-        "certProfile": "Certificate profile info (fully qualified class name that implements the ee.ria.xroad.common.CertificateProfileInfoProvider interface)",
-        "saveSuccess": "CA Settings successfully saved"
-      },
-      "ocspResponders": {
-        "url": "URL",
-        "add": {
-          "dialog": {
-            "title": "Add OCSP Responder"
-          },
-          "success": "OCSP Responder added successfully"
-        },
-        "edit": {
-          "dialog": {
-            "title": "Edit OCSP Responder",
-            "uploadCertificate": "Upload new certificate"
-          },
-          "success": "OCSP Responder edited successfully"
-        },
-        "delete": {
-          "confirmationDialog": {
-            "message": "Are you sure you want to delete the OCSP Responder with the URL {url}?",
-            "title": "Are you sure?"
-          },
-          "success": "OCSP Responder deleted successfully"
-        }
+      "details": {
+        "issuerDistinguishedName": "Issuer distinguished name",
+        "subjectDistinguishedName": "Subject distinguished name"
       },
       "intermediateCas": {
-        "intermediateCa": "Intermediate CA",
         "add": {
           "dialog": {
             "title": "Add Intermediate CAs"
@@ -807,90 +885,72 @@
             "title": "Are you sure?"
           },
           "success": "Intermediate CA deleted successfully"
-        }
+        },
+        "intermediateCa": "Intermediate CA"
       },
-      "timestampingService": {
-        "url": "Url",
-        "timestampingInterval": "Timestamping interval",
-        "timestampingIntervalMinutes": "{min} minute(s)",
-        "cost": "Cost",
-        "costValues": {
-          "FREE": "Free",
-          "PAID": "Paid",
-          "UNDEFINED": "Undefined"
+      "ocspResponders": {
+        "add": {
+          "dialog": {
+            "title": "Add OCSP Responder"
+          },
+          "success": "OCSP Responder added successfully"
         },
         "delete": {
-          "dialog": {
-            "title": "Are you sure?",
-            "message": "Are you sure you want to delete the Timestamping service with the URL {url}?"
+          "confirmationDialog": {
+            "message": "Are you sure you want to delete the OCSP Responder with the URL {url}?",
+            "title": "Are you sure?"
           },
-          "success": "Timestamping service deleted successfully"
-        }
+          "success": "OCSP Responder deleted successfully"
+        },
+        "edit": {
+          "dialog": {
+            "title": "Edit OCSP Responder",
+            "uploadCertificate": "Upload new certificate"
+          },
+          "success": "OCSP Responder edited successfully"
+        },
+        "url": "URL"
       },
       "pagenavigation": {
         "details": "Details",
-        "settings": "CA Settings",
+        "intermediateCas": "Intermediate CAs",
         "ocspResponders": "OCSP Responders",
-        "intermediateCas": "Intermediate CAs"
+        "settings": "CA Settings"
+      },
+      "settings": {
+        "acmeCapable": "This CA can be used for ACME",
+        "acmeNotCapable": "This CA can not be used for ACME",
+        "certProfile": "Certificate profile info (fully qualified class name that implements the ee.ria.xroad.common.CertificateProfileInfoProvider interface)",
+        "defaultCsrFormat": "Default CSR format (selected automatically when creating new authentication and signing keys with this CA; can still be manually changed)",
+        "saveSuccess": "CA Settings successfully saved",
+        "tlsAuth": "This CA can only be used for TLS authentication"
+      },
+      "timestampingService": {
+        "delete": {
+          "dialog": {
+            "message": "Are you sure you want to delete the Timestamping service with the URL {url}?",
+            "title": "Are you sure?"
+          },
+          "success": "Timestamping service deleted successfully"
+        },
+        "timestampingInterval": "Timestamping interval",
+        "timestampingIntervalMinutes": "{min} minute(s)",
+        "url": "Url"
       }
+    },
+    "uploadCertificate": "Upload the certificate file from your computer",
+    "validFrom": "Valid from",
+    "validTo": "Valid to",
+    "viewCertificate": "View Certificate"
+  },
+  "validation": {
+    "messages": {
+      "is": "The {field} field must have a value of \"{other}\""
     }
   },
   "validationError": {
-    "AssertFalse": "value should be 'false'",
-    "AssertTrue": "value should be 'true'",
-    "DecimalMax": "numeric value exceeds the maximum allowed",
-    "DecimalMin": "numeric value is under the miminum allowed",
-    "Digits": "value should contain only digits",
-    "Email": "value does not meet the email format",
-    "Future": "datetime value should be in the future",
-    "FutureOrPresent": "datetime value should be now or in the future",
     "IdentifierChars": "Instance identifier should not contain colon (:), semicolon (;), forward or backward slashes (/\\) or percent signs (%)",
     "IdentifierCharsField": "Use valid identifier characters only",
-    "Max": "numeric value exceeds the maximum allowed",
-    "Min": "numeric value is under the minimum allowed",
-    "Negative": "numeric value should be less than zero",
-    "NegativeOrZero": "numeric value should be less or equal to zero",
-    "NoBackslashes": "value should not contain backslash (\\) symbols",
-    "NoColons": "value should not contain colon (:) symbols",
-    "NoForwardslashes": "value should not contain forward slash (/) symbols",
-    "NoPercents": "value should not contain percentage (%) symbols",
-    "NoSemicolons": "value should not contain semicolon (;) symbols",
-    "Normalized": "value should be normalized",
-    "NotBlank": "value should not be blank",
-    "NotEmpty": "value should not be empty",
-    "NotNull": "value is required",
-    "Null": "value should not be set",
-    "Past": "datetime value should be in the past",
-    "PastOrPresent": "datetime value should be now or in the past",
-    "Pattern": "value did not match the required format",
-    "Positive": "numeric value should be greater that zero",
-    "PositiveOrZero": "numeric value should be greater or equal to zero",
-    "Size": "value does not meet length requirements",
-    "SizeField": "value does not meet length requirements",
-    "ValidHostAddress": "Valid fully qualified domain name (e.g. host.example.org) or public IP address (eg. 192.168.123.123) needed",
-    "ValidHostAddressField": "Valid IP address or fully qualified domain name needed"
-  },
-  "validation.is": "The {_field_} field must have a value of \"{other}\"",
-  "status": {
-    "signer_error": "Invocation of signer client failed",
-    "global_conf_generation": {
-      "status_not_found": "Global configuration generations status is unknown",
-      "failing": "Global configuration generation failing since {0}",
-      "global_conf_expired": "Global configuration expired"
-    },
-    "signing_key": {
-      "internal": {
-        "missing": "Signing of internal configuration failed - active key missing",
-        "token_not_found": "Signing of internal configuration failed - active key not found",
-        "token_not_active": "Signing of internal configuration failed - PIN of active key not entered",
-        "key_not_available": "Signing of internal configuration failed - active key not available"
-      },
-      "external": {
-        "missing": "Signing of external configuration failed - active key missing",
-        "token_not_found": "Signing of external configuration failed - active key not found",
-        "token_not_active": "Signing of external configuration failed - PIN of active key not entered",
-        "key_not_available": "Signing of external configuration failed - active key not available"
-      }
-    }
+    "SizeField": "value does not meet length requirements"
   }
 }

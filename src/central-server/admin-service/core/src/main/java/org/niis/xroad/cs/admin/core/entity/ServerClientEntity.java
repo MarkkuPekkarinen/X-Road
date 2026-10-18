@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,21 +26,23 @@
  */
 package org.niis.xroad.cs.admin.core.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
-import javax.persistence.Table;
+import static jakarta.persistence.FetchType.EAGER;
+import static jakarta.persistence.FetchType.LAZY;
 
 @Entity
 @NoArgsConstructor
@@ -56,21 +58,28 @@ public class ServerClientEntity {
     @Getter
     private int id;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.REFRESH})
+    @ManyToOne(fetch = LAZY)
     @JoinColumn(name = "security_server_client_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @Getter
     @Setter
     private SecurityServerClientEntity securityServerClient;
 
-    @ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.REFRESH})
+    @ManyToOne(fetch = EAGER)
     @JoinColumn(name = "security_server_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @Getter
     @Setter
     private SecurityServerEntity securityServer;
 
+    @Getter
+    @Setter
+    private boolean enabled;
+
     public ServerClientEntity(SecurityServerEntity server, SecurityServerClientEntity client) {
         securityServer = server;
         securityServerClient = client;
+        enabled = true;
     }
 
 }

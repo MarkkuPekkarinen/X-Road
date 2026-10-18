@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -42,6 +42,7 @@ public interface FindOrCreateAwareRepository<ENTITY, ID> extends GenericReposito
      * <p>
      */
     Optional<ENTITY> findOpt(ENTITY model);
+
     /**
      * Return an equivalent model from the repository.
      * <p>

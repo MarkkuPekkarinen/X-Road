@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -28,15 +28,17 @@ package org.niis.xroad.cs.admin.rest.api.openapi;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 
-import io.vavr.control.Try;
 import lombok.RequiredArgsConstructor;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.NotFoundException;
+import org.niis.xroad.cs.admin.api.service.SecurityServerService;
 import org.niis.xroad.cs.admin.api.service.SubsystemService;
 import org.niis.xroad.cs.admin.rest.api.converter.SubsystemCreationRequestMapper;
 import org.niis.xroad.cs.admin.rest.api.converter.db.ClientDtoConverter;
 import org.niis.xroad.cs.openapi.SubsystemsApi;
 import org.niis.xroad.cs.openapi.model.ClientDto;
 import org.niis.xroad.cs.openapi.model.SubsystemAddDto;
+import org.niis.xroad.cs.openapi.model.SubsystemNameDto;
 import org.niis.xroad.restapi.config.audit.AuditEventMethod;
 import org.niis.xroad.restapi.converter.ClientIdConverter;
 import org.niis.xroad.restapi.converter.SecurityServerIdConverter;
@@ -46,9 +48,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.util.Optional;
+
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.INVALID_SUBSYSTEM_ID;
+import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.SUBSYSTEM_NOT_FOUND;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.ADD_SUBSYSTEM;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.DELETE_SUBSYSTEM;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.EDIT_SUBSYSTEM;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.UNREGISTER_SUBSYSTEM;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.ResponseEntity.noContent;
@@ -60,6 +66,7 @@ import static org.springframework.http.ResponseEntity.noContent;
 public class SubsystemsApiController implements SubsystemsApi {
 
     private final SubsystemService subsystemService;
+    private final SecurityServerService securityServerService;
     private final ClientDtoConverter clientDtoConverter;
     private final ClientIdConverter clientIdConverter;
     private final SecurityServerIdConverter securityServerIdConverter;
@@ -69,12 +76,12 @@ public class SubsystemsApiController implements SubsystemsApi {
     @PreAuthorize("hasAuthority('ADD_MEMBER_SUBSYSTEM')")
     @AuditEventMethod(event = ADD_SUBSYSTEM)
     public ResponseEntity<ClientDto> addSubsystem(SubsystemAddDto subsystemAddDto) {
-        return Try.success(subsystemAddDto)
+        return Optional.ofNullable(subsystemAddDto)
                 .map(subsystemCreationRequestMapper::toTarget)
                 .map(subsystemService::add)
                 .map(clientDtoConverter::toDto)
                 .map(ResponseEntity.status(CREATED)::body)
-                .get();
+                .orElseGet(() -> ResponseEntity.badRequest().build());
     }
 
     @Override
@@ -85,8 +92,21 @@ public class SubsystemsApiController implements SubsystemsApi {
         ClientId clientId = clientIdConverter.convertId(subsystemId);
         SecurityServerId securityServerId = securityServerIdConverter.convertId(serverId);
 
-        subsystemService.unregisterSubsystem(clientId, securityServerId);
+        securityServerService.deleteClient(securityServerId, clientId);
         return noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasAuthority('EDIT_MEMBER_SUBSYSTEM')")
+    @AuditEventMethod(event = EDIT_SUBSYSTEM)
+    public ResponseEntity<ClientDto> updateSubsystemName(String subsystemId, SubsystemNameDto subsystemNameDto) {
+        verifySubsystemId(subsystemId);
+        return Optional.of(subsystemId)
+                .map(clientIdConverter::convertId)
+                .flatMap(clientId -> subsystemService.updateSubsystemName(clientId, subsystemNameDto.getSubsystemName()))
+                .map(clientDtoConverter::toDto)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new NotFoundException(SUBSYSTEM_NOT_FOUND.build()));
     }
 
     @Override
@@ -102,7 +122,7 @@ public class SubsystemsApiController implements SubsystemsApi {
 
     private void verifySubsystemId(String clientId) {
         if (!clientIdConverter.isEncodedSubsystemId(clientId)) {
-            throw new ValidationFailureException(INVALID_SUBSYSTEM_ID, clientId);
+            throw new BadRequestException(INVALID_SUBSYSTEM_ID.build(clientId));
         }
     }
 }

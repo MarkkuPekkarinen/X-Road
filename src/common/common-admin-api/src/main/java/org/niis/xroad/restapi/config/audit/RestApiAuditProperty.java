@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -83,6 +83,8 @@ public enum RestApiAuditProperty {
     KEY_USAGE,
 
     SUBJECT_NAME,
+    SUBJECT_ALT_NAME,
+    IS_ACME_ORDER,
     CERTIFICATION_SERVICE_NAME,
     CSR_FORMAT,
     CERT_ID,
@@ -92,9 +94,16 @@ public enum RestApiAuditProperty {
     OCSP_URL,
     OCSP_CERT_HASH,
     OCSP_CERT_HASH_ALGORITHM,
+    OCSP_COST_TYPE,
     INTERMEDIATE_CA_ID,
     INTERMEDIATE_CA_CERT_HASH,
     INTERMEDIATE_CA_CERT_HASH_ALGORITHM,
+    DS_TLS_CA_ID,
+    DS_TLS_CA_NAME,
+    DS_TLS_CERTIFICATE_PROFILE_ID,
+    DS_TLS_INTERMEDIATE_CA_ID,
+    DS_TLS_INTERMEDIATE_CA_CERT_HASH,
+    DS_TLS_INTERMEDIATE_CA_CERT_HASH_ALGORITHM,
     CERT_FILE_NAME,
     ADDRESS,
     CERT_STATUS,
@@ -107,6 +116,7 @@ public enum RestApiAuditProperty {
     GENERATED_AT,
     TSP_NAME,
     TSP_URL,
+    TSP_COST_TYPE,
 
     OWNER_IDENTIFIER,
     OWNER_CLASS,
@@ -125,16 +135,23 @@ public enum RestApiAuditProperty {
     MEMBER_CODE,
 
     MEMBER_SUBSYSTEM_CODE,
+    MEMBER_SUBSYSTEM_NAME,
 
     CODE,
     DESCRIPTION,
 
     AUTHENTICATION_ONLY,
     CERTIFICATE_PROFILE_INFO,
+    DEFAULT_CSR_FORMAT,
+    ACME_DIRECTORY_URL,
+    ACME_IP_ADDRESSES,
+    AUTH_CERT_PROFILE_ID,
+    SIGN_CERT_PROFILE_ID,
 
     TSA_ID,
     TSA_NAME,
     TSA_URL,
+    TSA_COST_TYPE,
     TSA_CERT_HASH,
     TSA_CERT_HASH_ALGORITHM,
     SOURCE_TYPE,
@@ -143,8 +160,18 @@ public enum RestApiAuditProperty {
     UPLOAD_FILE_HASH_ALGORITHM,
     CONTENT_IDENTIFIER,
 
+    MESSAGE,
+
     SERVICE_PROVIDER_IDENTIFIER,
-    SERVICE_PROVIDER_NAME;
+    SERVICE_PROVIDER_NAME,
+
+    USERNAME,
+    USER_ROLES,
+
+    SYSTEM_PROPERTY_NAME,
+    SYSTEM_PROPERTY_NEW_VALUE,
+    SYSTEM_PROPERTY_OLD_VALUE,
+    SYSTEM_PROPERTY_SCOPE;
 
     /**
      * Gets logged property name for the enum value.

@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -28,15 +29,17 @@ package org.niis.xroad.securityserver.restapi.converter;
 import ee.ria.xroad.common.DiagnosticsStatus;
 
 import com.google.common.collect.Streams;
+import lombok.RequiredArgsConstructor;
+import org.niis.xroad.common.CostType;
+import org.niis.xroad.globalconf.GlobalConfProvider;
 import org.niis.xroad.securityserver.restapi.dto.OcspResponderDiagnosticsStatus;
-import org.niis.xroad.securityserver.restapi.openapi.model.DiagnosticStatusClass;
-import org.niis.xroad.securityserver.restapi.openapi.model.OcspResponder;
-import org.niis.xroad.securityserver.restapi.openapi.model.OcspResponderDiagnostics;
-import org.niis.xroad.securityserver.restapi.openapi.model.OcspStatus;
+import org.niis.xroad.securityserver.restapi.openapi.model.CaOcspDiagnosticsDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CodeWithDetailsDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CostTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.OcspResponderDiagnosticsDto;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,33 +47,36 @@ import java.util.stream.Collectors;
  * Converter for certificate authority diagnostics related data between openapi and service domain classes
  */
 @Component
+@RequiredArgsConstructor
 public class OcspResponderDiagnosticConverter {
 
-    public OcspResponderDiagnostics convert(
+    private final GlobalConfProvider globalConfProvider;
+
+    public CaOcspDiagnosticsDto convert(
             OcspResponderDiagnosticsStatus ocspResponderDiagnosticsStatus) {
-        OcspResponderDiagnostics ocspResponderDiagnostics = new OcspResponderDiagnostics();
+        CaOcspDiagnosticsDto ocspResponderDiagnostics = new CaOcspDiagnosticsDto();
         ocspResponderDiagnostics.setDistinguishedName(ocspResponderDiagnosticsStatus.getName());
-        List<OcspResponder> ocspResponders = convertOcspResponders(
+        List<OcspResponderDiagnosticsDto> ocspResponders = convertOcspResponders(
                 ocspResponderDiagnosticsStatus.getOcspResponderStatusMap());
         ocspResponderDiagnostics.setOcspResponders(ocspResponders);
         return ocspResponderDiagnostics;
     }
 
-    public Set<OcspResponderDiagnostics> convert(Iterable<OcspResponderDiagnosticsStatus> statuses)  {
+    public Set<CaOcspDiagnosticsDto> convert(Iterable<OcspResponderDiagnosticsStatus> statuses) {
         return Streams.stream(statuses)
                 .map(this::convert)
                 .collect(Collectors.toSet());
     }
 
-    private OcspResponder convertOcspResponder(DiagnosticsStatus diagnosticsStatus) {
-        OcspResponder ocspResponder = new OcspResponder();
+    private OcspResponderDiagnosticsDto convertOcspResponder(DiagnosticsStatus diagnosticsStatus) {
+        OcspResponderDiagnosticsDto ocspResponder = new OcspResponderDiagnosticsDto();
         ocspResponder.setUrl(diagnosticsStatus.getDescription());
-        Optional<OcspStatus> statusCode = OcspStatusMapping.map(
-                diagnosticsStatus.getReturnCode());
-        ocspResponder.setStatusCode(statusCode.orElse(null));
-        Optional<DiagnosticStatusClass> statusClass = DiagnosticStatusClassMapping.map(
-                diagnosticsStatus.getReturnCode());
-        ocspResponder.setStatusClass(statusClass.orElse(null));
+        ocspResponder.setCostType(getCostType(diagnosticsStatus));
+        if (diagnosticsStatus.getErrorCode() != null) {
+            ocspResponder.setError(new CodeWithDetailsDto(diagnosticsStatus.getErrorCode().code())
+                    .metadata(diagnosticsStatus.getErrorCodeMetadata()));
+        }
+        ocspResponder.setStatusClass(DiagnosticStatusClassMapping.map(diagnosticsStatus.getStatus()));
         if (diagnosticsStatus.getPrevUpdate() != null) {
             ocspResponder.setPrevUpdateAt(diagnosticsStatus.getPrevUpdate());
         }
@@ -78,7 +84,13 @@ public class OcspResponderDiagnosticConverter {
         return ocspResponder;
     }
 
-    private List<OcspResponder> convertOcspResponders(Iterable<DiagnosticsStatus> statuses)  {
+    private CostTypeDto getCostType(DiagnosticsStatus diagnosticsStatus) {
+        CostType costType =
+                globalConfProvider.getOcspResponderCostType(globalConfProvider.getInstanceIdentifier(), diagnosticsStatus.getDescription());
+        return costType != null ? CostTypeDto.valueOf(costType.name()) : CostTypeDto.UNDEFINED;
+    }
+
+    private List<OcspResponderDiagnosticsDto> convertOcspResponders(Iterable<DiagnosticsStatus> statuses) {
         return Streams.stream(statuses)
                 .map(this::convertOcspResponder)
                 .collect(Collectors.toList());

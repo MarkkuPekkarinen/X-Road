@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,19 +26,22 @@
  */
 package org.niis.xroad.securityserver.restapi.openapi;
 
+import ee.ria.xroad.common.ServicePrioritizationStrategy;
 import ee.ria.xroad.common.certificateprofile.CertificateProfileInfo;
 import ee.ria.xroad.common.certificateprofile.DnFieldDescription;
 import ee.ria.xroad.common.certificateprofile.DnFieldValue;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.niis.xroad.securityserver.restapi.dto.ApprovedCaDto;
-import org.niis.xroad.securityserver.restapi.openapi.model.CertificateAuthority;
-import org.niis.xroad.securityserver.restapi.openapi.model.KeyUsageType;
+import org.niis.xroad.securityserver.restapi.openapi.model.AcmeOrderDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CertificateAuthorityDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyUsageTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServicePrioritizationStrategyDto;
 import org.niis.xroad.securityserver.restapi.service.KeyNotFoundException;
 import org.niis.xroad.securityserver.restapi.util.TokenTestUtils;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,6 +61,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 /**
@@ -102,47 +107,50 @@ public class CertificateAuthoritiesApiControllerTest extends AbstractApiControll
                     public DnFieldDescription[] getSubjectFields() {
                         return new DnFieldDescription[0];
                     }
+
                     @Override
                     public X500Principal createSubjectDn(DnFieldValue[] values) {
                         return null;
                     }
+
                     @Override
-                    public void validateSubjectField(DnFieldValue field) throws Exception {
+                    public void validateSubjectField(DnFieldValue field) {
                     }
                 });
+        doNothing().when(tokenCertificateService).orderAcmeCertificate(any(), any(), any());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_APPROVED_CERTIFICATE_AUTHORITIES" })
+    @WithMockUser(authorities = {"VIEW_APPROVED_CERTIFICATE_AUTHORITIES"})
     public void getApprovedCertificatesWithViewPermission() throws Exception {
         // basically test that these do not throw exceptions
-        caController.getApprovedCertificateAuthorities(KeyUsageType.AUTHENTICATION, false);
+        caController.getApprovedCertificateAuthorities(KeyUsageTypeDto.AUTHENTICATION, false);
         caController.getApprovedCertificateAuthorities(null, false);
-        ResponseEntity<Set<CertificateAuthority>> response =
-                caController.getApprovedCertificateAuthorities(KeyUsageType.SIGNING, false);
+        ResponseEntity<Set<CertificateAuthorityDto>> response =
+                caController.getApprovedCertificateAuthorities(KeyUsageTypeDto.SIGNING, false);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
-    @WithMockUser(authorities = { "GENERATE_AUTH_CERT_REQ" })
+    @WithMockUser(authorities = {"GENERATE_AUTH_CERT_REQ"})
     public void getApprovedCertificateAuthoritiesAuthWithAuthPermission() throws Exception {
-        caController.getApprovedCertificateAuthorities(KeyUsageType.AUTHENTICATION, false);
+        caController.getApprovedCertificateAuthorities(KeyUsageTypeDto.AUTHENTICATION, false);
         caController.getApprovedCertificateAuthorities(null, false);
 
         try {
-            caController.getApprovedCertificateAuthorities(KeyUsageType.SIGNING, false);
+            caController.getApprovedCertificateAuthorities(KeyUsageTypeDto.SIGNING, false);
             fail("should have thrown exception");
         } catch (AccessDeniedException expected) {
         }
     }
 
     @Test
-    @WithMockUser(authorities = { "GENERATE_SIGN_CERT_REQ" })
+    @WithMockUser(authorities = {"GENERATE_SIGN_CERT_REQ"})
     public void getApprovedCertificateAuthoritiesAuthWithSignPermission() throws Exception {
-        caController.getApprovedCertificateAuthorities(KeyUsageType.SIGNING, false);
+        caController.getApprovedCertificateAuthorities(KeyUsageTypeDto.SIGNING, false);
 
         try {
-            caController.getApprovedCertificateAuthorities(KeyUsageType.AUTHENTICATION, false);
+            caController.getApprovedCertificateAuthorities(KeyUsageTypeDto.AUTHENTICATION, false);
             fail("should have thrown exception");
         } catch (AccessDeniedException expected) {
         }
@@ -154,13 +162,24 @@ public class CertificateAuthoritiesApiControllerTest extends AbstractApiControll
     }
 
     @Test
-    @WithMockUser(authorities = { "GENERATE_AUTH_CERT_REQ" })
+    @WithMockUser(authorities = {"VIEW_APPROVED_CERTIFICATE_AUTHORITIES"})
+    public void getOcspPrioritizationStrategy() {
+        when(certificateAuthorityService.getOcspPrioritizationStrategy())
+                .thenReturn(ServicePrioritizationStrategy.ONLY_PAID);
+
+        ResponseEntity<ServicePrioritizationStrategyDto> response = caController.getOcspPrioritizationStrategy();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(ServicePrioritizationStrategyDto.ONLY_PAID, response.getBody());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"GENERATE_AUTH_CERT_REQ"})
     public void getSubjectFieldDescriptionsAuthWithAuthPermission() throws Exception {
-        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageType.AUTHENTICATION,
+        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageTypeDto.AUTHENTICATION,
                 GOOD_AUTH_KEY_ID, "FI:GOV:M1", false);
 
         try {
-            caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageType.SIGNING,
+            caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageTypeDto.SIGNING,
                     GOOD_SIGN_KEY_ID, "FI:GOV:M1", false);
             fail("should have thrown exception");
         } catch (AccessDeniedException expected) {
@@ -168,13 +187,13 @@ public class CertificateAuthoritiesApiControllerTest extends AbstractApiControll
     }
 
     @Test
-    @WithMockUser(authorities = { "GENERATE_SIGN_CERT_REQ" })
+    @WithMockUser(authorities = {"GENERATE_SIGN_CERT_REQ"})
     public void getSubjectFieldDescriptionsAuthWithSignPermission() throws Exception {
-        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageType.SIGNING,
+        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageTypeDto.SIGNING,
                 GOOD_SIGN_KEY_ID, "FI:GOV:M1", false);
 
         try {
-            caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageType.AUTHENTICATION,
+            caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageTypeDto.AUTHENTICATION,
                     GENERAL_PURPOSE_CA_NAME, "FI:GOV:M1", false);
             fail("should have thrown exception");
         } catch (AccessDeniedException expected) {
@@ -182,13 +201,35 @@ public class CertificateAuthoritiesApiControllerTest extends AbstractApiControll
     }
 
     @Test
-    @WithMockUser(authorities = { "GENERATE_SIGN_CERT_REQ", "GENERATE_AUTH_CERT_REQ" })
+    @WithMockUser(authorities = {"GENERATE_SIGN_CERT_REQ", "GENERATE_AUTH_CERT_REQ"})
     public void getSubjectFieldsKeyIsOptional() throws Exception {
-        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageType.SIGNING,
+        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageTypeDto.SIGNING,
                 null, "FI:GOV:M1", false);
-        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageType.AUTHENTICATION,
+        caController.getSubjectFieldDescriptions(GENERAL_PURPOSE_CA_NAME, KeyUsageTypeDto.AUTHENTICATION,
                 null, "FI:GOV:M1", false);
         // for Sonar "Add at least one assertion to this test case"
         assertTrue("should not have thrown exception", true);
+    }
+
+    @Test
+    @WithMockUser(authorities = { "IMPORT_SIGN_CERT" })
+    public void orderAcmeCertificateAuthWithSignPermission() {
+        caController.orderAcmeCertificate(GENERAL_PURPOSE_CA_NAME, new AcmeOrderDto("012", KeyUsageTypeDto.SIGNING));
+        try {
+            caController.orderAcmeCertificate(GENERAL_PURPOSE_CA_NAME, new AcmeOrderDto("012", KeyUsageTypeDto.AUTHENTICATION));
+            fail("should have thrown exception");
+        } catch (AccessDeniedException expected) {
+        }
+    }
+
+    @Test
+    @WithMockUser(authorities = { "IMPORT_AUTH_CERT" })
+    public void orderAcmeCertificateSignWithAuthPermission() {
+        caController.orderAcmeCertificate(GENERAL_PURPOSE_CA_NAME, new AcmeOrderDto("012", KeyUsageTypeDto.AUTHENTICATION));
+        try {
+            caController.orderAcmeCertificate(GENERAL_PURPOSE_CA_NAME, new AcmeOrderDto("012", KeyUsageTypeDto.SIGNING));
+            fail("should have thrown exception");
+        } catch (AccessDeniedException expected) {
+        }
     }
 }

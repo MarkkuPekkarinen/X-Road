@@ -27,6 +27,7 @@
 
 package org.niis.xroad.cs.admin.core.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.niis.xroad.common.exception.NotFoundException;
 import org.niis.xroad.cs.admin.api.dto.CertificateAuthority;
@@ -42,8 +43,6 @@ import org.niis.xroad.cs.admin.core.repository.OcspInfoRepository;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
-
 import java.util.Set;
 
 import static ee.ria.xroad.common.util.CryptoUtils.DEFAULT_CERT_HASH_ALGORITHM_ID;
@@ -54,6 +53,7 @@ import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.OCSP_RESPONDER_
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.INTERMEDIATE_CA_ID;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_CERT_HASH;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_CERT_HASH_ALGORITHM;
+import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_COST_TYPE;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_ID;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OCSP_URL;
 
@@ -78,7 +78,7 @@ public class IntermediateCasServiceImpl implements IntermediateCasService {
     private CaInfoEntity getIntermediateCa(Integer id) {
         return caInfoJpaRepository.findById(id)
                 .filter(this::isIntermediateCa)
-                .orElseThrow(() -> new NotFoundException(INTERMEDIATE_CA_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(INTERMEDIATE_CA_NOT_FOUND.build()));
     }
 
     @Override
@@ -101,6 +101,7 @@ public class IntermediateCasServiceImpl implements IntermediateCasService {
         final OcspInfoEntity ocspInfoEntity = new OcspInfoEntity(intermediateCa, ocspResponderRequest.getUrl(),
                 ocspResponderRequest.getCertificate());
 
+        ocspInfoEntity.setCostType(ocspResponderRequest.getCostType().name());
         ocspInfoEntity.setCaInfo(intermediateCa);
 
         final OcspInfoEntity savedOcspInfo = ocspInfoRepository.save(ocspInfoEntity);
@@ -115,7 +116,7 @@ public class IntermediateCasServiceImpl implements IntermediateCasService {
         OcspInfoEntity ocspResponder = intermediateCa.getOcspInfos().stream()
                 .filter(ocspInfo -> ocspResponderId.equals(ocspInfo.getId()))
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException(OCSP_RESPONDER_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(OCSP_RESPONDER_NOT_FOUND.build()));
 
         ocspInfoRepository.delete(ocspResponder);
 
@@ -126,8 +127,11 @@ public class IntermediateCasServiceImpl implements IntermediateCasService {
         auditDataHelper.put(INTERMEDIATE_CA_ID, intermediateCaId);
         auditDataHelper.put(OCSP_ID, savedOcspInfo.getId());
         auditDataHelper.put(OCSP_URL, savedOcspInfo.getUrl());
-        auditDataHelper.put(OCSP_CERT_HASH, calculateCertHexHashDelimited(savedOcspInfo.getCert()));
-        auditDataHelper.put(OCSP_CERT_HASH_ALGORITHM, DEFAULT_CERT_HASH_ALGORITHM_ID);
+        auditDataHelper.put(OCSP_COST_TYPE, savedOcspInfo.getCostType());
+        if (savedOcspInfo.getCert() != null) {
+            auditDataHelper.put(OCSP_CERT_HASH, calculateCertHexHashDelimited(savedOcspInfo.getCert()));
+            auditDataHelper.put(OCSP_CERT_HASH_ALGORITHM, DEFAULT_CERT_HASH_ALGORITHM_ID);
+        }
     }
 
     private boolean isIntermediateCa(CaInfoEntity caInfo) {

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -28,7 +28,7 @@ package org.niis.xroad.restapi.converter;
 import ee.ria.xroad.common.identifier.ClientId;
 
 import org.junit.jupiter.api.Test;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,19 +67,19 @@ class ClientIdConverterTest {
 
     @Test
     void convertBadStringId() {
-        assertThatExceptionOfType(ValidationFailureException.class)
+        assertThatExceptionOfType(BadRequestException.class)
                 .isThrownBy(() -> clientIdConverter.convertId("XRD2:GOV:M4:SS1:aa"));
     }
 
     @Test
     void convertBadStringId2() {
-        assertThatExceptionOfType(ValidationFailureException.class)
+        assertThatExceptionOfType(BadRequestException.class)
                 .isThrownBy(() -> clientIdConverter.convertId("XRD2"));
     }
 
     @Test
     void convertBadStringId3() {
-        assertThatExceptionOfType(ValidationFailureException.class)
+        assertThatExceptionOfType(BadRequestException.class)
                 .isThrownBy(() -> clientIdConverter.convertId("XRD2:GOV:M4:SS1::::::"));
     }
 

@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,10 +25,10 @@
  * THE SOFTWARE.
  */
 
-import { Key, Token, TokenCertificate } from '@/openapi-types';
+import { Key, LoginTokenData, Token, TokenCertificate, TokenPinUpdate } from '@/openapi-types';
 import * as api from '@/util/api';
-import { deepClone } from '@/util/helpers';
 import { encodePathParameter } from '@/util/api';
+import { deepClone } from '@/util/helpers';
 import { useAlerts } from './alerts';
 import { defineStore } from 'pinia';
 
@@ -48,13 +49,21 @@ function sortTokens(tokens: Token[]): Token[] {
   return arr;
 }
 
-export const useTokensStore = defineStore('tokensStore', {
+function tokenBaseUrl(tokenId: string, path = '') {
+  const encodedId = encodePathParameter(tokenId);
+  return `/tokens/${encodedId}` + path;
+}
+
+export const useTokens = defineStore('tokens', {
   state: () => {
     return {
       expandedTokens: [] as string[],
       tokens: [] as Token[],
       selectedToken: undefined as Token | undefined,
     };
+  },
+  persist: {
+    pick: ['tokens', 'selectedToken'],
   },
   getters: {
     filteredTokens: (state) => (search: string) => {
@@ -120,31 +129,32 @@ export const useTokensStore = defineStore('tokensStore', {
       return state.expandedTokens.includes(id);
     },
 
-    tokensFilteredByName: (state) => (search: string | undefined) => {
-      // Filter term is applied to token name
-      const arr = sortTokens(state.tokens);
+    tokensFilteredByName:
+      (state) =>
+      (search: string | undefined): Token[] => {
+        // Filter term is applied to token name
+        const arr: Token[] = sortTokens(state.tokens);
 
-      if (!search || search.length < 1) {
-        return arr;
-      }
+        if (!search || search.length < 1) {
+          return arr;
+        }
 
-      const mysearch = search.toLowerCase();
+        const mysearch = search.toLowerCase();
 
-      return arr.filter((token: Token) => {
-        return token.name.toLowerCase().includes(mysearch);
-      });
-    },
+        return arr.filter((token: Token) => {
+          return token.name.toLowerCase().includes(mysearch);
+        });
+      },
   },
 
   actions: {
     expandToken(id: string) {
-      const index = this.expandedTokens.findIndex((element) => {
-        return element === id;
-      });
+      this.expandedTokens.push(id);
+      this.expandedTokens = [...new Set(this.expandedTokens)];
+    },
 
-      if (index === -1) {
-        this.expandedTokens.push(id);
-      }
+    hideToken(id: string) {
+      this.expandedTokens = this.expandedTokens.filter((item) => item !== id);
     },
 
     fetchTokens() {
@@ -159,23 +169,18 @@ export const useTokensStore = defineStore('tokensStore', {
         });
     },
 
-    hideToken(id: string) {
-      const index = this.expandedTokens.findIndex((element) => {
-        return element === id;
-      });
-
-      if (index >= 0) {
-        this.expandedTokens.splice(index, 1);
-      }
-    },
-
     setSelectedToken(token: Token) {
       this.selectedToken = token;
     },
 
-    tokenLogout(id: string) {
+    async tokenLogin(tokenId: string, tokenPin: string) {
+      const body: LoginTokenData['body'] = { password: tokenPin };
+      return api.put(`/tokens/${encodePathParameter(tokenId)}/login`, body);
+    },
+
+    async tokenLogout(id: string) {
       return api
-        .put(`/tokens/${encodePathParameter(id)}/logout`, {})
+        .put(tokenBaseUrl(id, '/logout'), undefined)
         .then(() => {
           // Update tokens
           this.fetchTokens();
@@ -185,6 +190,29 @@ export const useTokensStore = defineStore('tokensStore', {
         .catch((error) => {
           throw error;
         });
+    },
+    async updatePin(tokenId: string, oldPin: string, newPin: string) {
+      const tokenPinUpdate: TokenPinUpdate = {
+        old_pin: oldPin,
+        new_pin: newPin,
+      };
+      return api.put(tokenBaseUrl(tokenId, '/pin'), tokenPinUpdate).catch((error) => {
+        throw error;
+      });
+    },
+    async updateToken(token: Token) {
+      return api
+        .patch<Token>(tokenBaseUrl(token.id), token)
+        .then((res) => {
+          const tokenIndex = this.tokens.findIndex((t) => t.id === token.id);
+          this.tokens[tokenIndex] = res.data;
+        })
+        .catch((error) => {
+          throw error;
+        });
+    },
+    async deleteToken(tokenId: string) {
+      return api.remove(tokenBaseUrl(tokenId));
     },
   },
 });

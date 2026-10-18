@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -33,6 +33,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -100,12 +101,11 @@ public class UserApiController implements UserApi {
     }
 
     private Set<String> getAuthorities(Authentication authentication,
-            Predicate<String> authorityNamePredicate) {
-        Set<String> roles = authentication.getAuthorities().stream()
-                .map(authority -> authority.getAuthority())
+                                       Predicate<String> authorityNamePredicate) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
                 .filter(authorityNamePredicate)
                 .collect(Collectors.toSet());
-        return roles;
     }
 
 }

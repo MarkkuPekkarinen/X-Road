@@ -27,27 +27,34 @@
 package org.niis.xroad.cs.admin.globalconf.generator;
 
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.common.util.CryptoUtils;
 
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.niis.xroad.cs.admin.api.domain.AuthCert;
+import org.niis.xroad.cs.admin.api.domain.ConfigurationSigningKey;
+import org.niis.xroad.cs.admin.api.domain.ConfigurationSourceType;
 import org.niis.xroad.cs.admin.api.domain.FlattenedSecurityServerClientView;
 import org.niis.xroad.cs.admin.api.domain.GlobalGroup;
 import org.niis.xroad.cs.admin.api.domain.GlobalGroupMember;
 import org.niis.xroad.cs.admin.api.domain.SecurityServer;
 import org.niis.xroad.cs.admin.api.dto.CertificateAuthority;
 import org.niis.xroad.cs.admin.api.dto.CertificationService;
+import org.niis.xroad.cs.admin.api.dto.DsTlsCertificationAuthority;
+import org.niis.xroad.cs.admin.api.dto.DsTlsIntermediateCertificateAuthority;
 import org.niis.xroad.cs.admin.api.dto.OcspResponder;
 import org.niis.xroad.cs.admin.api.service.CertificationServicesService;
 import org.niis.xroad.cs.admin.api.service.ClientService;
+import org.niis.xroad.cs.admin.api.service.ConfigurationService;
+import org.niis.xroad.cs.admin.api.service.DataspaceIssuerDidService;
+import org.niis.xroad.cs.admin.api.service.DsTlsCertificationAuthoritiesService;
 import org.niis.xroad.cs.admin.api.service.GlobalGroupMemberService;
 import org.niis.xroad.cs.admin.api.service.GlobalGroupService;
 import org.niis.xroad.cs.admin.api.service.MemberClassService;
 import org.niis.xroad.cs.admin.api.service.SecurityServerService;
 import org.niis.xroad.cs.admin.api.service.SystemParameterService;
 import org.niis.xroad.cs.admin.api.service.TimestampingServicesService;
+import org.niis.xroad.globalconf.model.CertHash;
+import org.niis.xroad.globalconf.model.SharedParameters;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -56,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @Component
 @RequiredArgsConstructor
@@ -64,30 +72,56 @@ class SharedParametersLoader {
     private final SystemParameterService systemParameterService;
     private final CertificationServicesService certificationServicesService;
     private final TimestampingServicesService timestampingServicesService;
+    private final DsTlsCertificationAuthoritiesService dsTlsCertificationAuthoritiesService;
+    private final DataspaceIssuerDidService dataspaceIssuerDidService;
     private final ClientService clientService;
     private final SecurityServerService securityServerService;
     private final GlobalGroupService globalGroupService;
     private final GlobalGroupMemberService globalGroupMemberService;
     private final MemberClassService memberClassService;
+    private final ConfigurationService configurationService;
 
 
     SharedParameters load() {
-        var parameters = new SharedParameters();
-        parameters.setInstanceIdentifier(systemParameterService.getInstanceIdentifier());
-        parameters.setApprovedCAs(getApprovedCAs());
-        parameters.setApprovedTSAs(getApprovedTSAs());
-        parameters.setMembers(getMembers());
-        parameters.setSecurityServers(getSecurityServers());
-        parameters.setGlobalGroups(getGlobalGroups());
-        parameters.setGlobalSettings(getGlobalSettings());
-        return parameters;
+        return new SharedParameters(systemParameterService.getInstanceIdentifier(), getSources(), getApprovedCAs(),
+                getApprovedTSAs(), getApprovedConnectorTlsCAs(), getCredentialIssuerDids(), getMembers(),
+                getSecurityServers(), getGlobalGroups(), getGlobalSettings());
+    }
+
+    private List<SharedParameters.ConfigurationSource> getSources() {
+        return configurationService.getNodeAddressesWithOrderedConfigurationSigningKeys().entrySet().stream()
+                .map(this::toSource)
+                .toList();
+    }
+
+    private SharedParameters.ConfigurationSource toSource(
+            Map.Entry<String, List<ConfigurationSigningKey>> addressWithConfigurationSigningKeys
+    ) {
+        var source = new SharedParameters.ConfigurationSource();
+        source.setAddress(addressWithConfigurationSigningKeys.getKey());
+        source.setInternalVerificationCerts(
+                getSigningKeysByType(addressWithConfigurationSigningKeys.getValue(), ConfigurationSourceType.INTERNAL)
+        );
+        source.setExternalVerificationCerts(
+                getSigningKeysByType(addressWithConfigurationSigningKeys.getValue(), ConfigurationSourceType.EXTERNAL)
+        );
+        return source;
+    }
+
+    private List<byte[]> getSigningKeysByType(
+            List<ConfigurationSigningKey> signingKeys, ConfigurationSourceType configurationSourceType
+    ) {
+        return signingKeys.stream()
+                .filter(key -> configurationSourceType.equals(key.getSourceType()))
+                .map(ConfigurationSigningKey::getCert)
+                .toList();
     }
 
     private List<SharedParameters.ApprovedCA> getApprovedCAs() {
         var approvedCas = certificationServicesService.findAll();
         return approvedCas.stream()
                 .map(this::toApprovedCa)
-                .collect(toList());
+                .toList();
     }
 
     private SharedParameters.ApprovedCA toApprovedCa(CertificationService ca) {
@@ -95,31 +129,74 @@ class SharedParametersLoader {
         approvedCA.setName(ca.getName());
         approvedCA.setAuthenticationOnly(ca.getTlsAuth());
         approvedCA.setCertificateProfileInfo(ca.getCertificateProfileInfo());
-        approvedCA.setTopCA(new SharedParameters.CaInfo(toOcspInfos(ca.getOcspResponders()), ca.getCertificate()));
-        approvedCA.setIntermediateCAs(toCaInfos(ca.getIntermediateCas()));
+        approvedCA.setTopCA(new SharedParameters.CaInfo(ca.getCertificate(), toOcspInfos(ca.getOcspResponders())));
+        approvedCA.setIntermediateCas(toCaInfos(ca.getIntermediateCas()));
+        if (isNotBlank(ca.getAcmeServerDirectoryUrl())) {
+            approvedCA.setAcmeServer(
+                    new SharedParameters.AcmeServer(ca.getAcmeServerDirectoryUrl(),
+                            isNotBlank(ca.getAcmeServerIpAddress()) ? ca.getAcmeServerIpAddress() : null,
+                            isNotBlank(ca.getAuthenticationCertificateProfileId()) ? ca.getAuthenticationCertificateProfileId() : null,
+                            isNotBlank(ca.getSigningCertificateProfileId()) ? ca.getSigningCertificateProfileId() : null
+                    )
+            );
+        } else {
+            approvedCA.setAcmeServer(null);
+        }
+        approvedCA.setDefaultCsrFormat(ca.getDefaultCsrFormat());
         return approvedCA;
     }
 
     private List<SharedParameters.CaInfo> toCaInfos(List<CertificateAuthority> cas) {
         return cas.stream()
-                .map(ca -> new SharedParameters.CaInfo(toOcspInfos(ca.getOcspResponders()), ca.getCaCertificate().getEncoded()))
-                .collect(toList());
+                .map(ca -> new SharedParameters.CaInfo(ca.getCaCertificate().getEncoded(), toOcspInfos(ca.getOcspResponders())))
+                .toList();
     }
 
     private List<SharedParameters.OcspInfo> toOcspInfos(List<OcspResponder> ocspResponders) {
         return ocspResponders.stream()
                 .map(this::toOcspInfo)
-                .collect(toList());
+                .toList();
     }
 
     private SharedParameters.OcspInfo toOcspInfo(OcspResponder ocsp) {
-        return new SharedParameters.OcspInfo(ocsp.getUrl(), ocsp.getCertificate());
+        return new SharedParameters.OcspInfo(ocsp.getUrl(), ocsp.getCertificate(), ocsp.getCostType());
     }
 
     private List<SharedParameters.ApprovedTSA> getApprovedTSAs() {
         return timestampingServicesService.getTimestampingServices().stream()
-                .map(tsa -> new SharedParameters.ApprovedTSA(tsa.getName(), tsa.getUrl(), tsa.getCertificate().getEncoded()))
-                .collect(toList());
+                .map(tsa -> new SharedParameters.ApprovedTSA(tsa.getName(),
+                        tsa.getUrl(),
+                        tsa.getCertificate().getEncoded(),
+                        tsa.getCostType()))
+                .toList();
+    }
+
+    private List<SharedParameters.ApprovedConnectorTlsCA> getApprovedConnectorTlsCAs() {
+        return dsTlsCertificationAuthoritiesService.findAll().stream()
+                .map(this::toApprovedConnectorTlsCA)
+                .toList();
+    }
+
+    private SharedParameters.ApprovedConnectorTlsCA toApprovedConnectorTlsCA(DsTlsCertificationAuthority ca) {
+        var approvedConnectorTlsCA = new SharedParameters.ApprovedConnectorTlsCA();
+        approvedConnectorTlsCA.setName(ca.getName());
+        approvedConnectorTlsCA.setTopCA(new SharedParameters.CaInfo(ca.getCertificate(), List.of()));
+        approvedConnectorTlsCA.setIntermediateCas(toDsTlsCaInfos(ca.getIntermediateCas()));
+        if (isNotBlank(ca.getAcmeServerDirectoryUrl())) {
+            approvedConnectorTlsCA.setAcmeServer(new SharedParameters.AcmeServer(
+                    ca.getAcmeServerDirectoryUrl(), null, null, null, ca.getDsTlsCertificateProfileId()));
+        }
+        return approvedConnectorTlsCA;
+    }
+
+    private List<String> getCredentialIssuerDids() {
+        return dataspaceIssuerDidService.findAll();
+    }
+
+    private List<SharedParameters.CaInfo> toDsTlsCaInfos(List<DsTlsIntermediateCertificateAuthority> cas) {
+        return cas.stream()
+                .map(ca -> new SharedParameters.CaInfo(ca.getCaCertificate().getEncoded(), List.of()))
+                .toList();
     }
 
     private List<SharedParameters.Member> getMembers() {
@@ -130,7 +207,7 @@ class SharedParametersLoader {
     private List<SharedParameters.SecurityServer> getSecurityServers() {
         return securityServerService.findAll().stream()
                 .map(this::toSecurityServer)
-                .collect(toList());
+                .toList();
     }
 
     private SharedParameters.SecurityServer toSecurityServer(SecurityServer ss) {
@@ -139,22 +216,20 @@ class SharedParametersLoader {
         result.setAddress(ss.getAddress());
         result.setServerCode(ss.getServerCode());
         result.setClients(getSecurityServerClients(ss.getId()));
+        result.setMaintenanceMode(new SharedParameters.MaintenanceMode(ss.isInMaintenanceMode(), ss.getMaintenanceModeMessage()));
         result.setAuthCertHashes(ss.getAuthCerts().stream()
                 .map(AuthCert::getCert)
-                .map(SharedParametersLoader::certHash)
-                .collect(toList()));
+                .map(CertHash::new)
+                .toList());
         return result;
     }
 
     private List<ClientId> getSecurityServerClients(int id) {
-        return clientService.find(new ClientService.SearchParameters().setSecurityServerId(id))
-                .stream().map(SharedParametersLoader::toClientId).collect(toList());
+        return clientService.find(new ClientService.SearchParameters()
+                        .setSecurityServerId(id)
+                        .setSecurityServerEnabled(true))
+                .stream().map(SharedParametersLoader::toClientId).toList();
 
-    }
-
-    @SneakyThrows
-    private static byte[] certHash(byte[] cert) {
-        return CryptoUtils.certHash(cert);
     }
 
     private static ClientId toClientId(FlattenedSecurityServerClientView client) {
@@ -167,7 +242,7 @@ class SharedParametersLoader {
     private List<SharedParameters.GlobalGroup> getGlobalGroups() {
         return globalGroupService.findGlobalGroups().stream()
                 .map(this::getGlobalGroup)
-                .collect(toList());
+                .toList();
     }
 
     private SharedParameters.GlobalGroup getGlobalGroup(GlobalGroup globalGroup) {
@@ -186,7 +261,7 @@ class SharedParametersLoader {
     private SharedParameters.GlobalSettings getGlobalSettings() {
         var memberClasses = memberClassService.findAll().stream()
                 .map(memberClass -> new SharedParameters.MemberClass(memberClass.getCode(), memberClass.getDescription()))
-                .collect(toList());
+                .toList();
 
         return new SharedParameters.GlobalSettings(memberClasses, systemParameterService.getOcspFreshnessSeconds());
     }
@@ -209,7 +284,8 @@ class SharedParametersLoader {
 
         private void addSubSystem(FlattenedSecurityServerClientView client) {
             var clientId = toClientId(client);
-            getSubsystemList(toMemberId(clientId)).add(new SharedParameters.Subsystem(client.getSubsystemCode(), clientId));
+            getSubsystemList(toMemberId(clientId))
+                    .add(new SharedParameters.Subsystem(client.getSubsystemCode(), client.getSubsystemName(), clientId));
         }
 
         private SharedParameters.Member toMember(FlattenedSecurityServerClientView client) {

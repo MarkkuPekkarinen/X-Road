@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -23,24 +24,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import '@mdi/font/css/materialdesignicons.css';
-import Vue from 'vue';
-import Vuetify from 'vuetify/lib';
+import { Color, createXrdVuetify } from '@niis/shared-ui'; //Keep at the top
 
-Vue.use(Vuetify);
+import '@/assets/styles.css';
 
-export default new Vuetify({
-  icons: {
-    iconfont: 'mdi',
-  },
-  theme: {
-    themes: {
-      light: {
-        primary: '#663cdc',
-        secondary: '#00C9E7',
-        accent: '#8c9eff',
-        grey: '#9c9c9c',
-      },
-    },
-  },
-});
+export default createXrdVuetify(Color.B_600, Color.B_50, Color.B_100, Color.B_800);

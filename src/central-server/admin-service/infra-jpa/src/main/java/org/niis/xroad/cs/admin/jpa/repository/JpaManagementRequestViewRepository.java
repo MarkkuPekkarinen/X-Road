@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,6 +26,9 @@
  */
 package org.niis.xroad.cs.admin.jpa.repository;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
 import org.niis.xroad.cs.admin.api.service.ManagementRequestService;
 import org.niis.xroad.cs.admin.core.entity.ManagementRequestViewEntity;
@@ -38,10 +41,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,11 +48,16 @@ import java.util.List;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static org.niis.xroad.cs.admin.jpa.repository.util.CriteriaBuilderUtil.caseInsensitiveLike;
+import static org.niis.xroad.cs.admin.jpa.repository.util.CriteriaBuilderUtil.like;
 
 @Repository
 public interface JpaManagementRequestViewRepository extends JpaRepository<ManagementRequestViewEntity, Integer>,
         JpaSpecificationExecutor<ManagementRequestViewEntity>,
         ManagementRequestViewRepository {
+
+    String DB_INTEGER_FORMAT = "9999999999";
+    String DB_TIMESTAMP_FORMAT = "YYYY-MM-DD HH24:MI:SS";
+    String TO_CHAR = "TO_CHAR";
 
     default Page<ManagementRequestViewEntity> findAll(ManagementRequestService.Criteria criteria, Pageable pageable) {
         return findAll(findSpec(criteria), pageable);
@@ -100,7 +104,6 @@ public interface JpaManagementRequestViewRepository extends JpaRepository<Manage
             if (StringUtils.isNotBlank(criteria.getQuery())) {
                 pred = setQueryPredicates(criteria, builder, root, pred);
             }
-
             return pred;
         };
     }
@@ -111,14 +114,15 @@ public interface JpaManagementRequestViewRepository extends JpaRepository<Manage
         final var q = criteria.getQuery();
         final List<Predicate> predicates = new ArrayList<>();
 
-        predicates.add(caseInsensitiveLike(root, builder, q, root.get(ManagementRequestViewEntity_.id).as(String.class)));
-        predicates.add(caseInsensitiveLike(root, builder, q, root.get(ManagementRequestViewEntity_.createdAt).as(String.class)));
-
-        predicates.add(caseInsensitiveLike(root, builder, q, root.get(ManagementRequestViewEntity_.securityServerOwnerName)));
-        predicates.add(caseInsensitiveLike(root, builder, q, root.get(ManagementRequestViewEntity_.xroadInstance)));
-        predicates.add(caseInsensitiveLike(root, builder, q, root.get(ManagementRequestViewEntity_.memberClass)));
-        predicates.add(caseInsensitiveLike(root, builder, q, root.get(ManagementRequestViewEntity_.memberCode)));
-        predicates.add(caseInsensitiveLike(root, builder, q, root.get(ManagementRequestViewEntity_.serverCode)));
+        predicates.add(like(builder, q, builder.function(
+                TO_CHAR, String.class, root.get(ManagementRequestViewEntity_.id), builder.literal(DB_INTEGER_FORMAT))));
+        predicates.add(like(builder, q, builder.function(
+                TO_CHAR, String.class, root.get(ManagementRequestViewEntity_.createdAt), builder.literal(DB_TIMESTAMP_FORMAT))));
+        predicates.add(caseInsensitiveLike(builder, q, root.get(ManagementRequestViewEntity_.securityServerOwnerName)));
+        predicates.add(caseInsensitiveLike(builder, q, root.get(ManagementRequestViewEntity_.xroadInstance)));
+        predicates.add(caseInsensitiveLike(builder, q, root.get(ManagementRequestViewEntity_.memberClass)));
+        predicates.add(caseInsensitiveLike(builder, q, root.get(ManagementRequestViewEntity_.memberCode)));
+        predicates.add(caseInsensitiveLike(builder, q, root.get(ManagementRequestViewEntity_.serverCode)));
 
         return builder.and(pred, builder.or(predicates.toArray(new Predicate[0])));
     }

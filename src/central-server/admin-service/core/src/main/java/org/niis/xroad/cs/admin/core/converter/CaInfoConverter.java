@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -29,7 +29,7 @@ package org.niis.xroad.cs.admin.core.converter;
 import ee.ria.xroad.common.util.CertUtils;
 
 import lombok.RequiredArgsConstructor;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.cs.admin.api.dto.CertificateAuthority;
 import org.niis.xroad.cs.admin.core.entity.CaInfoEntity;
 import org.springframework.stereotype.Component;
@@ -40,7 +40,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
-import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.INVALID_CERTIFICATE;
+import static org.niis.xroad.common.core.exception.ErrorCode.INVALID_CERTIFICATE;
 
 @Component
 @RequiredArgsConstructor
@@ -52,6 +52,7 @@ public class CaInfoConverter {
     public CertificateAuthority toCertificateAuthority(CaInfoEntity caInfo) {
         return new CertificateAuthority()
                 .setId(caInfo.getId())
+                .setCertificationServiceId(caInfo.getApprovedCa() == null ? null : caInfo.getApprovedCa().getId())
                 .setCaCertificate(certConverter.toCertificateDetails(caInfo.getCert()))
                 .setOcspResponders(caInfo.getOcspInfos().stream()
                         .map(ocspResponderConverter::toModel)
@@ -78,7 +79,7 @@ public class CaInfoConverter {
             caInfo.setValidTo(cert.getNotAfter().toInstant());
             return caInfo;
         } catch (Exception e) {
-            throw new ValidationFailureException(INVALID_CERTIFICATE);
+            throw new BadRequestException(e, INVALID_CERTIFICATE.build());
         }
     }
 

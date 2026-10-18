@@ -25,9 +25,10 @@
  * THE SOFTWARE.
  */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { AxiosError } from 'axios';
-import { getErrorInfo, isFieldError } from '@/util/helpers';
+import { AxiosError, AxiosHeaders } from 'axios';
 import { ErrorInfo } from '@/openapi-types';
+import { describe, expect, it } from 'vitest';
+import { getErrorInfo, isFieldValidationError } from '@niis/shared-ui';
 
 describe('util/helpers.ts ', () => {
   const hostAddressError = {
@@ -40,7 +41,9 @@ describe('util/helpers.ts ', () => {
     },
   };
   const realAxiosError: AxiosError<ErrorInfo> = {
-    config: {},
+    config: {
+      headers: {} as AxiosHeaders,
+    },
     isAxiosError: true,
     message: 'Correct test AxiosError',
     name: '',
@@ -49,7 +52,7 @@ describe('util/helpers.ts ', () => {
       status: 0,
       statusText: 'Fake status',
       headers: {},
-      config: {},
+      config: { headers: {} as AxiosHeaders },
     },
     stack: '',
     toJSON(): Record<string, unknown> {
@@ -74,26 +77,26 @@ describe('util/helpers.ts ', () => {
     expect(errorInfo.status).not.toBeUndefined();
   });
 
-  it('isFieldError does correct decision with real errorInfo', () => {
+  it('isFieldValidationError does correct decision with real errorInfo', () => {
     const fieldError = Object.assign({}, hostAddressError);
-    expect(() => isFieldError(fieldError)).not.toThrowError();
-    expect(isFieldError(fieldError)).toBeTruthy();
+    expect(() => isFieldValidationError(fieldError)).not.toThrowError();
+    expect(isFieldValidationError(fieldError)).toBeTruthy();
   });
-  it('isFieldError returns false with null input', () => {
+  it('isFieldValidationError returns false with null input', () => {
     // @ts-ignore
-    expect(() => isFieldError(null)).not.toThrowError();
+    expect(() => isFieldValidationError(null)).not.toThrowError();
     // @ts-ignore
-    expect(isFieldError(null)).not.toBeTruthy();
+    expect(isFieldValidationError(null)).not.toBeTruthy();
   });
-  it('isFieldError return false with non-400 status', () => {
+  it('isFieldValidationError return false with non-400 status', () => {
     const fieldError999 = Object.assign({}, hostAddressError);
     fieldError999.status = 999;
-    expect(isFieldError(fieldError999)).not.toBeTruthy();
+    expect(isFieldValidationError(fieldError999)).not.toBeTruthy();
   });
-  it('isFieldError return false with missing error code ', () => {
+  it('isFieldValidationError return false with missing error code ', () => {
     const fieldErrorNoCode = Object.assign({}, hostAddressError);
     // @ts-ignore
     fieldErrorNoCode.error.code = undefined;
-    expect(isFieldError(fieldErrorNoCode)).not.toBeTruthy();
+    expect(isFieldValidationError(fieldErrorNoCode)).not.toBeTruthy();
   });
 });

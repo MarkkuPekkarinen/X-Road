@@ -1,20 +1,21 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,43 +26,41 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import ee.ria.xroad.common.conf.serverconf.IsAuthentication;
-import ee.ria.xroad.common.conf.serverconf.model.ClientType;
-import ee.ria.xroad.common.conf.serverconf.model.ServerConfType;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
-import ee.ria.xroad.common.util.TokenPinPolicy;
-import ee.ria.xroad.common.util.process.ExternalProcessRunner;
-import ee.ria.xroad.common.util.process.ProcessFailedException;
-import ee.ria.xroad.common.util.process.ProcessNotExecutableException;
+import ee.ria.xroad.common.util.PasswordPolicy;
 
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.niis.xroad.common.core.exception.WarningDeviation;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.MemberIdEntity;
+import org.niis.xroad.globalconf.GlobalConfProvider;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
-import org.niis.xroad.restapi.exceptions.DeviationAwareRuntimeException;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.exceptions.WarningDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
+import org.niis.xroad.restapi.service.ConfigurablePropertiesService;
 import org.niis.xroad.restapi.service.UnhandledWarningsException;
-import org.niis.xroad.securityserver.restapi.dto.InitializationStatusDto;
+import org.niis.xroad.securityserver.restapi.dto.InitializationStatus;
 import org.niis.xroad.securityserver.restapi.dto.TokenInitStatusInfo;
-import org.niis.xroad.securityserver.restapi.facade.GlobalConfFacade;
-import org.niis.xroad.securityserver.restapi.facade.SignerProxyFacade;
-import org.springframework.beans.factory.annotation.Value;
+import org.niis.xroad.serverconf.IsAuthentication;
+import org.niis.xroad.serverconf.impl.entity.ClientEntity;
+import org.niis.xroad.serverconf.impl.entity.ServerConfEntity;
+import org.niis.xroad.serverconf.model.Client;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.common.config.SignerConfigKeys;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+import org.springframework.util.ObjectUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.OWNER_IDENTIFIER;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.SERVER_CODE;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_GPG_KEY_GENERATION_FAILED;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_INVALID_INIT_PARAMS;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_MEMBER_CLASS_EXISTS;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_MEMBER_CLASS_NOT_PROVIDED;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_MEMBER_CODE_EXISTS;
@@ -70,13 +69,15 @@ import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_PI
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_PIN_NOT_PROVIDED;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_SERVERCODE_EXISTS;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_SERVERCODE_NOT_PROVIDED;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_SERVER_ALREADY_FULLY_INITIALIZED;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_SOFTWARE_TOKEN_INIT_FAILED;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_INIT_SERVER_ID_EXISTS;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_INIT_UNREGISTERED_MEMBER;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_SERVERCODE_EXISTS;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_SERVER_OWNER_EXISTS;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_SOFTWARE_TOKEN_INITIALIZED;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.ANCHOR_NOT_FOUND;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.INVALID_INIT_PARAMS;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.SERVER_ALREADY_FULLY_INITIALIZED;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.SOFTWARE_TOKEN_INIT_FAILED;
 
 /**
  * service for initializing the security server
@@ -90,19 +91,14 @@ public class InitializationService {
     private final SystemService systemService;
     private final ServerConfService serverConfService;
     private final TokenService tokenService;
-    private final GlobalConfFacade globalConfFacade;
+    private final GlobalConfProvider globalConfProvider;
     private final ClientService clientService;
-    private final SignerProxyFacade signerProxyFacade;
+    private final SignerRpcClient signerRpcClient;
     private final AuditDataHelper auditDataHelper;
     private final TokenPinValidator tokenPinValidator;
-    private final ExternalProcessRunner externalProcessRunner;
-
-    @Setter
-    @Value("${script.generate-gpg-keypair.path}")
-    private String generateKeypairScriptPath;
-    @Setter
-    @Value("${gpgkeys.gpghome}")
-    private String gpgHome;
+    private final SecurityServerBackupService securityServerBackupService;
+    private final EncryptionInitializationService encryptionInitializationService;
+    private final ConfigurablePropertiesService configurablePropertiesService;
 
     /**
      * Check the whole init status of the Security Server. The init status consists of the following:
@@ -115,17 +111,34 @@ public class InitializationService {
      *
      * @return
      */
-    public InitializationStatusDto getSecurityServerInitializationStatus() {
+    public InitializationStatus getSecurityServerInitializationStatus() {
         boolean isAnchorImported = systemService.isAnchorImported();
         boolean isServerCodeInitialized = serverConfService.isServerCodeInitialized();
         boolean isServerOwnerInitialized = serverConfService.isServerOwnerInitialized();
         TokenInitStatusInfo tokenInitStatus = tokenService.getSoftwareTokenInitStatus();
-        InitializationStatusDto initializationStatusDto = new InitializationStatusDto();
-        initializationStatusDto.setAnchorImported(isAnchorImported);
-        initializationStatusDto.setServerCodeInitialized(isServerCodeInitialized);
-        initializationStatusDto.setServerOwnerInitialized(isServerOwnerInitialized);
-        initializationStatusDto.setSoftwareTokenInitStatusInfo(tokenInitStatus);
-        return initializationStatusDto;
+        InitializationStatus initializationStatus = new InitializationStatus();
+        initializationStatus.setAnchorImported(isAnchorImported);
+        initializationStatus.setServerCodeInitialized(isServerCodeInitialized);
+        initializationStatus.setServerOwnerInitialized(isServerOwnerInitialized);
+        initializationStatus.setSoftwareTokenInitStatusInfo(tokenInitStatus);
+        initializationStatus.setTokenPinPolicyEnforced(isTokenPinPolicyEnforced());
+        initializationStatus.setSoftwareTokenAutologinEnabled(isSoftwareTokenAutologinEnabled());
+        return initializationStatus;
+    }
+
+    private Boolean isTokenPinPolicyEnforced() {
+        try {
+            return signerRpcClient.isEnforcedTokenPinPolicy();
+        } catch (Exception e) {
+            log.warn("Could not determine whether token pin policy is enforced", e);
+        }
+        return null;
+    }
+
+    private Boolean isSoftwareTokenAutologinEnabled() {
+        return configurablePropertiesService.getEffectiveValue(SignerConfigKeys.AUTOLOGIN_ENABLED.key())
+                .map(Boolean::parseBoolean)
+                .orElse(null);
     }
 
     /**
@@ -134,28 +147,30 @@ public class InitializationService {
      * parameter <code>String softwareTokenPin</code> can be <code>null</code>.
      *
      * @param securityServerCode server code for the new Security Server
-     * @param ownerMemberClass member class of the new owner member
-     * @param ownerMemberCode member code of the new owner member
-     * @param softwareTokenPin pin code for the initial software token (softToken-0)
-     * @param ignoreWarnings whether to skip initialization warnings all in all
-     * @throws AnchorNotFoundException if an anchor has not been imported
-     * @throws UnhandledWarningsException if a server code already initialized
-     * OR server owner already initialized
-     * OR if a software token has already been initialized
-     * OR trying to set unregistered member as an owner
-     * OR provided server code already in use
-     * @throws WeakPinException if the pin does not meet the length and complexity requirements (if token pin policy is
-     * enforced by properties)
-     * @throws InvalidCharactersException if the provided pin code does not follow the TokenPinPolicy (if token pin
-     * policy is enforced by properties). In other words pin code contains invalid characters (not ascii)
-     * @throws SoftwareTokenInitException if something goes wrong with the token init
-     * @throws InvalidInitParamsException if empty or missing or redundant parameters are provided
+     * @param ownerMemberClass   member class of the new owner member
+     * @param ownerMemberCode    member code of the new owner member
+     * @param softwareTokenPin   pin code for the initial software token (softToken-0)
+     * @param ignoreWarnings     whether to skip initialization warnings all in all
+     * @param enableSoftwareTokenAutologin whether to enable software token autologin. {@code null} leaves the
+     *                           current autologin setting unchanged (skip)
+     * @throws AnchorFileNotFoundException            if an anchor has not been imported
+     * @throws UnhandledWarningsException             if a server code already initialized
+     *                                                OR server owner already initialized
+     *                                                OR if a software token has already been initialized
+     *                                                OR trying to set unregistered member as an owner
+     *                                                OR provided server code already in use
+     * @throws WeakPinException                       if the pin does not meet the length and complexity requirements
+     *                                                (if token pin policy is enforced by properties)
+     * @throws InvalidCharactersException             if the provided pin code does not follow the TokenPinPolicy
+     *                                                (if token pin policy is enforced by properties).
+     *                                                In other words pin code contains invalid characters (not ascii)
+     * @throws SoftwareTokenInitException             if something goes wrong with the token init
+     * @throws InvalidInitParamsException             if empty or missing or redundant parameters are provided
      * @throws ServerAlreadyFullyInitializedException if the server has already been fully initialized
      */
     public void initialize(String securityServerCode, String ownerMemberClass, String ownerMemberCode,
-                           String softwareTokenPin, boolean ignoreWarnings) throws AnchorNotFoundException, WeakPinException,
-            UnhandledWarningsException, InvalidCharactersException, SoftwareTokenInitException,
-            InvalidInitParamsException, ServerAlreadyFullyInitializedException, InterruptedException {
+                           String softwareTokenPin, boolean ignoreWarnings,
+                           Boolean enableSoftwareTokenAutologin) throws UnhandledWarningsException {
         if (!systemService.isAnchorImported()) {
             throw new AnchorNotFoundException("Configuration anchor was not found.");
         }
@@ -167,12 +182,12 @@ public class InitializationService {
         }
         verifyInitializationPrerequisites(securityServerCode, ownerMemberClass, ownerMemberCode, softwareTokenPin,
                 isServerCodeInitialized, isServerOwnerInitialized, isSoftwareTokenInitialized);
-        String instanceIdentifier = globalConfFacade.getInstanceIdentifier();
-        ClientId.Conf ownerClientId = null;
+        String instanceIdentifier = globalConfProvider.getInstanceIdentifier();
+        ClientIdEntity ownerClientId = null;
         if (isServerOwnerInitialized) {
-            ownerClientId = serverConfService.getSecurityServerOwnerId();
+            ownerClientId = serverConfService.getSecurityServerOwnerIdEntity();
         } else {
-            ownerClientId = ClientId.Conf.create(instanceIdentifier, ownerMemberClass, ownerMemberCode);
+            ownerClientId = MemberIdEntity.create(instanceIdentifier, ownerMemberClass, ownerMemberCode);
         }
         auditDataHelper.put(OWNER_IDENTIFIER, ownerClientId);
         auditDataHelper.put(SERVER_CODE, securityServerCode);
@@ -184,17 +199,18 @@ public class InitializationService {
         // when second one fails server server moves to unusable state
 
         // --- Start the init ---
-        ServerConfType serverConf = createInitialServerConf(ownerClientId, securityServerCode);
+        ServerConfEntity serverConf = createInitialServerConf(ownerClientId, securityServerCode);
         if (!isSoftwareTokenInitialized) {
             initializeSoftwareToken(softwareTokenPin);
+        }
+        if (enableSoftwareTokenAutologin != null) {
+            updateSoftwareTokenAutologin(enableSoftwareTokenAutologin);
         }
 
         // the same algorithm is used in get_security_server_id.sh script
         String keyRealName = ownerClientId.getXRoadInstance() + "/" + ownerClientId.getMemberClass() + "/"
                 + ownerClientId.getMemberCode() + "/" + serverConf.getServerCode();
-        generateGPGKeyPair(keyRealName);
-
-        serverConfService.saveOrUpdate(serverConf);
+        prepareEncryption(keyRealName);
     }
 
     /**
@@ -280,15 +296,15 @@ public class InitializationService {
      *
      * @param softwareTokenPin the pin of the token
      * @throws InvalidCharactersException if the pin includes characters outside of ascii (range 32 - 126)
-     * @throws WeakPinException           if the pin does not meet the requirements set in {@link TokenPinPolicy}
+     * @throws WeakPinException           if the pin does not meet the requirements set in {@link PasswordPolicy}
      * @throws SoftwareTokenInitException if token init fails
      */
     private void initializeSoftwareToken(String softwareTokenPin) throws InvalidCharactersException, WeakPinException,
-            SoftwareTokenInitException {
+                                                                         SoftwareTokenInitException {
         char[] pin = softwareTokenPin.toCharArray();
         tokenPinValidator.validateSoftwareTokenPin(pin);
         try {
-            signerProxyFacade.initSoftwareToken(pin);
+            signerRpcClient.initSoftwareToken(pin);
         } catch (Exception e) {
             // not good
             throw new SoftwareTokenInitException("Error initializing software token", e);
@@ -296,29 +312,37 @@ public class InitializationService {
     }
 
     /**
+     * Helper to enable or disable software token autologin via the same configurable-properties mechanism
+     * used by Settings -&gt; System Parameters. Takes effect once the signer service is next restarted.
+     *
+     * @param enableSoftwareTokenAutologin whether autologin should be enabled
+     */
+    private void updateSoftwareTokenAutologin(boolean enableSoftwareTokenAutologin) {
+        String autologinKey = SignerConfigKeys.AUTOLOGIN_ENABLED.key();
+        configurablePropertiesService.updateConfigurableProperty(
+                autologinKey, String.valueOf(enableSoftwareTokenAutologin));
+    }
+
+    /**
      * Helper to create the initial server conf with a new server code and owner. If an existing server conf is found
      * and it already has a server code or an owner -> the existing values will not be overridden
      *
-     * @param ownerClientId
-     * @param securityServerCode
-     * @return ServerConfType
+     * @param ownerClientId      ownerClientId
+     * @param securityServerCode securityServerCode
+     * @return ServerConfEntity
      */
-    private ServerConfType createInitialServerConf(ClientId.Conf ownerClientId, String securityServerCode) {
-        ServerConfType serverConf = serverConfService.getOrCreateServerConf();
+    ServerConfEntity createInitialServerConf(ClientIdEntity ownerClientId, String securityServerCode) {
+        ServerConfEntity serverConfEntity = serverConfService.getOrCreateServerConfEntity();
 
-        if (StringUtils.isEmpty(serverConf.getServerCode())) {
-            serverConf.setServerCode(securityServerCode);
+        if (ObjectUtils.isEmpty(serverConfEntity.getServerCode())) {
+            serverConfEntity.setServerCode(securityServerCode);
         }
 
-        if (serverConf.getOwner() == null) {
-            ClientType ownerClient = getInitialClient(ownerClientId);
-            ownerClient.setConf(serverConf);
-            if (!serverConf.getClient().contains(ownerClient)) {
-                serverConf.getClient().add(ownerClient);
-            }
-            serverConf.setOwner(ownerClient);
+        if (serverConfEntity.getOwner() == null) {
+            ClientEntity ownerClient = getInitialClient(ownerClientId, serverConfEntity);
+            serverConfEntity.setOwner(ownerClient);
         }
-        return serverConf;
+        return serverConfEntity;
     }
 
     /**
@@ -338,7 +362,7 @@ public class InitializationService {
         boolean isServerCodeInitialized = serverConfService.isServerCodeInitialized();
         boolean isServerOwnerInitialized = serverConfService.isServerOwnerInitialized();
         boolean isSoftwareTokenInitialized = tokenService.isSoftwareTokenInitialized();
-        String ownerMemberName = globalConfFacade.getMemberName(ownerClientId);
+        String ownerMemberName = globalConfProvider.getMemberName(ownerClientId);
         List<WarningDeviation> warnings = new ArrayList<>();
         if (isServerCodeInitialized) {
             warnings.add(new WarningDeviation(WARNING_SERVERCODE_EXISTS));
@@ -356,7 +380,7 @@ public class InitializationService {
         }
         if (!isServerCodeInitialized) {
             SecurityServerId.Conf serverId = SecurityServerId.Conf.create(ownerClientId, securityServerCode);
-            if (globalConfFacade.existsSecurityServer(serverId)) {
+            if (globalConfProvider.existsSecurityServer(serverId)) {
                 WarningDeviation memberWarning = new WarningDeviation(WARNING_INIT_SERVER_ID_EXISTS,
                         serverId.toShortString());
                 warnings.add(memberWarning);
@@ -371,62 +395,55 @@ public class InitializationService {
      * Helper to create an initial client
      *
      * @param clientId
+     * @param serverConf
      * @return
      */
-    private ClientType getInitialClient(ClientId.Conf clientId) {
-        ClientType localClient = clientService.getLocalClient(clientId);
+    private ClientEntity getInitialClient(ClientIdEntity clientId, ServerConfEntity serverConf) {
+        ClientEntity localClient = clientService.getLocalClientEntity(clientId);
         if (localClient == null) {
-            localClient = new ClientType();
-            localClient.setIdentifier(clientId);
-            localClient.setClientStatus(ClientType.STATUS_SAVED);
-            localClient.setIsAuthentication(IsAuthentication.SSLAUTH.name());
+            localClient = clientService.addClient(clientId, serverConf, IsAuthentication.SSLAUTH, Client.STATUS_SAVED);
         }
         return localClient;
     }
 
-    private void generateGPGKeyPair(String nameReal) throws InterruptedException {
-        String[] args = new String[]{gpgHome, nameReal};
-
-        try {
-            log.info("Generationg GPG keypair with command '"
-                    + generateKeypairScriptPath + " " + Arrays.toString(args) + "'");
-
-            ExternalProcessRunner.ProcessResult processResult = externalProcessRunner
-                    .executeAndThrowOnFailure(generateKeypairScriptPath, args);
-
-            log.info(" --- Generate GPG keypair script console output - START --- ");
-            log.info(String.join("\n", processResult.getProcessOutput()));
-            log.info(" --- Generate GPG keypair script console output - END --- ");
-        } catch (ProcessNotExecutableException | ProcessFailedException e) {
-            throw new DeviationAwareRuntimeException(e, new ErrorDeviation(ERROR_GPG_KEY_GENERATION_FAILED));
-        }
-        // todo check the keypair is really created? how?
+    private void prepareEncryption(String nameReal) {
+        log.info("Generating GPG key pair for {}", nameReal);
+        securityServerBackupService.generateGpgKey(nameReal);
+        encryptionInitializationService.initializeMessageLogArchivalEncryption(nameReal);
+        encryptionInitializationService.initializeMessageLogDatabaseEncryption();
     }
 
     /**
      * If missing or empty or redundant params are provided for the init
      */
-    public static class InvalidInitParamsException extends ServiceException {
+    public static class InvalidInitParamsException extends BadRequestException {
         public InvalidInitParamsException(String msg, List<String> metadata) {
-            super(msg, new ErrorDeviation(ERROR_INVALID_INIT_PARAMS, metadata));
+            super(msg, INVALID_INIT_PARAMS.build(metadata));
         }
     }
 
     /**
      * If the software token init fails
      */
-    public static class SoftwareTokenInitException extends ServiceException {
+    public static class SoftwareTokenInitException extends InternalServerErrorException {
         public SoftwareTokenInitException(String msg, Throwable t) {
-            super(msg, t, new ErrorDeviation(ERROR_SOFTWARE_TOKEN_INIT_FAILED));
+            super(msg, t, SOFTWARE_TOKEN_INIT_FAILED.build());
         }
     }
 
     /**
      * If the server has already been fully initialized
      */
-    public static class ServerAlreadyFullyInitializedException extends ServiceException {
+    public static class ServerAlreadyFullyInitializedException extends ConflictException {
         public ServerAlreadyFullyInitializedException(String msg) {
-            super(msg, new ErrorDeviation(ERROR_SERVER_ALREADY_FULLY_INITIALIZED));
+            super(msg, SERVER_ALREADY_FULLY_INITIALIZED.build());
+        }
+    }
+
+    public static class AnchorNotFoundException extends ConflictException {
+
+        public AnchorNotFoundException(String msg) {
+            super(msg, ANCHOR_NOT_FOUND.build());
         }
     }
 }

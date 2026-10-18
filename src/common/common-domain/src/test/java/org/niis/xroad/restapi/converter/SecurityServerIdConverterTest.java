@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -28,7 +28,7 @@ package org.niis.xroad.restapi.converter;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 
 import org.junit.jupiter.api.Test;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -45,7 +45,7 @@ class SecurityServerIdConverterTest {
     void convertEncodedId() {
         String securityServerCode = "security-server-foo";
         String memberCode = "XRD2:GOV:M4";
-        SecurityServerId id = securityServerIdConverter.convert(
+        SecurityServerId id = securityServerIdConverter.fromDto(
                 memberCode + ":" + securityServerCode);
         assertEquals("XRD2", id.getXRoadInstance());
         assertEquals("GOV", id.getMemberClass());
@@ -53,7 +53,7 @@ class SecurityServerIdConverterTest {
         assertEquals(securityServerCode, id.getServerCode());
 
         String difficultServerCode = "FOO SS-;/?@=&-X<!-- o -->BAR";
-        id = securityServerIdConverter.convert(
+        id = securityServerIdConverter.fromDto(
                 memberCode + ":" + difficultServerCode);
         assertEquals("XRD2", id.getXRoadInstance());
         assertEquals("GOV", id.getMemberClass());
@@ -63,46 +63,46 @@ class SecurityServerIdConverterTest {
 
     @Test
     void convertEncodedIdWithSubsystem() {
-        assertThatExceptionOfType(ValidationFailureException.class)
-                .isThrownBy(() -> securityServerIdConverter.convert("XRD2:GOV:M4:SS1:serverCode"));
+        assertThatExceptionOfType(BadRequestException.class)
+                .isThrownBy(() -> securityServerIdConverter.fromDto("XRD2:GOV:M4:SS1:serverCode"));
     }
 
     @Test
     void convertEncodedIdWithMissingMember() {
-        assertThatExceptionOfType(ValidationFailureException.class)
-                .isThrownBy(() -> securityServerIdConverter.convert("XRD2:GOV:serverCode"));
+        assertThatExceptionOfType(BadRequestException.class)
+                .isThrownBy(() -> securityServerIdConverter.fromDto("XRD2:GOV:serverCode"));
     }
 
     @Test
     void convertEncodedIdWithTooManyElements() {
-        assertThatExceptionOfType(ValidationFailureException.class)
-                .isThrownBy(() -> securityServerIdConverter.convert("XRD2:GOV:M4:SS1:serverCode::::"));
+        assertThatExceptionOfType(BadRequestException.class)
+                .isThrownBy(() -> securityServerIdConverter.fromDto("XRD2:GOV:M4:SS1:serverCode::::"));
     }
 
     @Test
     void convertEmptyEncodedId() {
-        assertThatExceptionOfType(ValidationFailureException.class)
-                .isThrownBy(() -> securityServerIdConverter.convert(""));
+        assertThatExceptionOfType(BadRequestException.class)
+                .isThrownBy(() -> securityServerIdConverter.fromDto(""));
     }
 
     @Test
     void convertNullEncodedId() {
         String id = null;
-        var result = securityServerIdConverter.convert(id);
+        var result = securityServerIdConverter.fromDto(id);
         assertThat(result).isNull();
     }
 
     @Test
     void convertEncodedIdWithoutDelimiter() {
-        assertThatExceptionOfType(ValidationFailureException.class)
-                .isThrownBy(() -> securityServerIdConverter.convert(";;;;asdsdas"));
+        assertThatExceptionOfType(BadRequestException.class)
+                .isThrownBy(() -> securityServerIdConverter.fromDto(";;;;asdsdas"));
     }
 
     @Test
     void convertSecurityServerId() {
         SecurityServerId securityServerId = SecurityServerId.Conf.create(
                 "XRD2", "GOV", "M4", "server1");
-        String id = securityServerIdConverter.convert(securityServerId);
+        String id = securityServerIdConverter.toDto(securityServerId);
         assertEquals("XRD2:GOV:M4:server1", id);
     }
 

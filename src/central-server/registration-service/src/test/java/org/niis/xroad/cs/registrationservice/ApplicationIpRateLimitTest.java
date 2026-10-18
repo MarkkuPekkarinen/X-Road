@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -31,23 +31,29 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
 import org.niis.xroad.common.api.throttle.test.ParallelMockMvcExecutor;
+import org.niis.xroad.common.properties.config.XRoadConfigOverrides;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -58,20 +64,29 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SuppressWarnings("java:S2925")
 @SpringBootTest(classes = {
         Main.class},
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "xroad.registration-service.rate-limit-requests-per-minute=10",
-                "xroad.registration-service.rate-limit-requests-per-second=5"})
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
 @ActiveProfiles({"test"})
-@AutoConfigureMockMvc(print = MockMvcPrint.NONE)
+@Import(ApplicationIpRateLimitTest.RateLimitOverridesConfiguration.class)
 class ApplicationIpRateLimitTest {
     private static final int RUNS_PER_MINUTE = 11;
     private static final int RUNS_PER_SECOND = 6;
 
+    @TestConfiguration
+    static class RateLimitOverridesConfiguration {
+        @Bean
+        @Primary
+        XRoadConfigOverrides testXRoadConfigOverrides() {
+            return new XRoadConfigOverrides(Map.of(
+                    "xroad.registration-service.rate-limit-requests-per-minute", "10",
+                    "xroad.registration-service.rate-limit-requests-per-second", "5"));
+        }
+    }
+
     @Autowired
     private MockMvc mvc;
 
-    @MockBean(name = "adminServiceHttpClient")
+    @MockitoBean(name = "adminServiceHttpClient")
     private CloseableHttpClient adminServiceHttpClient;
 
     @Nested
@@ -99,7 +114,7 @@ class ApplicationIpRateLimitTest {
                     .map(MockHttpServletResponse::getStatus)
                     .collect(Collectors.toList());
 
-            assertThat(result).asList().containsOnlyOnce(TOO_MANY_REQUESTS.value());
+            assertThat(result).asInstanceOf(LIST).containsOnlyOnce(TOO_MANY_REQUESTS.value());
         }
     }
 

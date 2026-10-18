@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -58,8 +58,8 @@ public class TestRequest {
      * @param timeoutSec timeout of this test request
      */
     public TestRequest(String template, ClientId client, ServiceId service,
-            List<RequestTag> content, String boundary, String description,
-            Integer timeoutSec) {
+                       List<RequestTag> content, String boundary, String description,
+                       Integer timeoutSec) {
         this.service = service;
 
         this.content = new Request(template, client, service, "1234567890",

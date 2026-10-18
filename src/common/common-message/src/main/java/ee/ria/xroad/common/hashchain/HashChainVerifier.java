@@ -1,0 +1,537 @@
+/*
+ * The MIT License
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package ee.ria.xroad.common.hashchain;
+
+import ee.ria.xroad.common.crypto.identifier.DigestAlgorithm;
+import ee.ria.xroad.common.util.XmlUtils;
+
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBElement;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.UnmarshalException;
+import jakarta.xml.bind.Unmarshaller;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.xml.security.exceptions.XMLSecurityException;
+import org.apache.xml.security.signature.XMLSignatureInput;
+import org.apache.xml.security.signature.XMLSignatureStreamInput;
+import org.apache.xml.security.transforms.Transforms;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParserFactory;
+import javax.xml.transform.Source;
+import javax.xml.transform.sax.SAXSource;
+import javax.xml.validation.Schema;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static ee.ria.xroad.common.crypto.Digests.calculateDigest;
+import static ee.ria.xroad.common.util.EncoderUtils.encodeBase64;
+import static ee.ria.xroad.common.util.SchemaValidator.createSchema;
+import static org.niis.xroad.common.core.exception.ErrorCode.HASHCHAIN_UNUSED_INPUTS;
+import static org.niis.xroad.common.core.exception.ErrorCode.INVALID_HASH_CHAIN_REF;
+import static org.niis.xroad.common.core.exception.ErrorCode.INVALID_HASH_CHAIN_RESULT;
+import static org.niis.xroad.common.core.exception.ErrorCode.INVALID_REFERENCE;
+import static org.niis.xroad.common.core.exception.ErrorCode.MALFORMED_HASH_CHAIN;
+
+/**
+ * Verification of hash chains.
+ */
+@Slf4j
+public final class HashChainVerifier {
+
+    /**
+     * For accessing JAXB functionality. Shared between all the verifiers.
+     */
+    private static JAXBContext jaxbCtx;
+
+    private static final String INVALID_HASH_STEP_URI_MSG = "Invalid hash step URI: %s";
+
+    /**
+     * Maximum recursion depth for hash-step resolution. HashChainBuilder produces chains of depth ceil(log2(N))
+     * for an N-message batch; depth 64 already covers a batch of 2^64 messages, many orders of magnitude above
+     * any realistic deployment. The cap exists solely to reject crafted deep chains and is never reached by
+     * legitimate traffic.
+     */
+    static final int MAX_DEPTH = 64;
+
+    /**
+     * Maximum total number of hash steps resolved in a single verification. A legitimate chain is linear with
+     * one step per tree level, so even a million-message batch resolves at most ~20 steps. 1024 is ~50x that
+     * ceiling and is unreachable by any chain HashChainBuilder can produce.
+     */
+    static final int MAX_STEPS = 1024;
+
+    /**
+     * Maximum cumulative number of values (HashValue, DataRef, StepRef) resolved across all steps in a single
+     * verification. HashChainBuilder emits ~2 values per step (one StepRef + one HashValue), so a million-message
+     * batch produces at most ~40 values. 10 000 is ~250x that ceiling and is unreachable by any chain
+     * HashChainBuilder can produce; it exists solely to reject crafted documents with very wide per-step value lists.
+     */
+    static final int MAX_VALUES = 10_000;
+
+    private static final SAXParserFactory SAX_PARSER_FACTORY;
+
+    private static final Schema HASH_CHAIN_SCHEMA = createSchema("hashchain.xsd");
+
+    static {
+        SAX_PARSER_FACTORY = SAXParserFactory.newInstance();
+        SAX_PARSER_FACTORY.setNamespaceAware(true);
+        SAX_PARSER_FACTORY.setValidating(false);
+        SAX_PARSER_FACTORY.setXIncludeAware(false);
+        try {
+            SAX_PARSER_FACTORY.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private final InputStream hashChainResultXml;
+    private final HashChainReferenceResolver referenceResolver;
+    private final Map<String, DigestValue> inputs;
+
+    /**
+     * Caches already retrieved and parsed hash chains.
+     * Map from URI to contents.
+     */
+    private final Map<String, HashChainType> hashChainCache = new HashMap<>();
+
+    /**
+     * Tracks the base URI for each parsed chain, allowing full-URI key construction for memoization.
+     */
+    private final Map<HashChainType, String> chainBaseUris = new IdentityHashMap<>();
+
+    /**
+     * Memoizes resolved step results keyed by full URI (base + "#" + fragment). Prevents exponential
+     * re-resolution when the same step is referenced multiple times in a tree. Keyed by the full URI
+     * rather than the bare fragment so steps with identical IDs in different chain documents do not collide.
+     */
+    private final Map<String, byte[]> resolvedSteps = new HashMap<>();
+
+    /**
+     * Tracks the set of step URIs on the active resolution path for cycle detection.
+     * A URI is added on entry to resolveHashStep and removed in a finally block on exit.
+     */
+    private final Set<String> activePath = new HashSet<>();
+
+    /**
+     * Running count of hash steps resolved in this verification. Guards against exponential fan-out
+     * that memoization alone cannot prevent across steps.
+     */
+    private int totalStepsResolved;
+
+    /**
+     * Running count of values (HashValue, DataRef, StepRef) resolved across all steps in this verification.
+     * Bounds total digest work regardless of how values are distributed across steps.
+     */
+    private int totalValuesResolved;
+
+    /**
+     * Records set of inputs that were used by the hash chain calculation.
+     */
+    private final Set<String> usedInputs = new HashSet<>();
+
+    /**
+     * Verifies a set of inputs with respect to hash chain result.
+     * Silently returns when all the inputs are correctly referenced by the hash chain. Throws exception on error.
+     *
+     * @param hashChainResultXml hash chain result that is the starting point of the verification.
+     * @param referenceResolver  used to resolve references from hash chain result and hash chains.
+     *                           The resolver is not called for file names that are given as inputs that have the target present.
+     * @param inputs             set of inputs that are to be verified with respect to the hash chain result.
+     *                           All the inputs must be referenced by the hash chain in order to the verification to succeed.
+     *                           The parameter should contain mapping from file names to input hashes. The Input object (key value) can be
+     *                           null,
+     *                           in which case the reference resolver is used to download the input data for hashing.
+     */
+    public static void verify(InputStream hashChainResultXml, HashChainReferenceResolver referenceResolver, Map<String, DigestValue> inputs)
+            throws JAXBException, IOException, ParserConfigurationException, XMLSecurityException, SAXException {
+        new HashChainVerifier(hashChainResultXml, referenceResolver, inputs).verify();
+    }
+
+    private HashChainVerifier(InputStream hashChainResultXml, HashChainReferenceResolver referenceResolver,
+                              Map<String, DigestValue> inputs) {
+        this.hashChainResultXml = hashChainResultXml;
+        this.referenceResolver = referenceResolver;
+        this.inputs = inputs;
+    }
+
+    private void verify() throws IOException, JAXBException, ParserConfigurationException, XMLSecurityException, SAXException {
+        log.trace("verify()");
+
+        HashChainResultType hashChainResult = parseHashChainResult(hashChainResultXml);
+
+        // Resolve last hash step in chain.
+        byte[] hashStepData = resolveHashStep(hashChainResult.getURI(), null);
+
+        // Digest the last hash step result.
+        var digestUri = DigestAlgorithm.ofUri(hashChainResult.getDigestMethod().getAlgorithm());
+        byte[] digestedData = calculateDigest(digestUri, hashStepData);
+
+        // Compare with the signed hash chain result.
+        if (!Arrays.equals(digestedData, hashChainResult.getDigestValue())) {
+            throw XrdRuntimeException.systemException(INVALID_HASH_CHAIN_RESULT,
+                    "Hash chain result does not match hash chain calculation");
+        }
+        checkReferencedInputs();
+    }
+
+    private void checkReferencedInputs() {
+        log.trace("checkReferencedInputs(). Used = {}", usedInputs);
+
+        Set<String> untouchedInputs = new HashSet<>(inputs.keySet());
+        untouchedInputs.removeAll(usedInputs);
+
+        if (!untouchedInputs.isEmpty()) {
+            throw XrdRuntimeException.systemException(HASHCHAIN_UNUSED_INPUTS,
+                    "Some inputs were not referenced by hash chain: %s".formatted(StringUtils.join(untouchedInputs, ", ")));
+        }
+    }
+
+    private static HashChainResultType parseHashChainResult(InputStream xml)
+            throws JAXBException, ParserConfigurationException, SAXException {
+        return validateAndParse(xml, HashChainResultType.class);
+    }
+
+    private static HashChainType parseHashChain(InputStream xml) throws JAXBException, ParserConfigurationException, SAXException {
+        return validateAndParse(xml, HashChainType.class);
+    }
+
+    private static <T> T validateAndParse(InputStream xml, Class<T> type)
+            throws ParserConfigurationException, SAXException, JAXBException {
+        final XMLReader reader = SAX_PARSER_FACTORY.newSAXParser().getXMLReader();
+        final InputSource inputSource = new InputSource(xml);
+        Source source = new SAXSource(reader, inputSource);
+        Unmarshaller unmarshaller = jaxbCtx.createUnmarshaller();
+        unmarshaller.setSchema(HASH_CHAIN_SCHEMA);
+        try {
+            JAXBElement<T> element = unmarshaller.unmarshal(source, type);
+            return element.getValue();
+        } catch (UnmarshalException e) {
+            throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN, e, "Parsing hash chain failed");
+        }
+    }
+
+    /**
+     * Downloads hash step, calculates all the values and concatenates the results to DigestList data structure.
+     *
+     * @return DER-encoding of the DigestList data structure.
+     */
+    private byte[] resolveHashStep(String uri, HashChainType currentChain)
+            throws JAXBException, IOException, ParserConfigurationException, SAXException, XMLSecurityException {
+        log.trace("resolveHashStep({})", uri);
+
+        var uriParts = splitUri(uri);
+        String fullUri = buildFullUri(uriParts, currentChain);
+
+        byte[] memoized = resolvedSteps.get(fullUri);
+        if (memoized != null) {
+            return memoized;
+        }
+
+        if (activePath.contains(fullUri)) {
+            throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN, "Cycle detected in hash chain at step: %s".formatted(fullUri));
+        }
+
+        if (activePath.size() >= MAX_DEPTH) {
+            throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN,
+                    "Hash chain exceeds maximum depth of %d".formatted(MAX_DEPTH));
+        }
+
+        if (totalStepsResolved >= MAX_STEPS) {
+            throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN,
+                    "Hash chain exceeds maximum step count of %d".formatted(MAX_STEPS));
+        }
+
+        activePath.add(fullUri);
+        totalStepsResolved++;
+        try {
+            Pair<HashStepType, HashChainType> hashStep = fetchHashStep(uriParts, currentChain);
+
+            List<AbstractValueType> values = hashStep.getLeft().getHashValueOrStepRefOrDataRef();
+
+            if (values.size() > MAX_VALUES - totalValuesResolved) {
+                throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN,
+                        "Hash chain exceeds maximum value count of %d".formatted(MAX_VALUES));
+            }
+
+            DigestValue[] digests = new DigestValue[values.size()];
+
+            for (int i = 0; i < digests.length; ++i) {
+                totalValuesResolved++;
+                if (totalValuesResolved > MAX_VALUES) {
+                    throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN,
+                            "Hash chain exceeds maximum value count of %d".formatted(MAX_VALUES));
+                }
+                digests[i] = resolveValue(values.get(i), hashStep.getRight());
+            }
+
+            byte[] result = DigestList.concatDigests(digests);
+            resolvedSteps.put(fullUri, result);
+            return result;
+        } finally {
+            activePath.remove(fullUri);
+        }
+    }
+
+    /**
+     * Splits {@code uri} into (base, fragment) on the first {@code #}. Returns {@code null} fragment
+     * when there is no {@code #}, and empty string base when the URI is fragment-only.
+     */
+    private static Pair<String, String> splitUri(String uri) {
+        int hashIndex = uri.indexOf('#');
+        if (hashIndex < 0) {
+            return new ImmutablePair<>(uri, null);
+        }
+        return new ImmutablePair<>(uri.substring(0, hashIndex), uri.substring(hashIndex + 1));
+    }
+
+    private String buildFullUri(Pair<String, String> uriParts, HashChainType currentChain) {
+        String base = uriParts.getLeft();
+        String fragment = uriParts.getRight();
+        if (fragment == null || !base.isEmpty()) {
+            return base + (fragment != null ? "#" + fragment : "");
+        }
+        if (currentChain == null) {
+            return "#" + fragment;
+        }
+        String chainBase = chainBaseUris.get(currentChain);
+        if (chainBase == null) {
+            throw new IllegalStateException("Chain base URI missing for a parsed chain — invariant violated");
+        }
+        return chainBase + "#" + fragment;
+    }
+
+    /**
+     * Calculates digest of the value in a hash step.
+     */
+    private DigestValue resolveValue(AbstractValueType value, HashChainType currentChain)
+            throws JAXBException, IOException, ParserConfigurationException, XMLSecurityException, SAXException {
+        log.trace("resolveValue({})", value);
+
+        if (value instanceof DataRefType) {
+            return resolveDataRef((DataRefType) value, currentChain);
+        } else if (value instanceof StepRefType) {
+            return resolveStepRef((StepRefType) value, currentChain);
+        } else if (value instanceof HashValueType) {
+            return resolveHashValue((HashValueType) value, currentChain);
+        } else {
+            throw new IllegalArgumentException("Unknown value type");
+        }
+    }
+
+    private DigestValue resolveHashValue(HashValueType hashValue, HashChainType currentChain) {
+        // Everything is already done for us.
+        DigestAlgorithm digestMethodUri = getValueDigestMethodUri(hashValue, currentChain);
+
+        return new DigestValue(digestMethodUri, hashValue.getDigestValue());
+    }
+
+    private DigestValue resolveStepRef(StepRefType stepRef, HashChainType currentChain)
+            throws JAXBException, IOException, ParserConfigurationException, XMLSecurityException, SAXException {
+        // Calculate result of the referenced hash step
+        byte[] resolved = resolveHashStep(stepRef.getURI(), currentChain);
+        DigestAlgorithm digestMethodUri = getValueDigestMethodUri(stepRef, currentChain);
+
+        // Digest the hash step result.
+        return new DigestValue(digestMethodUri, calculateDigest(digestMethodUri, resolved));
+    }
+
+    private DigestValue resolveDataRef(DataRefType dataRef, HashChainType currentChain)
+            throws IOException, JAXBException, ParserConfigurationException, XMLSecurityException {
+        if (isInputRef(dataRef)) {
+            // Hash chain referenced given input
+            usedInputs.add(dataRef.getURI());
+        }
+
+        // Check if we can use the DigestValue in the input.
+        DigestValue inputDigest = getMatchingInputHash(dataRef, currentChain);
+
+        if (inputDigest != null) {
+            return inputDigest;
+        }
+
+        // We'll have to retrieve and hash the data.
+
+        DigestAlgorithm digestMethodUri = getValueDigestMethodUri(dataRef, currentChain);
+
+        if (!referenceResolver.shouldResolve(dataRef.getURI(), dataRef.getDigestValue())) {
+            return new DigestValue(digestMethodUri, dataRef.getDigestValue());
+        }
+
+        InputStream toDigest;
+
+        // Check if we need to run transforms on the input data.
+        if (dataRef.getTransforms() != null) {
+            toDigest = performTransforms(dataRef.getURI(), dataRef.getTransforms());
+        } else {
+            // No transforms, just resolve the URI.
+            toDigest = referenceResolver.resolve(dataRef.getURI());
+        }
+
+        if (toDigest == null) {
+            throw XrdRuntimeException.systemException(INVALID_REFERENCE, "Cannot resolve URI: %s".formatted(dataRef.getURI()));
+        }
+
+        byte[] digest = calculateDigest(digestMethodUri, toDigest);
+
+        // Compare the calculated digest with the digest in the hash chain
+        if (!Arrays.equals(digest, dataRef.getDigestValue())) {
+            log.debug("Calculated: {}", encodeBase64(digest));
+
+            throw XrdRuntimeException.systemException(INVALID_HASH_CHAIN_REF,
+                    "Invalid digest value in hash chain reference to %s".formatted(dataRef.getURI()));
+        }
+
+        return new DigestValue(digestMethodUri, digest);
+    }
+
+    /**
+     * Returns DigestValue from input if it exactly matches the reference.
+     */
+    private DigestValue getMatchingInputHash(DataRefType dataRef, HashChainType currentChain) {
+        DigestValue inputDigest = inputs.get(dataRef.getURI());
+
+        if (inputDigest != null
+                && inputDigest.digestMethod().equals(getValueDigestMethodUri(dataRef, currentChain))) {
+            return inputDigest;
+        } else {
+            return null;
+        }
+    }
+
+    private boolean isInputRef(DataRefType dataRef) {
+        return inputs.containsKey(dataRef.getURI());
+    }
+
+    /**
+     * Downloads data from the URI and runs transforms on it.
+     */
+    private InputStream performTransforms(String uri, TransformsType transforms)
+            throws ParserConfigurationException, JAXBException, XMLSecurityException, IOException {
+        log.trace("performTransforms({}, {})", uri, transforms);
+
+        JAXBElement<TransformsType> transformsElement = new ObjectFactory().createTransforms(transforms);
+
+        // Create the Document
+        Document document = XmlUtils.newDocumentBuilder(false).newDocument();
+
+        Marshaller marshaller = jaxbCtx.createMarshaller();
+        marshaller.marshal(transformsElement, document);
+
+        Transforms tr = new Transforms(document.getDocumentElement(), null);
+
+        XMLSignatureInput before = new XMLSignatureStreamInput(referenceResolver.resolve(uri));
+
+        XMLSignatureInput after = tr.performTransforms(before);
+
+        return after.getUnprocessedInput();
+    }
+
+    /**
+     * Returns either the digest method from value or the hash chain default.
+     */
+    private DigestAlgorithm getValueDigestMethodUri(AbstractValueType value, HashChainType currentChain) {
+        if (value.getDigestMethod() != null && value.getDigestMethod().getAlgorithm() != null) {
+            return DigestAlgorithm.ofUri(value.getDigestMethod().getAlgorithm());
+        } else {
+            return DigestAlgorithm.ofUri(currentChain.getDefaultDigestMethod().getAlgorithm());
+        }
+    }
+
+    /**
+     * Retrieve hash step based on pre-split URI parts (base, fragment).
+     */
+    private Pair<HashStepType, HashChainType> fetchHashStep(Pair<String, String> uriParts, HashChainType currentChain)
+            throws JAXBException, IOException, ParserConfigurationException, SAXException {
+        String baseUri = uriParts.getLeft();
+        String fragment = uriParts.getRight();
+        String rawUri = baseUri + (fragment != null ? "#" + fragment : "");
+
+        if (fragment == null || fragment.isEmpty()) {
+            throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN, INVALID_HASH_STEP_URI_MSG.formatted(rawUri));
+        }
+
+        HashChainType hashChain;
+
+        if (baseUri.isEmpty()) {
+            hashChain = currentChain;
+        } else {
+            hashChain = getHashChain(baseUri);
+        }
+
+        for (HashStepType step : hashChain.getHashStep()) {
+            if (fragment.equals(step.getId())) {
+                return new ImmutablePair<>(step, hashChain);
+            }
+        }
+
+        throw XrdRuntimeException.systemException(MALFORMED_HASH_CHAIN, INVALID_HASH_STEP_URI_MSG.formatted(rawUri));
+    }
+
+    private HashChainType getHashChain(String uri) throws IOException, JAXBException, ParserConfigurationException, SAXException {
+        HashChainType ret = hashChainCache.get(uri);
+
+        if (ret == null) {
+            InputStream is = referenceResolver.resolve(uri);
+
+            if (is == null) {
+                throw XrdRuntimeException.systemException(INVALID_REFERENCE, "Cannot resolve URI: %s".formatted(uri));
+            }
+
+            ret = parseHashChain(is);
+            hashChainCache.put(uri, ret);
+            chainBaseUris.put(ret, uri);
+        }
+
+        return ret;
+    }
+
+    static {
+        try {
+            jaxbCtx = JAXBContext.newInstance(ObjectFactory.class);
+        } catch (Exception ex) {
+            log.error("Failed to initialize JAXB context", ex);
+        }
+    }
+}

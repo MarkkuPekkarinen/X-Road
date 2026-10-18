@@ -24,12 +24,21 @@
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
    THE SOFTWARE.
  -->
+
 <template>
-  <v-layout align-center justify-center column>oops, page not found</v-layout>
+  <XrdNotFoundError @go-home="goHome" />
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
+<script lang="ts" setup>
+import { useRouter } from 'vue-router';
 
-export default Vue.extend({});
+import { XrdNotFoundError } from '@niis/shared-ui';
+import { useMainTabs } from '@/store/modules/main-tabs';
+
+const { push } = useRouter();
+const mainTabs = useMainTabs();
+
+function goHome() {
+  push(mainTabs.firstAllowedTab.to);
+}
 </script>

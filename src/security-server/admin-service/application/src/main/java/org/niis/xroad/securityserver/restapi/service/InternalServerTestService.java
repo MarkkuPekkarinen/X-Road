@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -26,14 +27,17 @@
 package org.niis.xroad.securityserver.restapi.service;
 
 import ee.ria.xroad.common.conf.InternalSSLKey;
-import ee.ria.xroad.common.conf.serverconf.ServerConf;
-import ee.ria.xroad.common.conf.serverconf.model.CertificateType;
 import ee.ria.xroad.common.util.CryptoUtils;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.securityserver.restapi.config.AdminServiceProperties;
+import org.niis.xroad.securityserver.restapi.config.CustomClientTlsSSLSocketFactory;
 import org.niis.xroad.securityserver.restapi.wsdl.HostnameVerifiers;
+import org.niis.xroad.serverconf.ServerConfProvider;
+import org.niis.xroad.serverconf.impl.entity.CertificateEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,13 +50,19 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509TrustManager;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,48 +72,59 @@ import java.util.List;
 @Slf4j
 @Service
 @Transactional
+@RequiredArgsConstructor
 @PreAuthorize("isAuthenticated()")
 public class InternalServerTestService {
+    private static final String TLS = "TLS";
+    private final ServerConfProvider serverConfProvider;
+    private final AdminServiceProperties adminServiceProperties;
+
     /**
      * Tests if a HTTPS connection can be established to the given URL using
      * the specified certificates.
+     *
      * @param trustedCerts certificates used for authentication
-     * @param url the URL for opening the connection
-     * @throws Exception in case connection fails
+     * @param url          the URL for opening the connection
      */
-    public void testHttpsConnection(
-            List<CertificateType> trustedCerts, String url) throws Exception {
+    public void testHttpsConnection(List<CertificateEntity> trustedCerts, String url) {
+        try {
+            List<X509Certificate> trustedX509Certs = new ArrayList<>();
+            for (CertificateEntity trustedCert : trustedCerts) {
+                trustedX509Certs.add(CryptoUtils.readCertificate(trustedCert.getData()));
+            }
 
-        List<X509Certificate> trustedX509Certs = new ArrayList<>();
-        for (CertificateType trustedCert : trustedCerts) {
-            trustedX509Certs.add(CryptoUtils.readCertificate(trustedCert.getData()));
+            SSLContext ctx = SSLContext.getInstance(TLS);
+            ctx.init(createServiceKeyManager(),
+                    new TrustManager[]{new ServiceTrustManager(trustedX509Certs)},
+                    new SecureRandom());
+
+            HttpsURLConnection con = (HttpsURLConnection) (new URL(url).openConnection());
+
+            con.setSSLSocketFactory(new CustomClientTlsSSLSocketFactory(ctx.getSocketFactory(),
+                    adminServiceProperties.getProxyTlsProtocols(), adminServiceProperties.getProxyTlsCipherSuites()));
+            con.setHostnameVerifier(HostnameVerifiers.ACCEPT_ALL);
+
+            con.connect();
+        } catch (IOException | UnrecoverableKeyException | CertificateException | KeyStoreException
+                 | NoSuchAlgorithmException | KeyManagementException | InvalidKeySpecException e) {
+            throw XrdRuntimeException.systemException(e);
         }
-
-        SSLContext ctx = SSLContext.getInstance(CryptoUtils.SSL_PROTOCOL);
-        ctx.init(createServiceKeyManager(),
-                new TrustManager[] {new ServiceTrustManager(trustedX509Certs)},
-                new SecureRandom());
-
-        HttpsURLConnection con = (HttpsURLConnection)(new URL(url).openConnection());
-
-        con.setSSLSocketFactory(ctx.getSocketFactory());
-        con.setHostnameVerifier(HostnameVerifiers.ACCEPT_ALL);
-
-        con.connect();
     }
 
-    private KeyManager[] createServiceKeyManager() throws Exception {
-        InternalSSLKey key = ServerConf.getSSLKey();
+    private KeyManager[] createServiceKeyManager()
+            throws UnrecoverableKeyException, CertificateException, KeyStoreException, IOException, NoSuchAlgorithmException,
+            InvalidKeySpecException {
+        InternalSSLKey key = serverConfProvider.getSSLKey();
 
         if (key != null) {
-            return new KeyManager[] {new ServiceKeyManager(key)};
+            return new KeyManager[]{new ServiceKeyManager(key)};
         }
 
         return null;
     }
 
     @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-    private class ServiceKeyManager extends X509ExtendedKeyManager {
+    private static final class ServiceKeyManager extends X509ExtendedKeyManager {
 
         private static final String ALIAS = "AuthKeyManager";
 
@@ -131,7 +152,7 @@ public class InternalServerTestService {
 
         @Override
         public X509Certificate[] getCertificateChain(String alias) {
-            log.trace("getCertificateChain: {}", (Object)sslKey.getCertChain());
+            log.trace("getCertificateChain: {}", (Object) sslKey.getCertChain());
             return sslKey.getCertChain();
         }
 
@@ -161,8 +182,7 @@ public class InternalServerTestService {
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] chain, String authType)
-                throws CertificateException {
+        public void checkClientTrusted(X509Certificate[] chain, String authType) {
             log.trace("checkClientTrusted()");
         }
 
@@ -187,7 +207,7 @@ public class InternalServerTestService {
         @Override
         public X509Certificate[] getAcceptedIssuers() {
             log.trace("getAcceptedIssuers()");
-            return new X509Certificate[] {};
+            return new X509Certificate[]{};
         }
     }
 }

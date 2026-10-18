@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,14 +26,14 @@
  */
 package org.niis.xroad.securityserver.restapi.converter;
 
+import ee.ria.xroad.common.DiagnosticStatus;
 import ee.ria.xroad.common.DiagnosticsStatus;
 
-import org.niis.xroad.securityserver.restapi.openapi.model.ConfigurationStatus;
-import org.niis.xroad.securityserver.restapi.openapi.model.DiagnosticStatusClass;
-import org.niis.xroad.securityserver.restapi.openapi.model.GlobalConfDiagnostics;
+import org.niis.xroad.securityserver.restapi.openapi.model.CodeWithDetailsDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.GlobalConfDiagnosticsDto;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
+import java.net.URI;
 
 /**
  * Converter for global configuration diagnostics related data between openapi and service domain classes
@@ -40,16 +41,19 @@ import java.util.Optional;
 @Component
 public class GlobalConfDiagnosticConverter {
 
-    public GlobalConfDiagnostics convert(DiagnosticsStatus diagnosticsStatus) {
-        GlobalConfDiagnostics globalConfDiagnostics = new GlobalConfDiagnostics();
-        Optional<ConfigurationStatus> statusCode = ConfigurationStatusMapping.map(
-                diagnosticsStatus.getReturnCode());
-        globalConfDiagnostics.setStatusCode(statusCode.orElse(null));
-        Optional<DiagnosticStatusClass> statusClass = DiagnosticStatusClassMapping.map(
-                diagnosticsStatus.getReturnCode());
-        globalConfDiagnostics.setStatusClass(statusClass.orElse(null));
+    public GlobalConfDiagnosticsDto convert(DiagnosticsStatus diagnosticsStatus) {
+        GlobalConfDiagnosticsDto globalConfDiagnostics = new GlobalConfDiagnosticsDto();
+        globalConfDiagnostics.setStatusClass(DiagnosticStatusClassMapping.map(diagnosticsStatus.getStatus()));
+        if (DiagnosticStatus.ERROR.equals(diagnosticsStatus.getStatus())) {
+            CodeWithDetailsDto codeWithDetails = new CodeWithDetailsDto(diagnosticsStatus.getErrorCode().code())
+                    .metadata(diagnosticsStatus.getErrorCodeMetadata());
+            globalConfDiagnostics.error(codeWithDetails);
+        }
         globalConfDiagnostics.setPrevUpdateAt(diagnosticsStatus.getPrevUpdate());
         globalConfDiagnostics.setNextUpdateAt(diagnosticsStatus.getNextUpdate());
+        if (diagnosticsStatus.getDescription() != null) {
+            globalConfDiagnostics.setLastSuccessfulUrl(URI.create(diagnosticsStatus.getDescription()));
+        }
 
         return globalConfDiagnostics;
     }

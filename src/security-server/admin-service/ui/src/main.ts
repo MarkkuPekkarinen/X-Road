@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,44 +26,45 @@
  */
 
 /*
-Startpoint of the Vue application. 
+Startpoint of the Vue application.
 Sets up plugins and 3rd party components that the app uses.
 Creates a new Vue instance with the Vue function.
 Initialises the app root component.
 */
-import Vue from 'vue';
+import vuetify from './plugins/vuetify'; //!!!Keep it before any component imports!!!
+import { createApp } from 'vue';
+
 import axios from 'axios';
-import Router from 'vue-router';
-import SharedComponents from '@niis/shared-ui';
-Vue.use(SharedComponents); // This must be done before importing Vuetify
-import vuetify from './plugins/vuetify';
-import './plugins/vee-validate';
-import './filters';
+
+import { pinia, setupAddErrorNavigation } from '@niis/shared-ui';
+
+import { createFilters } from '@/filters';
+import { createValidators } from '@niis/shared-ui/src/plugins/vee-validate';
+
+import { createLanguageHelper } from './plugins/i18n';
+import router from './router/router';
+
 import App from './App.vue';
-import router from './router';
-import '@fontsource/open-sans/800.css';
-import '@fontsource/open-sans/700.css';
-import '@fontsource/open-sans';
-import i18n from './i18n';
-import { createPinia, PiniaVuePlugin } from 'pinia';
-import VueCompositionAPI from '@vue/composition-api';
-import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 
-Vue.use(VueCompositionAPI);
-Vue.use(PiniaVuePlugin);
+import './filters';
+import { RouteName } from '@/global';
 
-const pinia = createPinia();
-pinia.use(piniaPluginPersistedstate);
-
-Vue.config.productionTip = false;
-Vue.use(Router);
-axios.defaults.baseURL = process.env.VUE_APP_BASE_URL;
+axios.defaults.baseURL = import.meta.env.VITE_VUE_APP_BASE_URL;
 axios.defaults.headers.get.Accepts = 'application/json';
 
-new Vue({
-  router,
-  i18n,
-  vuetify,
-  pinia,
-  render: (h) => h(App),
-}).$mount('#app');
+setupAddErrorNavigation(router, {
+  404: {
+    name: RouteName.NotFound,
+  },
+});
+
+const app = createApp(App);
+app.use(pinia);
+app.use(router);
+app.use(vuetify);
+app.use(createFilters());
+app.use(createValidators());
+
+createLanguageHelper()
+  .then((plugin) => app.use(plugin))
+  .finally(() => app.mount('#app'));

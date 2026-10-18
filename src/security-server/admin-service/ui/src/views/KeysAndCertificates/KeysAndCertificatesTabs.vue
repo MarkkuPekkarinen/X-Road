@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,73 +26,14 @@
  -->
 <template>
   <div>
-    <sub-tabs :tab="currentTab">
-      <v-tab
-        v-for="tab in tabs"
-        :key="tab.key"
-        :to="tab.to"
-        :data-test="tab.key"
-        exact-path
-        >{{ $t(tab.name) }}
-      </v-tab>
-    </sub-tabs>
+    <XrdViewNavigation :allowed-tabs="tabs" />
   </div>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { Permissions, RouteName } from '@/global';
-import { Tab } from '@/ui-types';
-import SubTabs from '@/components/layout/SubTabs.vue';
-import { mapState } from 'pinia';
-import { useUser } from '@/store/modules/user';
+<script lang="ts" setup>
+import { computed } from 'vue';
+import { XrdViewNavigation } from '@niis/shared-ui';
+import { useKeysTabs } from '@/store/modules/keys-tabs';
 
-export default Vue.extend({
-  components: {
-    SubTabs,
-  },
-  data: () => ({
-    currentTab: undefined as undefined | Tab,
-    showHelp: false,
-  }),
-
-  computed: {
-    ...mapState(useUser, ['getAllowedTabs']),
-    tabs(): Tab[] {
-      const allTabs: Tab[] = [
-        {
-          key: 'sign-and-auth-keys-tab-button',
-          name: 'tab.keys.signAndAuthKeys',
-          to: {
-            name: RouteName.SignAndAuthKeys,
-          },
-          permissions: [Permissions.VIEW_KEYS],
-        },
-        {
-          key: 'api-key-tab-button',
-          name: 'tab.keys.apiKey',
-          to: {
-            name: RouteName.ApiKey,
-          },
-          permissions: [
-            Permissions.CREATE_API_KEY,
-            Permissions.VIEW_API_KEYS,
-            Permissions.UPDATE_API_KEY,
-            Permissions.REVOKE_API_KEY,
-          ],
-        },
-        {
-          key: 'ss-tls-certificate-tab-button',
-          name: 'tab.keys.ssTlsCertificate',
-          to: {
-            name: RouteName.SSTlsCertificate,
-          },
-          permissions: [Permissions.VIEW_INTERNAL_TLS_CERT],
-        },
-      ];
-
-      return this.getAllowedTabs(allTabs);
-    },
-  },
-});
+const tabs = computed(() => useKeysTabs().availableTabs);
 </script>

@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -27,27 +28,32 @@ package org.niis.xroad.securityserver.restapi.openapi;
 
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.niis.xroad.restapi.openapi.BadRequestException;
-import org.niis.xroad.restapi.openapi.ConflictException;
-import org.niis.xroad.restapi.openapi.InternalServerErrorException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.restapi.service.UnhandledWarningsException;
-import org.niis.xroad.securityserver.restapi.dto.InitializationStatusDto;
-import org.niis.xroad.securityserver.restapi.openapi.model.InitialServerConf;
-import org.niis.xroad.securityserver.restapi.service.AnchorNotFoundException;
+import org.niis.xroad.securityserver.restapi.dto.InitializationStatus;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitialAdminUserDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitialAdminUserStatusDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitialServerConfDto;
+import org.niis.xroad.securityserver.restapi.service.InitialAdminUserService;
 import org.niis.xroad.securityserver.restapi.service.InitializationService;
 import org.niis.xroad.securityserver.restapi.service.InvalidCharactersException;
 import org.niis.xroad.securityserver.restapi.service.WeakPinException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,25 +73,25 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
     @Test
     @WithMockUser
     public void initStatus() {
-        when(initializationService.getSecurityServerInitializationStatus()).thenReturn(new InitializationStatusDto());
+        when(initializationService.getSecurityServerInitializationStatus()).thenReturn(new InitializationStatus());
         initializationApiController.getInitializationStatus();
         verify(initializationService).getSecurityServerInitializationStatus();
     }
 
     @Test
-    @WithMockUser(authorities = { "INIT_CONFIG" })
+    @WithMockUser(authorities = {"INIT_CONFIG"})
     public void initSecurityServerSuccess() {
-        InitialServerConf initialServerConf = createInitConfWithPin(SOFTWARE_TOKEN_PIN);
+        InitialServerConfDto initialServerConf = createInitConfWithPin(SOFTWARE_TOKEN_PIN);
         ResponseEntity<Void> response = initializationApiController.initSecurityServer(initialServerConf);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
     }
 
     @Test
-    @WithMockUser(authorities = { "INIT_CONFIG" })
+    @WithMockUser(authorities = {"INIT_CONFIG"})
     public void initSecurityServerFail() throws Exception {
-        InitialServerConf initialServerConf = createInitConfWithPin(SOFTWARE_TOKEN_PIN);
-        Mockito.doThrow(new AnchorNotFoundException(""))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+        InitialServerConfDto initialServerConf = createInitConfWithPin(SOFTWARE_TOKEN_PIN);
+        Mockito.doThrow(new InitializationService.AnchorNotFoundException("err"))
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
         try {
             initializationApiController.initSecurityServer(initialServerConf);
             fail("should have thrown");
@@ -94,7 +100,7 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
         }
 
         Mockito.doThrow(new InitializationService.ServerAlreadyFullyInitializedException(""))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
         try {
             initializationApiController.initSecurityServer(initialServerConf);
             fail("should have thrown");
@@ -103,7 +109,7 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
         }
 
         Mockito.doThrow(new InitializationService.InvalidInitParamsException("", Collections.emptyList()))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
         try {
             initializationApiController.initSecurityServer(initialServerConf);
             fail("should have thrown");
@@ -112,7 +118,7 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
         }
 
         Mockito.doThrow(new UnhandledWarningsException(Collections.emptyList()))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
         try {
             initializationApiController.initSecurityServer(initialServerConf);
             fail("should have thrown");
@@ -121,7 +127,7 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
         }
 
         Mockito.doThrow(new InvalidCharactersException(""))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
         try {
             initializationApiController.initSecurityServer(initialServerConf);
             fail("should have thrown");
@@ -130,7 +136,7 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
         }
 
         Mockito.doThrow(new WeakPinException("", Collections.emptyList()))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
         try {
             initializationApiController.initSecurityServer(initialServerConf);
             fail("should have thrown");
@@ -139,7 +145,7 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
         }
 
         Mockito.doThrow(new InitializationService.SoftwareTokenInitException("", new Exception()))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
         try {
             initializationApiController.initSecurityServer(initialServerConf);
             fail("should have thrown");
@@ -148,8 +154,45 @@ public class InitializationApiControllerTest extends AbstractApiControllerTestCo
         }
     }
 
-    private InitialServerConf createInitConfWithPin(String pin) {
-        return new InitialServerConf().ownerMemberClass(OWNER_MEMBER_CLASS)
+    @Test
+    @WithAnonymousUser
+    public void getInitialAdminUserStatusReportsRequired() {
+        when(initialAdminUserService.isInitialAdminUserRequired()).thenReturn(true);
+
+        ResponseEntity<InitialAdminUserStatusDto> response = initializationApiController.getInitialAdminUserStatus();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().getAdminUserCreationRequired());
+    }
+
+    @Test
+    @WithAnonymousUser
+    public void createInitialAdminUserSuccess() {
+        InitialAdminUserDto request = new InitialAdminUserDto().username("admin").password("TopSecret123!");
+
+        ResponseEntity<Void> response = initializationApiController.createInitialAdminUser(request);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        verify(initialAdminUserService).createInitialAdminUser(eq("admin"), any(char[].class));
+    }
+
+    @Test
+    @WithAnonymousUser
+    public void createInitialAdminUserRejectedWhenStateNotAllowed() {
+        InitialAdminUserDto request = new InitialAdminUserDto().username("admin").password("TopSecret123!");
+        Mockito.doThrow(new InitialAdminUserService.InitialAdminUserNotAllowedException())
+                .when(initialAdminUserService).createInitialAdminUser(any(), any(char[].class));
+
+        try {
+            initializationApiController.createInitialAdminUser(request);
+            fail("should have thrown");
+        } catch (ConflictException expected) {
+            // expected
+        }
+    }
+
+    private InitialServerConfDto createInitConfWithPin(String pin) {
+        return new InitialServerConfDto().ownerMemberClass(OWNER_MEMBER_CLASS)
                 .ownerMemberCode(OWNER_MEMBER_CODE)
                 .securityServerCode(SECURITY_SERVER_CODE)
                 .softwareTokenPin(pin)

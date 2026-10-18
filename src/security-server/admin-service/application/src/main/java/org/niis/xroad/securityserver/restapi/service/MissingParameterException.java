@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,14 +25,13 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
+import org.niis.xroad.common.exception.BadRequestException;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_MISSING_PARAMETER;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.MISSING_PARAMETER;
 
-public class MissingParameterException extends ServiceException {
+public class MissingParameterException extends BadRequestException {
     public MissingParameterException(String s) {
-        super(s, new ErrorDeviation(ERROR_MISSING_PARAMETER));
+        super(s, MISSING_PARAMETER.build());
     }
 
 }

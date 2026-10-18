@@ -1,5 +1,6 @@
 /*
  *  The MIT License
+ *
  *  Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  *  Copyright (c) 2018 Estonian Information System Authority (RIA),
  *  Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,11 +26,6 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import ee.ria.xroad.common.conf.globalconf.GlobalGroupInfo;
-import ee.ria.xroad.common.conf.globalconf.MemberInfo;
-import ee.ria.xroad.common.conf.serverconf.model.AccessRightType;
-import ee.ria.xroad.common.conf.serverconf.model.ClientType;
-import ee.ria.xroad.common.conf.serverconf.model.EndpointType;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.GlobalGroupId;
 import ee.ria.xroad.common.identifier.LocalGroupId;
@@ -37,12 +33,22 @@ import ee.ria.xroad.common.identifier.XRoadId;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.GlobalGroupIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.LocalGroupIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.XRoadIdEntity;
+import org.niis.xroad.globalconf.model.GlobalGroupInfo;
+import org.niis.xroad.globalconf.model.MemberInfo;
+import org.niis.xroad.securityserver.restapi.dto.ServiceClient;
 import org.niis.xroad.securityserver.restapi.dto.ServiceClientAccessRightDto;
-import org.niis.xroad.securityserver.restapi.dto.ServiceClientDto;
 import org.niis.xroad.securityserver.restapi.repository.ClientRepository;
 import org.niis.xroad.securityserver.restapi.util.PersistenceTestUtil;
 import org.niis.xroad.securityserver.restapi.util.TestUtils;
+import org.niis.xroad.serverconf.impl.entity.AccessRightEntity;
+import org.niis.xroad.serverconf.impl.entity.ClientEntity;
+import org.niis.xroad.serverconf.impl.entity.EndpointEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
@@ -58,11 +64,14 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -76,16 +85,15 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
     @Autowired
     EndpointService endpointService;
 
-    private List<MemberInfo> memberInfos = new ArrayList<>(Arrays.asList(
+    @Autowired
+    IdentifierService identifierService;
+
+    private List<MemberInfo> memberInfos = new ArrayList<>(List.of(
             TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, null),
-            TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                    TestUtils.SUBSYSTEM1),
-            TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                    TestUtils.SUBSYSTEM1),
-            TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                    TestUtils.SUBSYSTEM2),
-            TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                    "SS5")
+            TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM1),
+            TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM1),
+            TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM2),
+            TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, "SS5")
     ));
     private List<GlobalGroupInfo> globalGroupInfos = new ArrayList<>(Arrays.asList(
             TestUtils.getGlobalGroupInfo(TestUtils.INSTANCE_FI, TestUtils.DB_GLOBALGROUP_CODE),
@@ -97,10 +105,11 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
 
     @Before
     public void setup() {
-        when(globalConfFacade.getMembers()).thenReturn(memberInfos);
-        when(globalConfFacade.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
-        when(globalConfFacade.getInstanceIdentifiers()).thenReturn(instanceIdentifiers);
-        when(globalConfFacade.getGlobalGroups(any())).thenAnswer(invocation -> {
+        when(globalConfProvider.getMembers()).thenReturn(memberInfos);
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
+        when(globalConfProvider.getInstanceIdentifiers()).thenReturn(instanceIdentifiers);
+        when(globalConfProvider.getGlobalGroups()).thenReturn(globalGroupInfos);
+        when(globalConfProvider.getGlobalGroups(any(String[].class))).thenAnswer(invocation -> {
             Object[] args = invocation.getArguments();
             if (args.length == 0) {
                 return globalGroupInfos;
@@ -109,7 +118,7 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
                     Arrays.copyOf(args, args.length, String[].class)));
             return globalGroupInfos.stream()
                     .filter(globalGroupInfo -> foundInstanceIdentifiers
-                            .contains(globalGroupInfo.getId().getXRoadInstance()))
+                            .contains(globalGroupInfo.id().getXRoadInstance()))
                     .collect(Collectors.toList());
         });
 
@@ -134,60 +143,74 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
     @Autowired
     AccessRightService accessRightService;
 
+    @MockitoBean
+    CatalogInvalidationNotifier catalogInvalidationNotifier;
+
     private long countIdentifiers() {
-        return persistenceTestUtil.countRows(XRoadId.Conf.class);
+        return persistenceTestUtil.countRows(XRoadIdEntity.class);
     }
 
     private long countAccessRights() {
-        return persistenceTestUtil.countRows(AccessRightType.class);
+        return persistenceTestUtil.countRows(AccessRightEntity.class);
     }
 
     private int countServiceClients(ClientId serviceOwnerId) {
-        ClientType owner = clientRepository.getClient(serviceOwnerId);
-        return owner.getAcl().stream().map(acl -> acl.getSubjectId())
-                .collect(Collectors.toSet())
-                .size();
+        ClientEntity owner = clientRepository.getClient(serviceOwnerId);
+        var serviceClients = owner.getAccessRights().stream()
+                .map(AccessRightEntity::getSubjectId)
+                .collect(Collectors.toSet());
+        return serviceClients.size();
     }
 
     @Test
     public void findAllAccessRightHolderCandidates() throws Throwable {
-        List<ServiceClientDto> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
+        List<ServiceClient> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
                 null, null, null, null, null, null);
         assertEquals(10, dtos.size());
     }
 
     @Test
     public void findAccessRightHolderCandidatesByMemberOrGroupCode() throws Throwable {
-        List<ServiceClientDto> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
+        List<ServiceClient> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
                 null, null, null, null, "1", null);
         assertEquals(6, dtos.size());
     }
 
     @Test
     public void findAccessRightHolderCandidatesByMemberOrGroupCodeNoResults() throws Throwable {
-        List<ServiceClientDto> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
+        List<ServiceClient> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
                 null, null, null, null, "öäöäöäöäöäöä", null);
         assertEquals(0, dtos.size());
     }
 
     @Test
     public void findAccessRightHolderCandidatesByInstance() throws Throwable {
-        List<ServiceClientDto> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
+        List<ServiceClient> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
                 null, null, TestUtils.INSTANCE_EE, null, null, null);
         assertEquals(5, dtos.size());
     }
 
     @Test
     public void findAccessRightHolderCandidatesByInstanceAndSubSystem() throws Throwable {
-        List<ServiceClientDto> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
+        List<ServiceClient> dtos = accessRightService.findAccessRightHolderCandidates(TestUtils.getM1Ss1ClientId(),
                 null, null, TestUtils.INSTANCE_FI, null, null, TestUtils.SUBSYSTEM1);
         assertEquals(1, dtos.size());
     }
 
     @Test
+    public void deleteServiceClientAccessRightsNotifiesCatalogInvalidation() throws Exception {
+        ClientId.Conf serviceOwner = TestUtils.getM1Ss1ClientId();
+        Set<String> serviceCodes = new HashSet<>(List.of("serviceWithObsoleteScs"));
+
+        accessRightService.deleteServiceClientAccessRights(serviceOwner, serviceCodes, TestUtils.OBSOLETE_SUBSYSTEM_ID);
+
+        verify(catalogInvalidationNotifier).invalidateCatalogCaches();
+    }
+
+    @Test
     public void removeObsoleteServiceClientAccessRights() throws Exception {
         ClientId.Conf serviceOwner = TestUtils.getM1Ss1ClientId();
-        Set<String> serviceCodes = new HashSet<>(Arrays.asList(
+        Set<String> serviceCodes = new HashSet<>(List.of(
                 "serviceWithObsoleteScs"));
 
         int initialServiceClients = countServiceClients(serviceOwner);
@@ -208,13 +231,9 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         assertEquals(initialAccessRights - 2, countAccessRights());
 
         // can't remove what has already been removed
-        try {
-            accessRightService.deleteServiceClientAccessRights(serviceOwner,
-                    new HashSet<>(serviceCodes),
-                    TestUtils.OBSOLETE_GGROUP_ID);
-            fail("should throw exception");
-        } catch (AccessRightService.AccessRightNotFoundException expected) {
-        }
+        assertThrows(AccessRightService.AccessRightNotFoundException.class,
+                () -> accessRightService.deleteServiceClientAccessRights(serviceOwner,
+                        Set.copyOf(serviceCodes), TestUtils.OBSOLETE_GGROUP_ID));
     }
 
     @Test
@@ -232,18 +251,16 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
 
         // delete group access
         accessRightService.deleteEndpointAccessRights(TestUtils.OBSOLETE_SCS_BASE_ENDPOINT_ID,
-                new HashSet<XRoadId>(Arrays.asList(TestUtils.OBSOLETE_GGROUP_ID)));
+                Set.of(TestUtils.OBSOLETE_GGROUP_ID));
         assertEquals(initialServiceClients - 2, countServiceClients(serviceOwner));
         assertEquals(initialAccessRights - 2, countAccessRights());
 
         // can't remove what has already been removed
-        try {
-            accessRightService.deleteEndpointAccessRights(TestUtils.OBSOLETE_SCS_BASE_ENDPOINT_ID,
-                    new HashSet<XRoadId>(Arrays.asList(TestUtils.OBSOLETE_GGROUP_ID)));
-            fail("should throw exception");
-        } catch (AccessRightService.AccessRightNotFoundException expected) {
-        }
+        assertThrows(AccessRightService.AccessRightNotFoundException.class,
+                () -> accessRightService.deleteEndpointAccessRights(TestUtils.OBSOLETE_SCS_BASE_ENDPOINT_ID,
+                Set.of(TestUtils.OBSOLETE_GGROUP_ID)));
     }
+
     @Test
     public void removeObsoleteSoapServiceAccessRights() throws Exception {
         ClientId.Conf serviceOwner = TestUtils.getM1Ss1ClientId();
@@ -259,17 +276,15 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
 
         // delete group access
         accessRightService.deleteSoapServiceAccessRights(serviceOwner, TestUtils.OBSOLETE_SCS_FULL_SERVICE_CODE,
-                new HashSet<XRoadId>(Arrays.asList(TestUtils.OBSOLETE_GGROUP_ID)));
+                Set.of(TestUtils.OBSOLETE_GGROUP_ID));
         assertEquals(initialServiceClients - 2, countServiceClients(serviceOwner));
         assertEquals(initialAccessRights - 2, countAccessRights());
 
         // can't remove what has already been removed
-        try {
-            accessRightService.deleteSoapServiceAccessRights(serviceOwner, TestUtils.OBSOLETE_SCS_FULL_SERVICE_CODE,
-                    new HashSet<XRoadId>(Arrays.asList(TestUtils.OBSOLETE_GGROUP_ID)));
-            fail("should throw exception");
-        } catch (AccessRightService.AccessRightNotFoundException expected) {
-        }
+        assertThrows(AccessRightService.AccessRightNotFoundException.class,
+                () -> accessRightService.deleteSoapServiceAccessRights(serviceOwner, TestUtils.OBSOLETE_SCS_FULL_SERVICE_CODE,
+                Set.of(TestUtils.OBSOLETE_GGROUP_ID)));
+
     }
 
     @Test
@@ -282,20 +297,20 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         ClientId.Conf subsystemId = TestUtils.getClientId(TestUtils.CLIENT_ID_SS5);
         int initialServiceClients = countServiceClients(serviceOwner);
         long initialAccessRights = countAccessRights();
-        int initialAclSize = clientRepository.getClient(serviceOwner).getAcl().size();
+        int initialAclSize = clientRepository.getClient(serviceOwner).getAccessRights().size();
         List<ServiceClientAccessRightDto> dtos = accessRightService.addServiceClientAccessRights(
                 serviceOwner, serviceCodes, subsystemId);
         assertEquals(3, dtos.size());
         assertEquals(initialServiceClients + 1, countServiceClients(serviceOwner));
         assertEquals(initialAccessRights + 3, countAccessRights());
-        assertEquals(initialAclSize + 3, clientRepository.getClient(serviceOwner).getAcl().size());
+        assertEquals(initialAclSize + 3, clientRepository.getClient(serviceOwner).getAccessRights().size());
 
         // delete 2/3 of the added
         accessRightService.deleteServiceClientAccessRights(serviceOwner,
                 new HashSet<>(Arrays.asList("openapi-servicecode", "rest-servicecode")),
                 subsystemId);
         assertEquals(initialServiceClients + 1, countServiceClients(serviceOwner));
-        assertEquals(initialAclSize + 1, clientRepository.getClient(serviceOwner).getAcl().size());
+        assertEquals(initialAclSize + 1, clientRepository.getClient(serviceOwner).getAccessRights().size());
         assertEquals(initialAccessRights + 1, countAccessRights());
 
         // delete 1/3 remaining added
@@ -317,18 +332,16 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         int initialServiceClients = countServiceClients(serviceOwner);
 
         // add access to test-globalgroup
-        Set<XRoadId.Conf> globalGroupSubject = new HashSet<>(Arrays.asList(
+        Set<XRoadId.Conf> globalGroupSubject = new HashSet<>(List.of(
                 GlobalGroupId.Conf.create("FI", "test-globalgroup")));
         accessRightService.addEndpointAccessRights(11L, globalGroupSubject);
         accessRightService.addEndpointAccessRights(12L, globalGroupSubject);
         assertEquals(initialAccessRights + 2, countAccessRights());
         assertEquals(initialServiceClients + 1, countServiceClients(serviceOwner));
 
-        XRoadId ss6Id = serviceOwner;
-
         // remove access from ss6
         accessRightService.deleteServiceClientAccessRights(serviceOwner,
-                new HashSet<>(Arrays.asList("openapi3-test")), ss6Id);
+                new HashSet<>(List.of("openapi3-test")), serviceOwner);
         assertEquals(initialAccessRights + 2 - 4, countAccessRights());
         assertEquals(initialServiceClients + 1 - 1, countServiceClients(serviceOwner));
 
@@ -340,15 +353,9 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         ClientId serviceOwner = ClientId.Conf.create("FI", "GOV", "M2", "SS6");
         int initialServiceClientsSs6 = countServiceClients(serviceOwner);
 
-        XRoadId ss6Id = serviceOwner;
-
         // remove access from ss6. But ss6 does not have calculatePrime service
-        try {
-            accessRightService.deleteServiceClientAccessRights(serviceOwner,
-                    new HashSet<>(Arrays.asList("openapi3-test", "calculatePrime")), ss6Id);
-            fail("should throw exception");
-        } catch (ServiceNotFoundException expected) {
-        }
+        assertThrows(ServiceNotFoundException.class, () -> accessRightService.deleteServiceClientAccessRights(serviceOwner,
+                Set.of("openapi3-test", "calculatePrime"), serviceOwner));
         assertEquals(initialAccessRights, countAccessRights());
         assertEquals(initialServiceClientsSs6, countServiceClients(serviceOwner));
     }
@@ -356,19 +363,13 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
     @Test
     public void removeServiceClientAccessRightDoesNotExistSimple() throws Exception {
 
-
         ClientId serviceOwner = ClientId.Conf.create("FI", "GOV", "M2", "SS6");
-        XRoadId ss6Id = serviceOwner;
 
         // openapi3-test base endpoint access has been granted only to subject #8 = ss6
         // try to remove from subject ss1, which should fail
         ClientId.Conf ss1Id = TestUtils.getM1Ss1ClientId();
-        try {
-            accessRightService.deleteServiceClientAccessRights(serviceOwner,
-                    new HashSet<>(Arrays.asList("openapi3-test")), ss1Id);
-            fail("should throw exception");
-        } catch (AccessRightService.AccessRightNotFoundException expected) {
-        }
+        assertThrows(AccessRightService.AccessRightNotFoundException.class,
+                () -> accessRightService.deleteServiceClientAccessRights(serviceOwner, Set.of("openapi3-test"), ss1Id));
     }
 
     @Test
@@ -385,13 +386,9 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         assertEquals(2, dtos.size());
         assertEquals(initialAccessRights + 2, countAccessRights());
         assertEquals(initialServiceClientsSs1 + 1, countServiceClients(ss1Id));
-        try {
-            accessRightService.deleteServiceClientAccessRights(ss1Id,
-                    new HashSet<>(Arrays.asList("getRandom", "calculatePrime", "openapi-servicecode")),
-                    ss5Id);
-            fail("should throw exception since ss1 does not have access to openapi-servicecode");
-        } catch (AccessRightService.AccessRightNotFoundException expected) {
-        }
+        assertThrows(AccessRightService.AccessRightNotFoundException.class,
+                () -> accessRightService.deleteServiceClientAccessRights(ss1Id,
+                        Set.of("getRandom", "calculatePrime", "openapi-servicecode"), ss5Id));
     }
 
     @Test
@@ -400,7 +397,6 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         // test that remove succeeds when we dont try to remove openapi-servicecode
         // separate test since previous deleteServiceClientAccessRights
         // is not rolled back if in same test
-
 
         long initialAccessRights = countAccessRights();
         ClientId ss1Id = TestUtils.getM1Ss1ClientId();
@@ -436,12 +432,9 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         LocalGroupId group2Id = LocalGroupId.Conf.create(localGroupCode);
 
         // try to remove group2 access rights from ss6 services
-        try {
-            accessRightService.deleteServiceClientAccessRights(ss6Id,
-                    new HashSet<>(Arrays.asList("openapi3-test")), group2Id);
-            fail("should throw exception");
-        } catch (AccessRightService.AccessRightNotFoundException expected) {
-        }
+        assertThrows(AccessRightService.AccessRightNotFoundException.class, () ->
+                accessRightService.deleteServiceClientAccessRights(ss6Id,
+                        Set.of("openapi3-test"), group2Id));
     }
 
     @Test
@@ -460,7 +453,6 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
     @Test
     public void removeServiceClientAccessRightFromWrongServiceOwner() throws Exception {
 
-
         // bodyMassIndexOld belongs to ss2
         ClientId.Conf ss1Id = TestUtils.getM1Ss1ClientId();
         ClientId.Conf ss2Id = TestUtils.getM1Ss2ClientId(); // ss2
@@ -468,11 +460,32 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         ClientId.Conf subsystemId = TestUtils.getClientId(TestUtils.CLIENT_ID_SS5);
         accessRightService.addServiceClientAccessRights(ss2Id, getRandomCode, subsystemId);
 
-        try {
-            accessRightService.deleteServiceClientAccessRights(ss1Id, getRandomCode, subsystemId);
-            fail("should have thrown exception");
-        } catch (ServiceNotFoundException expected) {
-        }
+        assertThrows(ServiceNotFoundException.class, () ->
+                accessRightService.deleteServiceClientAccessRights(ss1Id, getRandomCode, subsystemId));
+    }
+
+    @Test
+    public void addServiceClientAccessRightsNotifiesCatalogInvalidation() throws Exception {
+        ClientId.Conf serviceOwner = TestUtils.getM1Ss1ClientId();
+        Set<String> serviceCodes = new HashSet<>(Arrays.asList("calculatePrime"));
+        ClientId.Conf subsystemId = TestUtils.getClientId(TestUtils.CLIENT_ID_SS5);
+
+        accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, subsystemId);
+
+        verify(catalogInvalidationNotifier).invalidateCatalogCaches();
+    }
+
+    @Test
+    public void addServiceClientAccessRightsForObsoleteFailsDoesNotNotifyCatalogInvalidation() throws Exception {
+        ClientId.Conf serviceOwner = TestUtils.getM1Ss1ClientId();
+        Set<String> serviceCodes = new HashSet<>(Arrays.asList(
+                "calculatePrime", "openapi-servicecode", "rest-servicecode"));
+
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes,
+                        TestUtils.OBSOLETE_SUBSYSTEM_ID));
+
+        verify(catalogInvalidationNotifier, never()).invalidateCatalogCaches();
     }
 
     @Test
@@ -483,20 +496,14 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
                 "calculatePrime", "openapi-servicecode", "rest-servicecode"));
 
         // try to add access to obsolete subsystem
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes,
-                    TestUtils.OBSOLETE_SUBSYSTEM_ID);
-            fail("should throw exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes,
+                        TestUtils.OBSOLETE_SUBSYSTEM_ID));
 
         // try to add access to obsolete globalgroup
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes,
-                    TestUtils.OBSOLETE_GGROUP_ID);
-            fail("should throw exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes,
+                        TestUtils.OBSOLETE_GGROUP_ID));
     }
 
     @Test
@@ -530,21 +537,14 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
 
         // adding duplicates should throw exceptions
         Set<String> duplicateServiceCode = new HashSet<>(Arrays.asList("calculatePrime"));
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, duplicateServiceCode, subsystemId);
-            fail("should throw exception");
-        } catch (AccessRightService.DuplicateAccessRightException expected) {
-        }
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, duplicateServiceCode, localGroupId);
-            fail("should throw exception");
-        } catch (AccessRightService.DuplicateAccessRightException expected) {
-        }
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, duplicateServiceCode, globalGroupId);
-            fail("should throw exception");
-        } catch (AccessRightService.DuplicateAccessRightException expected) {
-        }
+        assertThrows(AccessRightService.DuplicateAccessRightException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, duplicateServiceCode, subsystemId));
+
+        assertThrows(AccessRightService.DuplicateAccessRightException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, duplicateServiceCode, localGroupId));
+
+        assertThrows(AccessRightService.DuplicateAccessRightException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, duplicateServiceCode, globalGroupId));
     }
 
     @Test
@@ -553,28 +553,23 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         Set<String> serviceCodes = new HashSet<>(Arrays.asList(
                 "calculatePrime", "openapi-servicecode", "rest-servicecode"));
 
-        ClientId.Conf subsystemId = TestUtils.getClientId(TestUtils.CLIENT_ID_SS5);
-        LocalGroupId.Conf localGroupId = LocalGroupId.Conf.create("group2");
-        GlobalGroupId.Conf globalGroupId = GlobalGroupId.Conf.create(TestUtils.INSTANCE_FI, TestUtils.DB_GLOBALGROUP_CODE);
-        Set<XRoadId.Conf> subjectIds = new HashSet<>(Arrays.asList(subsystemId, localGroupId, globalGroupId));
+        ClientIdEntity subsystemId = TestUtils.getClientIdEntity(TestUtils.CLIENT_ID_SS5);
+        LocalGroupIdEntity localGroupId = LocalGroupIdEntity.create("group2");
+        GlobalGroupIdEntity globalGroupId = GlobalGroupIdEntity.create(TestUtils.INSTANCE_FI, TestUtils.DB_GLOBALGROUP_CODE);
+        Set<XRoadIdEntity> subjectIds = identifierService.getOrPersistXroadIdEntities(Set.of(subsystemId, localGroupId, globalGroupId));
 
-        ClientType ownerClient = clientRepository.getClient(serviceOwner);
+        ClientEntity ownerClient = clientRepository.getClient(serviceOwner);
 
-        List<EndpointType> endpoints = serviceCodes.stream()
-                .map(code -> {
-                    try {
-                        return endpointService.getServiceBaseEndpoint(ownerClient, code);
-                    } catch (EndpointNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
-                }).collect(Collectors.toList());
+        List<EndpointEntity> endpoints = serviceCodes.stream()
+                .map(code -> endpointService.getServiceBaseEndpointEntity(ownerClient, code))
+                .collect(Collectors.toList());
 
-        Map<XRoadId.Conf, List<ServiceClientAccessRightDto>> dtosById = accessRightService.addAccessRightsInternal(
+        Map<XRoadIdEntity, List<ServiceClientAccessRightDto>> dtosById = accessRightService.addAccessRightsInternal(
                 subjectIds, ownerClient, endpoints);
 
         // should have 3 subjects with 3 identical access rights each
         assertEquals(3, dtosById.size());
-        for (XRoadId subjectId: dtosById.keySet()) {
+        for (XRoadId subjectId : dtosById.keySet()) {
             List<ServiceClientAccessRightDto> accessRights = dtosById.get(subjectId);
             assertNotNull(accessRights);
             assertEquals(3, accessRights.size());
@@ -589,7 +584,7 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
     }
 
     private ServiceClientAccessRightDto findServiceClientAccessRightDto(String serviceCode,
-            List<ServiceClientAccessRightDto> accessRights) {
+                                                                        List<ServiceClientAccessRightDto> accessRights) {
         return accessRights.stream()
                 .filter(dto -> dto.getServiceCode().equals(serviceCode))
                 .findFirst()
@@ -604,11 +599,8 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         ClientId serviceOwner = TestUtils.getM1Ss2ClientId(); // ss2
         Set<String> serviceCodes = new HashSet<>(Arrays.asList("bodyMassIndexOld")); // belongs to ss2
         LocalGroupId.Conf localGroupId = LocalGroupId.Conf.create("group2"); // belongs to ss1
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, localGroupId);
-            fail("should have thrown exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, localGroupId));
     }
 
     @Test
@@ -632,26 +624,17 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         Set<String> serviceCodes = new HashSet<>(Arrays.asList(
                 "calculatePrime", "openapi-servicecode", "bodyMassIndexOld"));
         ClientId.Conf subsystemId = TestUtils.getClientId(TestUtils.CLIENT_ID_SS5);
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, subsystemId);
-            fail("should have thrown exception");
-        } catch (ServiceNotFoundException expected) {
-        }
+        assertThrows(ServiceNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, subsystemId));
 
         LocalGroupId.Conf localGroupId = LocalGroupId.Conf.create("group2");
         //SS2 does not have local group group2
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, localGroupId);
-            fail("should have thrown exception");
-        } catch (ServiceNotFoundException expected) {
-        }
+        assertThrows(ServiceNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, localGroupId));
 
         GlobalGroupId.Conf globalGroupId = GlobalGroupId.Conf.create(TestUtils.INSTANCE_FI, TestUtils.DB_GLOBALGROUP_CODE);
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, globalGroupId);
-            fail("should have thrown exception");
-        } catch (ServiceNotFoundException expected) {
-        }
+        assertThrows(ServiceNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, globalGroupId));
     }
 
     @Test
@@ -663,25 +646,16 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         Set<String> serviceCodes = new HashSet<>(Arrays.asList(
                 "calculatePrime", "openapi-servicecode", "rest-servicecode"));
         ClientId.Conf subsystemId = TestUtils.getClientId(TestUtils.CLIENT_ID_SS5);
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, subsystemId);
-            fail("should have thrown exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, subsystemId));
 
         LocalGroupId.Conf localGroupId = LocalGroupId.Conf.create("nonexistent-group");
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, localGroupId);
-            fail("should have thrown exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, localGroupId));
 
         GlobalGroupId.Conf globalGroupId = GlobalGroupId.Conf.create(TestUtils.INSTANCE_FI, TestUtils.DB_GLOBALGROUP_CODE);
-        try {
-            accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, globalGroupId);
-            fail("should have thrown exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addServiceClientAccessRights(serviceOwner, serviceCodes, globalGroupId));
     }
 
     @Test
@@ -740,20 +714,14 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
                 "calculatePrime", "openapi-servicecode", "rest-servicecode"));
 
         // try to add access to obsolete subsystem
-        try {
-            accessRightService.addSoapServiceAccessRights(serviceOwner, TestUtils.OBSOLETE_SCS_FULL_SERVICE_CODE,
-                    new HashSet<>(Arrays.asList(TestUtils.OBSOLETE_SUBSYSTEM_ID)));
-            fail("should throw exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addSoapServiceAccessRights(serviceOwner, TestUtils.OBSOLETE_SCS_FULL_SERVICE_CODE,
+                        Set.of(TestUtils.OBSOLETE_SUBSYSTEM_ID)));
 
         // try to add access to obsolete globalgroup
-        try {
-            accessRightService.addSoapServiceAccessRights(serviceOwner, TestUtils.OBSOLETE_SCS_FULL_SERVICE_CODE,
-                    new HashSet<>(Arrays.asList(TestUtils.OBSOLETE_GGROUP_ID)));
-            fail("should throw exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addSoapServiceAccessRights(serviceOwner, TestUtils.OBSOLETE_SCS_FULL_SERVICE_CODE,
+                        Set.of(TestUtils.OBSOLETE_GGROUP_ID)));
     }
 
     @Test
@@ -762,20 +730,14 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
                 "calculatePrime", "openapi-servicecode", "rest-servicecode"));
 
         // try to add access to obsolete subsystem
-        try {
-            accessRightService.addEndpointAccessRights(TestUtils.OBSOLETE_SCS_BASE_ENDPOINT_ID,
-                    new HashSet<>(Arrays.asList(TestUtils.OBSOLETE_SUBSYSTEM_ID)));
-            fail("should throw exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addEndpointAccessRights(TestUtils.OBSOLETE_SCS_BASE_ENDPOINT_ID,
+                        Set.of(TestUtils.OBSOLETE_SUBSYSTEM_ID)));
 
         // try to add access to obsolete globalgroup
-        try {
-            accessRightService.addEndpointAccessRights(TestUtils.OBSOLETE_SCS_BASE_ENDPOINT_ID,
-                    new HashSet<>(Arrays.asList(TestUtils.OBSOLETE_GGROUP_ID)));
-            fail("should throw exception");
-        } catch (ServiceClientNotFoundException expected) {
-        }
+        assertThrows(ServiceClientNotFoundException.class, () ->
+                accessRightService.addEndpointAccessRights(TestUtils.OBSOLETE_SCS_BASE_ENDPOINT_ID,
+                        Set.of(TestUtils.OBSOLETE_GGROUP_ID)));
     }
 
     @Test
@@ -786,7 +748,7 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
                 TestUtils.SUBSYSTEM2));
         subjectIds.add(GlobalGroupId.Conf.create(TestUtils.INSTANCE_FI, TestUtils.DB_GLOBALGROUP_CODE));
         subjectIds.add(LocalGroupId.Conf.create("group2"));
-        List<ServiceClientDto> dtos = accessRightService.addSoapServiceAccessRights(clientId,
+        List<ServiceClient> dtos = accessRightService.addSoapServiceAccessRights(clientId,
                 TestUtils.FULL_SERVICE_CALCULATE_PRIME, subjectIds);
         assertEquals(4, dtos.size());
     }
@@ -802,10 +764,10 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         subjectIds.add(ss3);
         subjectIds.add(GlobalGroupId.Conf.create(TestUtils.INSTANCE_FI, TestUtils.DB_GLOBALGROUP_CODE));
         subjectIds.add(LocalGroupId.Conf.create("group2"));
-        List<ServiceClientDto> dtos = accessRightService.addSoapServiceAccessRights(clientId,
+        List<ServiceClient> dtos = accessRightService.addSoapServiceAccessRights(clientId,
                 TestUtils.FULL_SERVICE_CALCULATE_PRIME, subjectIds);
         assertEquals(4, dtos.size());
-        ServiceClientDto persistedSs3 = dtos.stream()
+        ServiceClient persistedSs3 = dtos.stream()
                 .filter(accessRightHolderDto -> accessRightHolderDto.getSubjectId().equals(ss3))
                 .findFirst().get();
         ClientId ss3PersistedSubjectId = (ClientId) persistedSs3.getSubjectId();
@@ -842,9 +804,9 @@ public class AccessRightServiceIntegrationTest extends AbstractServiceIntegratio
         ClientId clientId = TestUtils.getM1Ss1ClientId();
         Set<XRoadId.Conf> subjectIds = new HashSet<>();
         subjectIds.add(LocalGroupId.Conf.create("group1")); // this is a LocalGroup with groupCode 'group1' in data.sql
-        List<ServiceClientDto> aclHolders = accessRightService.addSoapServiceAccessRights(clientId,
+        List<ServiceClient> aclHolders = accessRightService.addSoapServiceAccessRights(clientId,
                 TestUtils.FULL_SERVICE_CALCULATE_PRIME, subjectIds);
-        Optional<ServiceClientDto> addedLocalGroupServiceClient = aclHolders.stream()
+        Optional<ServiceClient> addedLocalGroupServiceClient = aclHolders.stream()
                 .filter(s -> "group1".equals(s.getLocalGroupCode()))
                 .findFirst();
         assertTrue(addedLocalGroupServiceClient.isPresent());

@@ -1,0 +1,35 @@
+---
+# The XRoadConfig DSL resolves DB overrides and packaged defaults only — env vars
+# and conf.d yaml are ignored — so these are seeded straight into the centerui
+# configuration_properties table. Deterministic upsert; restart xroad-center
+# because it resolved the DSL config before the rows existed.
+- name: seed dev-cadence configuration into centerui configuration_properties
+  become: true
+  command:
+    argv:
+      - /usr/share/xroad/scripts/db_property.sh
+      - set
+      - "{{ item.key }}"
+      - "{{ item.value }}"
+      - --yes
+  loop:
+    - key: xroad.admin-service.global-configuration-generation-rate-in-seconds
+      value: "10"
+    # See the identical setting in xroad-ss/tasks/seed-config-properties.yml —
+    # the Issuer Service's own outbound self-connect trust and DID publication
+    # need globalconf (approved DS TLS CAs) to propagate on the same shortened
+    # cadence, gated by this key rather than xroad.edc.web.https.trust.reload-interval-seconds.
+    - key: xroad.common-global-conf.refresh-rate
+      value: "5S"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: restart xroad-center to resolve the seeded configuration
+  systemd:
+    name: xroad-center
+    state: restarted
+
+- name: restart xroad-ds-issuer-service to resolve the seeded configuration
+  systemd:
+    name: xroad-ds-issuer-service
+    state: restarted

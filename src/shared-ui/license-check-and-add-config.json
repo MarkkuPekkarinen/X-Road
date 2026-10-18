@@ -1,8 +1,13 @@
 {
   "ignore": [
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "redocly.yaml",
     "build/",
     "build.gradle",
     ".gradle",
+    "gradle.lockfile",
+    "settings-gradle.lockfile",
     "**/*.md",
     "**/*.svg",
     "**/*.eot",
@@ -16,12 +21,16 @@
     "**/*.log",
     "**/.*",
     "src/openapi-types/",
+    "src/mock-openapi-types/",
     "**/openapi-types.ts",
+    "**/openapi-msw-paths.d.ts",
+    "**/*.gen.d.ts",
     "scripts/dtsgen-wrapper.js",
     "tests/unit/__snapshots__",
-    "build.gradle",
+    "build.gradle.kts",
     "build/**",
-    ".gradle/**"
+    ".gradle/**",
+    ".settings/**"
   ],
   "license": "LICENSE.txt",
   "licenseFormats": {

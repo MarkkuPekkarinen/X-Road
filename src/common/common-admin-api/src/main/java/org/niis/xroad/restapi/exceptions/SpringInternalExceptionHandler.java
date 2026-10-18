@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,14 +27,14 @@ package org.niis.xroad.restapi.exceptions;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.jspecify.annotations.Nullable;
 import org.niis.xroad.restapi.config.audit.AuditEventLoggingFacade;
 import org.niis.xroad.restapi.openapi.model.ErrorInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.Nullable;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -69,18 +69,18 @@ public class SpringInternalExceptionHandler extends ResponseEntityExceptionHandl
 
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(Exception ex, @Nullable Object body,
-            HttpHeaders headers, HttpStatus status,
-            WebRequest request) {
+                                                             HttpHeaders headers, HttpStatusCode status,
+                                                             WebRequest request) {
         auditEventLoggingFacade.auditLogFail(ex);
         log.error("exception caught", ex);
         ErrorInfo errorInfo = new ErrorInfo();
         Optional<Throwable> wrappedStatusCause = getWrappedStatusCarryingExceptionCause(ex);
         if (wrappedStatusCause.isPresent()) {
             status = getAnnotatedResponseStatus(wrappedStatusCause.get(), status);
-        } else if (ex instanceof MethodArgumentNotValidException) {
-            errorInfo.setError(validationErrorHelper.createError((MethodArgumentNotValidException) ex));
-        } else if (ex instanceof MethodArgumentTypeMismatchException) {
-            errorInfo.setError(validationErrorHelper.createError((MethodArgumentTypeMismatchException) ex));
+        } else if (ex instanceof MethodArgumentNotValidException manve) {
+            errorInfo.setError(validationErrorHelper.createError(manve));
+        } else if (ex instanceof MethodArgumentTypeMismatchException matme) {
+            errorInfo.setError(validationErrorHelper.createError(matme));
         }
 
         errorInfo.setStatus(status.value());
@@ -99,7 +99,7 @@ public class SpringInternalExceptionHandler extends ResponseEntityExceptionHandl
      */
     private Optional<Throwable> getWrappedStatusCarryingExceptionCause(Throwable t) {
         return ExceptionUtils.getThrowableList(t).stream()
-                .filter(e -> e instanceof WrappedStatusCarryingException)
+                .filter(WrappedStatusCarryingException.class::isInstance)
                 .findFirst();
     }
 }

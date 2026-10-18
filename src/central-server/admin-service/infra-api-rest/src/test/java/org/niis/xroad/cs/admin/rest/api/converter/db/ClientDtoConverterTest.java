@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,7 +27,6 @@ package org.niis.xroad.cs.admin.rest.api.converter.db;
 
 import ee.ria.xroad.common.junit.helper.WithInOrder;
 
-import io.vavr.control.Option;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -58,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.niis.xroad.common.core.exception.DeviationBuilder.trMetadata;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_CLASS_NOT_FOUND;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_NOT_FOUND;
 
@@ -234,7 +234,7 @@ public class ClientDtoConverterTest extends AbstractDtoConverterTest implements 
 
             assertThatThrownBy(testable)
                     .usingRecursiveComparison()
-                    .isEqualTo(new NotFoundException(MEMBER_CLASS_NOT_FOUND, "code", MEMBER_CLASS_CODE));
+                    .isEqualTo(new NotFoundException(MEMBER_CLASS_NOT_FOUND.build(trMetadata("code", MEMBER_CLASS_CODE))));
             inOrder().verify(inOrder -> {
                 inOrder.verify(clientDto).getClientId();
                 inOrder.verify(clientIdDtoConverter).fromDto(clientIdDto);
@@ -251,7 +251,7 @@ public class ClientDtoConverterTest extends AbstractDtoConverterTest implements 
             doReturn(subsystemClientId).when(clientIdDtoConverter).fromDto(clientIdDto);
             doReturn(XRoadIdDto.TypeEnum.SUBSYSTEM).when(clientIdDto).getType();
             doReturn(memberClientId).when(subsystemClientId).getMemberId();
-            doReturn(Option.of(xRoadMember)).when(memberService).findMember(memberClientId);
+            doReturn(Optional.of(xRoadMember)).when(memberService).findMember(memberClientId);
             doReturn(INSTANCE_ID).when(subsystemClientId).getXRoadInstance();
             doReturn(MEMBER_CLASS_CODE).when(subsystemClientId).getMemberClass();
             doReturn(MEMBER_CODE).when(subsystemClientId).getMemberCode();
@@ -294,14 +294,14 @@ public class ClientDtoConverterTest extends AbstractDtoConverterTest implements 
             doReturn(subsystemClientId).when(clientIdDtoConverter).fromDto(clientIdDto);
             doReturn(XRoadIdDto.TypeEnum.SUBSYSTEM).when(clientIdDto).getType();
             doReturn(memberClientId).when(subsystemClientId).getMemberId();
-            doReturn(Option.none()).when(memberService).findMember(memberClientId);
+            doReturn(Optional.empty()).when(memberService).findMember(memberClientId);
             doReturn(MEMBER_CODE).when(clientIdDto).getMemberCode();
 
             ThrowingCallable testable = () -> converter.fromDto(clientDto);
 
             assertThatThrownBy(testable)
                     .usingRecursiveComparison()
-                    .isEqualTo(new NotFoundException(MEMBER_NOT_FOUND, "code", MEMBER_CODE));
+                    .isEqualTo(new NotFoundException(MEMBER_NOT_FOUND.build(trMetadata("code", MEMBER_CODE))));
             inOrder().verify(inOrder -> {
                 inOrder.verify(clientDto).getClientId();
                 inOrder.verify(clientIdDtoConverter).fromDto(clientIdDto);

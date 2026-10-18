@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,15 +25,17 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
+import ee.ria.xroad.common.crypto.identifier.KeyAlgorithm;
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.commonui.SignerProxy.GeneratedCertRequestInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
-import ee.ria.xroad.signer.protocol.message.CertificateRequestFormat;
 
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.niis.xroad.restapi.exceptions.DeviationAwareRuntimeException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
+import org.niis.xroad.securityserver.restapi.config.KeyAlgorithmConfig;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.client.SignerRpcClient.GeneratedCertRequestInfo;
+import org.niis.xroad.signer.proto.CertificateRequestFormat;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -52,12 +54,15 @@ public class KeyAndCertificateRequestService {
 
     private final KeyService keyService;
     private final TokenCertificateService tokenCertificateService;
+    private final KeyAlgorithmConfig keyAlgorithmConfig;
 
     @Autowired
     public KeyAndCertificateRequestService(KeyService keyService,
-            TokenCertificateService tokenCertificateService) {
+                                           TokenCertificateService tokenCertificateService,
+                                           KeyAlgorithmConfig keyAlgorithmConfig) {
         this.keyService = keyService;
         this.tokenCertificateService = tokenCertificateService;
+        this.keyAlgorithmConfig = keyAlgorithmConfig;
     }
 
     /**
@@ -82,36 +87,46 @@ public class KeyAndCertificateRequestService {
      * @param caName
      * @param subjectFieldValues
      * @param csrFormat
+     * @param isAcmeOrder
      * @return
-     * @throws ActionNotPossibleException if add key or generate csr was not possible
-     * @throws ClientNotFoundException if client with {@code memberId} id was not found
-     * @throws CertificateAuthorityNotFoundException if ca authority with name {@code caName} does not exist
-     * @throws TokenNotFoundException if token with {@code tokenId} was not found
+     * @throws ActionNotPossibleException                if add key or generate csr was not possible
+     * @throws ClientNotFoundException                   if client with {@code memberId} id was not found
+     * @throws CertificateAuthorityNotFoundException     if ca authority with name {@code caName} does not exist
+     * @throws TokenNotFoundException                    if token with {@code tokenId} was not found
      * @throws DnFieldHelper.InvalidDnParameterException if required dn parameters were missing, or if there
-     * were some extra parameters
+     *                                                   were some extra parameters
      */
     public KeyAndCertRequestInfo addKeyAndCertRequest(String tokenId, String keyLabel,
-            ClientId.Conf memberId, KeyUsageInfo keyUsageInfo, String caName,
-            Map<String, String> subjectFieldValues, CertificateRequestFormat csrFormat)
+                                                      ClientId.Conf memberId, KeyUsageInfo keyUsageInfo, String caName,
+                                                      Map<String, String> subjectFieldValues, CertificateRequestFormat csrFormat,
+                                                      Boolean isAcmeOrder)
             throws ActionNotPossibleException,
-            ClientNotFoundException, CertificateAuthorityNotFoundException, TokenNotFoundException,
-            DnFieldHelper.InvalidDnParameterException {
+                   ClientNotFoundException, CertificateAuthorityNotFoundException, TokenNotFoundException,
+                   DnFieldHelper.InvalidDnParameterException, CertificateAlreadyExistsException, GlobalConfOutdatedException,
+                   CsrNotFoundException, TokenCertificateService.WrongCertificateUsageException, InvalidCertificateException,
+                   TokenCertificateService.AuthCertificateNotSupportedException {
 
-        KeyInfo keyInfo = keyService.addKey(tokenId, keyLabel);
+        KeyAlgorithm algorithm = switch (keyUsageInfo) {
+            case KEY_USAGE_UNSPECIFIED, UNRECOGNIZED -> KeyAlgorithm.RSA;
+            case SIGNING -> keyAlgorithmConfig.getSigningKeyAlgorithm();
+            case AUTHENTICATION -> keyAlgorithmConfig.getAuthenticationKeyAlgorithm();
+        };
+
+        KeyInfo keyInfo = keyService.addKey(tokenId, keyLabel, algorithm);
         GeneratedCertRequestInfo csrInfo;
         boolean csrGenerateSuccess = false;
         Exception csrGenerateException = null;
         try {
             csrInfo = tokenCertificateService.generateCertRequest(keyInfo.getId(),
                     memberId, keyUsageInfo, caName,
-                    subjectFieldValues, csrFormat);
+                    subjectFieldValues, csrFormat, isAcmeOrder);
             csrGenerateSuccess = true;
         } catch (KeyNotFoundException | WrongKeyUsageException e) {
             csrGenerateException = e;
             // since we just generated the key, neither of these should happen
             // these should only happen if someone else updated / deleted the key between
             // create key & generateCertRequest
-            throw new DeviationAwareRuntimeException(e, e.getErrorDeviation());
+            throw new InternalServerErrorException(e);
         } catch (Exception e) {
             csrGenerateException = e;
             throw e;
@@ -126,26 +141,20 @@ public class KeyAndCertificateRequestService {
             }
         }
         // get a new keyInfo that contains the csr
-        KeyInfo refreshedKeyInfo;
-        try {
-            refreshedKeyInfo = keyService.getKey(keyInfo.getId());
-        } catch (KeyNotFoundException e) {
-            throw new DeviationAwareRuntimeException(e, e.getErrorDeviation());
-        }
-        KeyAndCertRequestInfo info = new KeyAndCertRequestInfo(refreshedKeyInfo,
-                csrInfo.getCertReqId(),
-                csrInfo.getCertRequest(),
-                csrInfo.getFormat(),
-                csrInfo.getMemberId(),
-                csrInfo.getKeyUsage());
+        KeyInfo refreshedKeyInfo = keyService.getKey(keyInfo.getId());
 
-        return info;
+        return new KeyAndCertRequestInfo(refreshedKeyInfo,
+                csrInfo.certReqId(),
+                csrInfo.certRequest(),
+                csrInfo.format(),
+                csrInfo.memberId(),
+                csrInfo.keyUsage());
     }
 
     /**
      * Rollback key creation by deleting that key
      * @param rootCause root cause why we rollback, to log in case new exceptions would mask it
-     * @param keyId key id
+     * @param keyId     key id
      */
     private void tryRollbackCreateKey(Exception rootCause, String keyId) {
         // log error in case deleteKey throws an error, to not mask the original exception
@@ -153,12 +162,6 @@ public class KeyAndCertificateRequestService {
         try {
             keyService.deleteKeyAndIgnoreWarnings(keyId);
             rollbackSuccess = true;
-        } catch (GlobalConfOutdatedException e) {
-            // should not happen, since only thrown from unregister cert (which wont be done)
-            throw new DeviationAwareRuntimeException(e, e.getErrorDeviation());
-        } catch (KeyNotFoundException | ActionNotPossibleException e) {
-            // this should be rare situations since we just created the key -> not checked exceptions
-            throw new DeviationAwareRuntimeException(e, e.getErrorDeviation());
         } finally {
             if (!rollbackSuccess) {
                 log.error("csr generate failed, key create rollback also failed."

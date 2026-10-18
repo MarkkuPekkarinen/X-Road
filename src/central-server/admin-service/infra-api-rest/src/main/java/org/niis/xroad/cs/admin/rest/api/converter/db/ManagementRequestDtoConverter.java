@@ -1,21 +1,21 @@
-/**
+/*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,13 +28,19 @@ package org.niis.xroad.cs.admin.rest.api.converter.db;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.common.managementrequest.model.ManagementRequestType;
+import org.niis.xroad.cs.admin.api.domain.AddressChangeRequest;
 import org.niis.xroad.cs.admin.api.domain.AuthenticationCertificateDeletionRequest;
 import org.niis.xroad.cs.admin.api.domain.AuthenticationCertificateRegistrationRequest;
 import org.niis.xroad.cs.admin.api.domain.ClientDeletionRequest;
+import org.niis.xroad.cs.admin.api.domain.ClientDisableRequest;
+import org.niis.xroad.cs.admin.api.domain.ClientEnableRequest;
 import org.niis.xroad.cs.admin.api.domain.ClientId;
 import org.niis.xroad.cs.admin.api.domain.ClientRegistrationRequest;
+import org.niis.xroad.cs.admin.api.domain.ClientRenameRequest;
+import org.niis.xroad.cs.admin.api.domain.MaintenanceModeDisableRequest;
+import org.niis.xroad.cs.admin.api.domain.MaintenanceModeEnableRequest;
 import org.niis.xroad.cs.admin.api.domain.MemberId;
 import org.niis.xroad.cs.admin.api.domain.OwnerChangeRequest;
 import org.niis.xroad.cs.admin.api.domain.Request;
@@ -44,10 +50,16 @@ import org.niis.xroad.cs.admin.api.service.ManagementRequestService;
 import org.niis.xroad.cs.admin.rest.api.converter.model.ManagementRequestDtoTypeConverter;
 import org.niis.xroad.cs.admin.rest.api.converter.model.ManagementRequestOriginDtoConverter;
 import org.niis.xroad.cs.admin.rest.api.converter.model.ManagementRequestStatusConverter;
+import org.niis.xroad.cs.openapi.model.AddressChangeRequestDto;
 import org.niis.xroad.cs.openapi.model.AuthenticationCertificateDeletionRequestDto;
 import org.niis.xroad.cs.openapi.model.AuthenticationCertificateRegistrationRequestDto;
 import org.niis.xroad.cs.openapi.model.ClientDeletionRequestDto;
+import org.niis.xroad.cs.openapi.model.ClientDisableRequestDto;
+import org.niis.xroad.cs.openapi.model.ClientEnableRequestDto;
 import org.niis.xroad.cs.openapi.model.ClientRegistrationRequestDto;
+import org.niis.xroad.cs.openapi.model.ClientRenameRequestDto;
+import org.niis.xroad.cs.openapi.model.MaintenanceModeDisableRequestDto;
+import org.niis.xroad.cs.openapi.model.MaintenanceModeEnableRequestDto;
 import org.niis.xroad.cs.openapi.model.ManagementRequestDto;
 import org.niis.xroad.cs.openapi.model.ManagementRequestTypeDto;
 import org.niis.xroad.cs.openapi.model.ManagementRequestsFilterDto;
@@ -62,7 +74,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static ee.ria.xroad.common.util.Fn.self;
 import static java.util.stream.Collectors.toList;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MR_UNKNOWN_TYPE;
 
@@ -80,37 +91,29 @@ public class ManagementRequestDtoConverter extends DtoConverter<Request, Managem
     private final ManagementRequestDtoTypeConverter requestTypeConverter;
 
     public ManagementRequestDto toDto(Request request) {
-        ManagementRequestDto result;
+        ManagementRequestDto result = switch (request) {
+            case AuthenticationCertificateRegistrationRequest req -> new AuthenticationCertificateRegistrationRequestDto()
+                    .serverAddress(req.getAddress())
+                    .authenticationCertificate(req.getAuthCert());
+            case AuthenticationCertificateDeletionRequest req -> new AuthenticationCertificateDeletionRequestDto()
+                    .authenticationCertificate(req.getAuthCert());
+            case ClientRegistrationRequest req -> new ClientRegistrationRequestDto()
+                    .clientId(clientIdConverter.convertId(req.getClientId()));
+            case ClientDeletionRequest req -> new ClientDeletionRequestDto().clientId(clientIdConverter.convertId(req.getClientId()));
+            case ClientDisableRequest req -> new ClientDisableRequestDto().clientId(clientIdConverter.convertId(req.getClientId()));
+            case ClientEnableRequest req -> new ClientEnableRequestDto().clientId(clientIdConverter.convertId(req.getClientId()));
+            case ClientRenameRequest req -> new ClientRenameRequestDto()
+                    .clientId(clientIdConverter.convertId(req.getClientId()))
+                    .subsystemName(req.getSubsystemName());
+            case OwnerChangeRequest req -> new OwnerChangeRequestDto().clientId(clientIdConverter.convertId(req.getClientId()));
+            case AddressChangeRequest req -> new AddressChangeRequestDto().serverAddress(req.getServerAddress());
+            case MaintenanceModeEnableRequest req -> new MaintenanceModeEnableRequestDto().message(req.getComments());
+            case MaintenanceModeDisableRequest ignored -> new MaintenanceModeDisableRequestDto();
+            case null -> throw new BadRequestException(MR_UNKNOWN_TYPE.build());
+        };
 
-        if (request instanceof AuthenticationCertificateRegistrationRequest) {
-            AuthenticationCertificateRegistrationRequest req = (AuthenticationCertificateRegistrationRequest) request;
-            result = self(new AuthenticationCertificateRegistrationRequestDto(), self -> {
-                self.setServerAddress(req.getAddress());
-                self.setAuthenticationCertificate(req.getAuthCert());
-            });
-
-        } else if (request instanceof AuthenticationCertificateDeletionRequest) {
-            AuthenticationCertificateDeletionRequest req = (AuthenticationCertificateDeletionRequest) request;
-            result = self(new AuthenticationCertificateDeletionRequestDto(), self -> self.setAuthenticationCertificate(req.getAuthCert()));
-
-        } else if (request instanceof ClientRegistrationRequest) {
-            ClientRegistrationRequest req = (ClientRegistrationRequest) request;
-            result = self(new ClientRegistrationRequestDto(), self -> self.setClientId(clientIdConverter.convertId(req.getClientId())));
-
-        } else if (request instanceof ClientDeletionRequest) {
-            ClientDeletionRequest req = (ClientDeletionRequest) request;
-            result = self(new ClientDeletionRequestDto(), self -> self.setClientId(clientIdConverter.convertId(req.getClientId())));
-
-        } else if (request instanceof OwnerChangeRequest) {
-            OwnerChangeRequest req = (OwnerChangeRequest) request;
-            result = self(new OwnerChangeRequestDto(), self -> self.setClientId(clientIdConverter.convertId(req.getClientId())));
-
-        } else {
-            throw new ValidationFailureException(MR_UNKNOWN_TYPE, request);
-        }
-
-        if (request instanceof RequestWithProcessing) {
-            result.status(statusMapper.convert(((RequestWithProcessing) request).getProcessingStatus()));
+        if (request instanceof RequestWithProcessing req) {
+            result.status(statusMapper.convert(req.getProcessingStatus()));
         }
 
         return result.id(request.getId())
@@ -122,51 +125,55 @@ public class ManagementRequestDtoConverter extends DtoConverter<Request, Managem
     }
 
     public Request fromDto(ManagementRequestDto request) {
-        if (request instanceof AuthenticationCertificateRegistrationRequestDto) {
-            AuthenticationCertificateRegistrationRequestDto req =
-                    (AuthenticationCertificateRegistrationRequestDto) request;
-            return new AuthenticationCertificateRegistrationRequest(
+        return switch (request) {
+            case AuthenticationCertificateRegistrationRequestDto req -> new AuthenticationCertificateRegistrationRequest(
                     originMapper.convert(req.getOrigin()),
                     securityServerIdMapper.convertId(req.getSecurityServerId()))
-
                     .setAuthCert(req.getAuthenticationCertificate())
                     .setAddress(req.getServerAddress());
-
-
-        } else if (request instanceof AuthenticationCertificateDeletionRequestDto) {
-            AuthenticationCertificateDeletionRequestDto req = (AuthenticationCertificateDeletionRequestDto) request;
-            return new AuthenticationCertificateDeletionRequest(
+            case AuthenticationCertificateDeletionRequestDto req -> new AuthenticationCertificateDeletionRequest(
                     originMapper.convert(req.getOrigin()),
                     securityServerIdMapper.convertId(req.getSecurityServerId()))
                     .setAuthCert(req.getAuthenticationCertificate());
-
-
-        } else if (request instanceof ClientRegistrationRequestDto) {
-            ClientRegistrationRequestDto req = (ClientRegistrationRequestDto) request;
-
-            return new ClientRegistrationRequest(
+            case ClientRegistrationRequestDto req -> new ClientRegistrationRequest(
                     originMapper.convert(req.getOrigin()),
-
                     securityServerIdMapper.convertId(req.getSecurityServerId()),
-                    fromEncodedId(req.getClientId()));
-
-        } else if (request instanceof ClientDeletionRequestDto) {
-            ClientDeletionRequestDto req = (ClientDeletionRequestDto) request;
-            return new ClientDeletionRequest(
+                    fromEncodedId(req.getClientId()), req.getSubsystemName());
+            case ClientDeletionRequestDto req -> new ClientDeletionRequest(
                     originMapper.convert(req.getOrigin()),
                     securityServerIdMapper.convertId(req.getSecurityServerId()),
                     fromEncodedId(req.getClientId()));
-
-        } else if (request instanceof OwnerChangeRequestDto) {
-            OwnerChangeRequestDto req = (OwnerChangeRequestDto) request;
-            return new OwnerChangeRequest(
+            case ClientDisableRequestDto req -> new ClientDisableRequest(
                     originMapper.convert(req.getOrigin()),
                     securityServerIdMapper.convertId(req.getSecurityServerId()),
                     fromEncodedId(req.getClientId()));
-
-        } else {
-            throw new ValidationFailureException(MR_UNKNOWN_TYPE, request);
-        }
+            case ClientEnableRequestDto req -> new ClientEnableRequest(
+                    originMapper.convert(req.getOrigin()),
+                    securityServerIdMapper.convertId(req.getSecurityServerId()),
+                    fromEncodedId(req.getClientId()));
+            case ClientRenameRequestDto req -> new ClientRenameRequest(
+                    originMapper.convert(req.getOrigin()),
+                    securityServerIdMapper.convertId(req.getSecurityServerId()),
+                    fromEncodedId(req.getClientId()),
+                    req.getSubsystemName());
+            case OwnerChangeRequestDto req -> new OwnerChangeRequest(
+                    originMapper.convert(req.getOrigin()),
+                    securityServerIdMapper.convertId(req.getSecurityServerId()),
+                    fromEncodedId(req.getClientId()));
+            case AddressChangeRequestDto req -> new AddressChangeRequest(
+                    originMapper.convert(req.getOrigin()),
+                    securityServerIdMapper.convertId(req.getSecurityServerId()),
+                    req.getServerAddress());
+            case MaintenanceModeEnableRequestDto req -> new MaintenanceModeEnableRequest(
+                    originMapper.convert(req.getOrigin()),
+                    securityServerIdMapper.convertId(req.getSecurityServerId()),
+                    req.getMessage());
+            case MaintenanceModeDisableRequestDto req -> new MaintenanceModeDisableRequest(
+                    originMapper.convert(req.getOrigin()),
+                    securityServerIdMapper.convertId(req.getSecurityServerId()));
+            case null -> throw new BadRequestException(MR_UNKNOWN_TYPE.build());
+            default -> throw new BadRequestException(MR_UNKNOWN_TYPE.build(request.getClass().getName()));
+        };
     }
 
     public ClientId fromEncodedId(String encodedId) {

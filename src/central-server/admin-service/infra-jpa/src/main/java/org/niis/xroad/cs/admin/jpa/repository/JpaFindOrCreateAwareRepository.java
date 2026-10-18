@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,12 +26,14 @@
  */
 package org.niis.xroad.cs.admin.jpa.repository;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.Id;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.niis.xroad.common.exception.DataIntegrityException;
+import org.niis.xroad.common.exception.ConflictException;
 import org.niis.xroad.cs.admin.api.exception.ErrorMessage;
 import org.niis.xroad.cs.admin.core.entity.AuditableEntity;
 import org.niis.xroad.cs.admin.core.entity.AuditableEntity_;
-import org.niis.xroad.cs.admin.core.entity.EntityExistsAwareEntity;
 import org.niis.xroad.cs.admin.core.repository.FindOrCreateAwareRepository;
 import org.niis.xroad.cs.admin.jpa.example.ExampleMatcherExt;
 import org.springframework.data.domain.Example;
@@ -39,10 +41,6 @@ import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.data.repository.query.FluentQuery;
-
-import javax.persistence.Column;
-import javax.persistence.EntityNotFoundException;
-import javax.persistence.Id;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -78,14 +76,13 @@ public interface JpaFindOrCreateAwareRepository<ENTITY, ID> extends JpaRepositor
 
     /**
      * Create an equivalent model to the repository.
-     *
      * @param model        the model to create
      * @param errorMessage the error message to use if the model already exists
      * @return a persisted model
      */
     default ENTITY create(ENTITY model, ErrorMessage errorMessage) {
         Function<ENTITY, ENTITY> ensureNotPresent = entity -> {
-            throw new DataIntegrityException(errorMessage, entity.toString());
+            throw new ConflictException(errorMessage.build(entity.toString()));
         };
 
         return findBy(Example.of(model, exampleMatcher(model)), FluentQuery.FetchableFluentQuery::first)
@@ -98,12 +95,7 @@ public interface JpaFindOrCreateAwareRepository<ENTITY, ID> extends JpaRepositor
 
         Optional<String> idColumnName = getIdColumnName(model);
         if (idColumnName.isPresent()) {
-            boolean isPersisted = model instanceof EntityExistsAwareEntity && ((EntityExistsAwareEntity) model).exists();
-            if (isPersisted) {
-                return exampleMatcher.withOnlyPaths(idColumnName.get());
-            } else {
-                exampleMatcher = exampleMatcher.withIgnorePaths(idColumnName.get());
-            }
+            exampleMatcher = exampleMatcher.withIgnorePaths(idColumnName.get());
         }
 
         boolean shouldExcludeTimestamps = model instanceof AuditableEntity;

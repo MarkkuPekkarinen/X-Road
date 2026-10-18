@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -63,4 +63,5 @@ public interface SecurityServerService {
 
     void deleteAuthCertificate(SecurityServerId serverId, Integer certificateId);
 
+    void deleteClient(SecurityServerId securityServerId, ClientId clientId);
 }

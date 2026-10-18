@@ -1,81 +1,101 @@
 # X-Road: External Load Balancer Installation Guide
 
-Version: 1.17 
+Version: 1.33
 Doc. ID: IG-XLB
 
 
-| Date       | Version | Description                                                                                                              | Author                       |
-|------------|---------|--------------------------------------------------------------------------------------------------------------------------|------------------------------|
-| 22.3.2017  | 1.0     | Initial version                                                                                                          | Jarkko Hyöty, Olli Lindgren  |
-| 27.4.2017  | 1.1     | Added slave node user group instructions                                                                                 | Tatu Repo                    |
-| 15.6.2017  | 1.2     | Added health check interface maintenance mode                                                                            | Tatu Repo                    |
-| 21.6.2017  | 1.3     | Added chapter 7 on [upgrading the security server cluster](#7-upgrading-a-clustered-x-road-security-server-installation) | Olli Lindgren                |
-| 02.03.2018 | 1.4     | Added uniform terms and conditions reference                                                                             | Tatu Repo                    |
-| 15.11.2018 | 1.5     | Updates for Ubuntu 18.04 support                                                                                         | Jarkko Hyöty                 |
-| 20.12.2018 | 1.6     | Update upgrade instructions                                                                                              | Jarkko Hyöty                 |
-| 11.09.2019 | 1.7     | Remove Ubuntu 14.04 support                                                                                              | Jarkko Hyöty                 |
-| 08.10.2020 | 1.8     | Added notes about API keys and caching                                                                                   | Janne Mattila                |
-| 19.10.2020 | 1.9     | Remove xroad-jetty and nginx mentions and add xroad-proxy-ui-api                                                         | Caro Hautamäki               |
-| 19.10.2020 | 1.10    | Added information about management REST API permissions                                                                  | Petteri Kivimäki             |
-| 23.12.2020 | 1.11    | Updates for Ubuntu 20.04 support                                                                                         | Jarkko Hyöty                 |
-| 02.07.2021 | 1.12    | Updates for state sync                                                                                                   | Jarkko Hyöty                 |
-| 25.08.2021 | 1.13    | Update X-Road references from version 6 to 7                                                                             | Caro Hautamäki               |
-| 17.09.2021 | 1.14    | Add note about the proxy health check now also checking global conf validity                                             | Caro Hautamäki               |
-| 17.06.2022 | 1.15    | Replace the word "replica" with "secondary"                                                                              | Petteri Kivimäki             |
-| 26.09.2022 | 1.16    | Remove Ubuntu 18.04 support                                                                                              | Andres Rosenthal             |
-| 01.03.2023 | 1.17    | Updates for user groups in secondary nodes                                                                               | Petteri Kivimäki             |
+| Date       | Version | Description                                                                                                              | Author                      |
+|------------|---------|--------------------------------------------------------------------------------------------------------------------------|-----------------------------|
+| 22.3.2017  | 1.0     | Initial version                                                                                                          | Jarkko Hyöty, Olli Lindgren |
+| 27.4.2017  | 1.1     | Added slave node user group instructions                                                                                 | Tatu Repo                   |
+| 15.6.2017  | 1.2     | Added health check interface maintenance mode                                                                            | Tatu Repo                   |
+| 21.6.2017  | 1.3     | Added chapter 7 on [upgrading the Security Server cluster](#7-upgrading-a-clustered-x-road-security-server-installation) | Olli Lindgren               |
+| 02.03.2018 | 1.4     | Added uniform terms and conditions reference                                                                             | Tatu Repo                   |
+| 15.11.2018 | 1.5     | Updates for Ubuntu 18.04 support                                                                                         | Jarkko Hyöty                |
+| 20.12.2018 | 1.6     | Update upgrade instructions                                                                                              | Jarkko Hyöty                |
+| 11.09.2019 | 1.7     | Remove Ubuntu 14.04 support                                                                                              | Jarkko Hyöty                |
+| 08.10.2020 | 1.8     | Added notes about API keys and caching                                                                                   | Janne Mattila               |
+| 19.10.2020 | 1.9     | Remove xroad-jetty and nginx mentions and add xroad-proxy-ui-api                                                         | Caro Hautamäki              |
+| 19.10.2020 | 1.10    | Added information about management REST API permissions                                                                  | Petteri Kivimäki            |
+| 23.12.2020 | 1.11    | Updates for Ubuntu 20.04 support                                                                                         | Jarkko Hyöty                |
+| 02.07.2021 | 1.12    | Updates for state sync                                                                                                   | Jarkko Hyöty                |
+| 25.08.2021 | 1.13    | Update X-Road references from version 6 to 7                                                                             | Caro Hautamäki              |
+| 17.09.2021 | 1.14    | Add note about the proxy health check now also checking global conf validity                                             | Caro Hautamäki              |
+| 17.06.2022 | 1.15    | Replace the word "replica" with "secondary"                                                                              | Petteri Kivimäki            |
+| 26.09.2022 | 1.16    | Remove Ubuntu 18.04 support                                                                                              | Andres Rosenthal            |
+| 01.03.2023 | 1.17    | Updates for user groups in secondary nodes                                                                               | Petteri Kivimäki            |
+| 20.12.2023 | 1.18    | Added RHEL 9                                                                                                             | Justas Samuolis             |
+| 12.01.2024 | 1.19    | RHEL PostgreSQL 12 support                                                                                               | Eneli Reimets               |
+| 16.02.2024 | 1.20    | RHEL PostgreSQL 13 support                                                                                               | Eneli Reimets               |
+| 19.04.2024 | 1.21    | Simplified creation of PostgreSQL serverconf service for RHEL 8, 9 and added warning about SELinux policy                | Eneli Reimets               |
+| 26.04.2024 | 1.22    | Added Ubuntu 24.04 support                                                                                               | Madis Loitmaa               |
+| 16.08.2024 | 1.23    | Added assumption that the load balancer supports TLS passthrough                                                         | Petteri Kivimäki            |
+| 06.09.2024 | 1.24    | Updated RHEL default configuration files location                                                                        | Eneli Reimets               |
+| 17.12.2024 | 1.25    | When adding user xroad-slave, the home directory must be explicitly added for Ubuntu                                     | Eneli Reimets               |
+| 17.03.2025 | 1.26    | Syntax and styling                                                                                                       | Pauline Dimmek              |
+| 02.04.2025 | 1.27    | Added Proxy memory health check paragraph                                                                                | Mikk-Erik Bachmann          |
+| 06.05.2025 | 1.28    | Added more details about the soft token status check result caching                                                      | Petteri Kivimäki            |
+| 01.08.2025 | 1.29    | Fix a broken link                                                                                                        | Petteri Kivimäki            |
+| 25.02.2026 | 1.30    | Update PostgreSQL to version 15 on RHEL                                                                                  | Ričardas Bučiūnas           |
+| 02.03.2026 | 1.31    | Fix broken link                                                                                                          | Petteri Kivimäki            |
+| 22.04.2026 | 1.32    | Remove RHEL 8 and add RHEL 10 support                                                                                    | Eneli Reimets               |
+| 22.05.2026 | 1.33    | Added ACME HTTP challenge port clarification for secondaries                                                             | Mikk-Erik Bachmann          |
+
 ## Table of Contents
 
 <!-- toc -->
 <!-- vim-markdown-toc GFM -->
 
-* [License](#license)
-* [1. Introduction](#1-introduction)
-  * [1.1 Target Audience](#11-target-audience)
-  * [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
-  * [1.3 References](#13-references)
-* [2. Overview](#2-overview)
-  * [2.1 Goals and assumptions](#21-goals-and-assumptions)
-    * [2.1.1 Basic assumptions about the load balanced environment](#211-basic-assumptions-about-the-load-balanced-environment)
-    * [2.1.2 Consequences of the selected implementation model](#212-consequences-of-the-selected-implementation-model)
-  * [2.2 Communication with external servers and services: The cluster from the point of view of a client or service](#22-communication-with-external-servers-and-services-the-cluster-from-the-point-of-view-of-a-client-or-service)
-  * [2.3 State replication from the primary to the secondaries](#23-state-replication-from-the-primary-to-the-secondaries)
-    * [2.3.1 Replicated state](#231-replicated-state)
-      * [2.3.1.1 `serverconf` database replication](#2311-serverconf-database-replication)
-      * [2.3.1.2 Key configuration and software token replication from `/etc/xroad/signer/*`](#2312-key-configuration-and-software-token-replication-from-etcxroadsigner)
-      * [2.3.1.3 Other server configuration parameters from `/etc/xroad/*`](#2313-other-server-configuration-parameters-from-etcxroad)
-    * [2.3.2 Non-replicated state](#232-non-replicated-state)
-      * [2.3.2.1 `messagelog` database](#2321-messagelog-database)
-      * [2.3.2.2 OCSP responses from `/var/cache/xroad/`](#2322-ocsp-responses-from-varcachexroad)
-* [3. X-Road Installation and configuration](#3-x-road-installation-and-configuration)
-  * [3.1 Prerequisites](#31-prerequisites)
-  * [3.2 primary installation](#32-primary-installation)
-  * [3.3 Secondary installation](#33-secondary-installation)
-  * [3.4 Health check service configuration](#34-health-check-service-configuration)
-    * [3.4.1 Known check result inconsistencies vs. actual state](#341-known-check-result-inconsistencies-vs-actual-state)
-    * [3.4.2 Health check examples](#342-health-check-examples)
-* [4. Database replication setup](#4-database-replication-setup)
-  * [4.1 Setting up TLS certificates for database authentication](#41-setting-up-tls-certificates-for-database-authentication)
-  * [4.2 Creating a separate PostgreSQL instance for the `serverconf` database](#42-creating-a-separate-postgresql-instance-for-the-serverconf-database)
-    * [4.2.1 on RHEL](#421-on-rhel)
-    * [4.2.2 on Ubuntu](#422-on-ubuntu)
-  * [4.3 Configuring the primary instance for replication](#43-configuring-the-primary-instance-for-replication)
-  * [4.4 Configuring the secondary instance for replication](#44-configuring-the-secondary-instance-for-replication)
-* [5. Configuring data replication with rsync over SSH](#5-configuring-data-replication-with-rsync-over-ssh)
-  * [5.1 Set up SSH between secondaries and the primary](#51-set-up-ssh-between-secondaries-and-the-primary)
-  * [5.2 Set up periodic configuration synchronization on the secondary nodes](#52-set-up-periodic-configuration-synchronization-on-the-secondary-nodes)
-    * [5.2.1 Use systemd for configuration synchronization](#521-use-systemd-for-configuration-synchronization)
-  * [5.3 Set up log rotation for the sync log on the secondary nodes](#53-set-up-log-rotation-for-the-sync-log-on-the-secondary-nodes)
-* [6. Verifying the setup](#6-verifying-the-setup)
-  * [6.1 Verifying rsync+ssh replication](#61-verifying-rsyncssh-replication)
-  * [6.2 Verifying database replication](#62-verifying-database-replication)
-  * [6.3 Verifying replication from the admin user interface](#63-verifying-replication-from-the-admin-user-interface)
-* [7. Upgrading a clustered X-Road security server installation](#7-upgrading-a-clustered-x-road-security-server-installation)
-  * [7.1 Offline upgrade](#71-offline-upgrade)
-  * [7.2 Online rolling upgrade](#72-online-rolling-upgrade)
-    * [7.2.1 Pausing the database and configuration synchronization](#721-pausing-the-database-and-configuration-synchronization)
-    * [7.2.2 Upgrading the primary](#722-upgrading-the-primary)
-    * [7.2.3 Upgrade a single secondary node](#723-upgrade-a-single-secondary-node)
+- [X-Road: External Load Balancer Installation Guide](#x-road-external-load-balancer-installation-guide)
+  - [Table of Contents](#table-of-contents)
+  - [License](#license)
+  - [1. Introduction](#1-introduction)
+    - [1.1 Target Audience](#11-target-audience)
+    - [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
+    - [1.3 References](#13-references)
+  - [2. Overview](#2-overview)
+    - [2.1 Goals and assumptions](#21-goals-and-assumptions)
+      - [2.1.1 Basic assumptions about the load balanced environment](#211-basic-assumptions-about-the-load-balanced-environment)
+      - [2.1.2 Consequences of the selected implementation model](#212-consequences-of-the-selected-implementation-model)
+    - [2.2 Communication with external servers and services: The cluster from the point of view of a client or service](#22-communication-with-external-servers-and-services-the-cluster-from-the-point-of-view-of-a-client-or-service)
+    - [2.3 State replication from the primary to the secondaries](#23-state-replication-from-the-primary-to-the-secondaries)
+      - [2.3.1 Replicated state](#231-replicated-state)
+        - [2.3.1.1 `serverconf` database replication](#2311-serverconf-database-replication)
+        - [2.3.1.2 Key configuration and software token replication from `/etc/xroad/signer/*`](#2312-key-configuration-and-software-token-replication-from-etcxroadsigner)
+        - [2.3.1.3 Other server configuration parameters from `/etc/xroad/*`](#2313-other-server-configuration-parameters-from-etcxroad)
+      - [2.3.2 Non-replicated state](#232-non-replicated-state)
+        - [2.3.2.1 `messagelog` database](#2321-messagelog-database)
+        - [2.3.2.2 OCSP responses from `/var/cache/xroad/`](#2322-ocsp-responses-from-varcachexroad)
+  - [3. X-Road Installation and configuration](#3-x-road-installation-and-configuration)
+    - [3.1 Prerequisites](#31-prerequisites)
+    - [3.2 Primary installation](#32-primary-installation)
+    - [3.3 Secondary installation](#33-secondary-installation)
+    - [3.4 Health check service configuration](#34-health-check-service-configuration)
+      - [3.4.1 Known check result inconsistencies vs. actual state](#341-known-check-result-inconsistencies-vs-actual-state)
+      - [3.4.2 Health check examples](#342-health-check-examples)
+      - [3.4.3 Proxy memory health check](#343-proxy-memory-health-check)
+  - [4. Database replication setup](#4-database-replication-setup)
+    - [4.1 Setting up TLS certificates for database authentication](#41-setting-up-tls-certificates-for-database-authentication)
+    - [4.2 Creating a separate PostgreSQL instance for the `serverconf` database](#42-creating-a-separate-postgresql-instance-for-the-serverconf-database)
+      - [4.2.1 on RHEL](#421-on-rhel)
+      - [4.2.2 on Ubuntu](#422-on-ubuntu)
+    - [4.3 Configuring the primary instance for replication](#43-configuring-the-primary-instance-for-replication)
+    - [4.4 Configuring the secondary instance for replication](#44-configuring-the-secondary-instance-for-replication)
+  - [5. Configuring data replication with rsync over SSH](#5-configuring-data-replication-with-rsync-over-ssh)
+    - [5.1 Set up SSH between secondaries and the primary](#51-set-up-ssh-between-secondaries-and-the-primary)
+    - [5.2 Set up periodic configuration synchronization on the secondary nodes](#52-set-up-periodic-configuration-synchronization-on-the-secondary-nodes)
+      - [5.2.1 Use systemd for configuration synchronization](#521-use-systemd-for-configuration-synchronization)
+    - [5.3 Set up log rotation for the sync log on the secondary nodes](#53-set-up-log-rotation-for-the-sync-log-on-the-secondary-nodes)
+  - [6. Verifying the setup](#6-verifying-the-setup)
+    - [6.1 Verifying rsync+ssh replication](#61-verifying-rsyncssh-replication)
+    - [6.2 Verifying database replication](#62-verifying-database-replication)
+    - [6.3 Verifying replication from the admin user interface](#63-verifying-replication-from-the-admin-user-interface)
+  - [7. Upgrading a clustered X-Road Security Server installation](#7-upgrading-a-clustered-x-road-security-server-installation)
+    - [7.1 Offline upgrade](#71-offline-upgrade)
+    - [7.2 Online rolling upgrade](#72-online-rolling-upgrade)
+      - [7.2.1 Pausing the database and configuration synchronization](#721-pausing-the-database-and-configuration-synchronization)
+      - [7.2.2 Upgrading the primary](#722-upgrading-the-primary)
+      - [7.2.3 Upgrade a single secondary node](#723-upgrade-a-single-secondary-node)
 
 <!-- vim-markdown-toc -->
 <!-- tocstop -->
@@ -89,8 +109,8 @@ license, visit http://creativecommons.org/licenses/by-sa/3.0/.
 
 ### 1.1 Target Audience
 
-The intended audience of this installation guide are the X-Road security server administrators responsible for installing
-and configuring X-Road security servers to use external load balancing. The document is intended for readers with a good
+The intended audience of this installation guide are the X-Road Security Server administrators responsible for installing
+and configuring X-Road Security Servers to use external load balancing. The document is intended for readers with a good
 knowledge of Linux server management, computer networks, database administration, clustered environments and the X-Road
 functioning principles.
 
@@ -100,18 +120,18 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 ### 1.3 References
 
-| Document Id    |  Document                                                                                |
-|:--------------:|:-----------------------------------------------------------------------------------------|
-| \[SS-CLUSTER\] | [Readme: Security server cluster setup with Ansible](../../../ansible/ss_cluster/README.md) |
-| \[IG-SS\] | [X-Road: Security Server Installation Guide](../ig-ss_x-road_v6_security_server_installation_guide.md) |
-| \[UG-SS\] | [X-Road 7 Security Server User Guide](../ug-ss_x-road_6_security_server_user_guide.md) |
-| <a name="Ref_TERMS"></a>\[TA-TERMS\] | [X-Road Terms and Abbreviations](../../terms_x-road_docs.md)
+|             Document Id              | Document                                                                                                                                   |
+| :----------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------- |
+|            \[SS-CLUSTER\]            | [Readme: Security Server cluster setup with Ansible](https://github.com/nordic-institute/X-Road/blob/develop/development/ansible/ss_cluster/README.md) |
+|              \[IG-SS\]               | [X-Road: Security Server Installation Guide](../ig-ss_x-road_v6_security_server_installation_guide.md)                                     |
+|              \[UG-SS\]               | [X-Road 7 Security Server User Guide](../ug-ss_x-road_6_security_server_user_guide.md)                                                     |
+| <a name="Ref_TERMS"></a>\[TA-TERMS\] | [X-Road Terms and Abbreviations](../../terms_x-road_docs.md)                                                                               |
 
 ## 2. Overview
 
 This document describes the external load balancing support features implemented by X-Road and the steps necessary to
-configure security servers to run as a cluster where each node has an identical configuration, including their keys and
-certificates. X-Road security server configuration changes are handled by a single primary server and one or more secondary
+configure Security Servers to run as a cluster where each node has an identical configuration, including their keys and
+certificates. X-Road Security Server configuration changes are handled by a single primary server and one or more secondary
 servers.
 
 Chapter [3. X-Road Installation and configuration](#3-x-road-installation-and-configuration) describes the installation
@@ -121,12 +141,14 @@ The last chapter briefly describes how the configuration can be verified.
 ### 2.1 Goals and assumptions
 
 The primary goal of the load balancing support is, as the name suggests, load balancing, not fault tolerance.
-A clustered environment increases fault tolerance but some X-Road messages can still be lost if a security server node fails.
+A clustered environment increases fault tolerance but some X-Road messages can still be lost if a Security Server node fails.
 
 The implementation does not include a load balancer component. It should be possible to use any external load balancer
-component that supports HTTP-based health checks for the nodes and load balancing at the TCP level (eg. haproxy, nginx,
-AWS ALB or Classic Load Balancer, or a hardware appliance). A health check service is provided for monitoring a node's
-status, this is described in more detail in section [3.4 Health check service configuration](#34-health-check-service-configuration)
+component that supports HTTP-based health checks for the nodes, load balancing at the TCP level and TLS passthrough (e.g., haproxy, nginx,
+AWS NLB or Classic Load Balancer, or a hardware appliance). A health check service is provided for monitoring a node's
+status, this is described in more detail in section [3.4 Health check service configuration](#34-health-check-service-configuration).
+The load balancer must be configured to use TSL passthrough so that TLS termination is performed by the Security Server and 
+not by the load balancer.
 
 The load balancing support is implemented with a few assumptions about the environment that users should be aware of.
 Carefully consider these assumptions before deciding if the supported features are suitable for your needs.
@@ -156,16 +178,16 @@ Carefully consider these assumptions before deciding if the supported features a
 
 ### 2.2 Communication with external servers and services: The cluster from the point of view of a client or service
 
-When external security servers communicate with the cluster, they see only the public IP address of the cluster which is
-registered to the global configuration as the security server address. From the caller point of view, this case is analogous
-to making a request to a single security server.
+When external Security Servers communicate with the cluster, they see only the public IP address of the cluster which is
+registered to the global configuration as the Security Server address. From the caller point of view, this case is analogous
+to making a request to a single Security Server.
 
 ![inbound traffic](img/load_balancing_traffic.png)
 
-When a security server makes a request to an external server (security server, OCSP, TSA or a central server), the
+When a Security Server makes a request to an external server (Security Server, OCSP, TSA or a Central Server), the
 external server sees only the public IP address. Note that depending on the configuration, the public IP address
-might be different from the one used in the previous scenario. It should also be noted that the security servers will
-independently make requests to OCSP and TSA services as well as to the central server to fetch the global configuration
+might be different from the one used in the previous scenario. It should also be noted that the Security Servers will
+independently make requests to OCSP and TSA services as well as to the Central Server to fetch the global configuration
 as needed.
 
 ![outbound traffic](img/load_balancing_traffic-2.png)
@@ -177,8 +199,8 @@ as needed.
 #### 2.3.1 Replicated state
 
 ##### 2.3.1.1 `serverconf` database replication
-| Data            | Replication          | Replication method                                 |
-| ------------------- | -------------------- | -------------------------------------------------- |
+| Data                | Replication              | Replication method                             |
+| ------------------- | ------------------------ | ---------------------------------------------- |
 | serverconf database | **replication required** | PostgreSQL streaming replication (Hot standby) |
 
 The serverconf database replication is done using streaming replication with hot standby. Note that PostgreSQL replication
@@ -186,9 +208,9 @@ is all-or-nothing: it is not possible to exclude databases from the replication.
 non-replicated messagelog databases need to be separated to different instances.
 
 ##### 2.3.1.2 Key configuration and software token replication from `/etc/xroad/signer/*`
-| Data                            | Replication          | Replication method                                 |
-| ------------------------------- | -------------------- | -------------------------------------------------- |
-| keyconf and the software token  | **replicated**       |  `rsync+ssh`  (scheduled)                          |
+| Data                           | Replication    | Replication method       |
+| ------------------------------ | -------------- | ------------------------ |
+| keyconf and the software token | **replicated** | `rsync+ssh`  (scheduled) |
 
 Previously, any external modification to `/etc/xroad/signer/keyconf.xml` was overwritten by the X-Road signer process if
 it was running. Therefore, replicating the signer configuration without service disruptions would have required taking the
@@ -205,9 +227,9 @@ reload the configuration from disk periodically and apply the changes to their r
 
 
 ##### 2.3.1.3 Other server configuration parameters from `/etc/xroad/*`
-| Data                                  | Replication          | Replication method                                 |
-| ------------------------------------- | -------------------- | -------------------------------------------------- |
-| other server configuration parameters | **replicated**       |  `rsync+ssh`  (scheduled)                          |
+| Data                                  | Replication    | Replication method       |
+| ------------------------------------- | -------------- | ------------------------ |
+| other server configuration parameters | **replicated** | `rsync+ssh`  (scheduled) |
 
 The following configurations are excluded from replication:
 * `db.properties` (node-specific)
@@ -223,7 +245,7 @@ The following configurations are excluded from replication:
 The messagelog database is not replicated. Each node has its own separate messagelog database. **However**, in order to
 support PostgreSQL streaming replication (hot standby mode) for the serverconf data, the serverconf and messagelog
 databases must be separated. This requires modifications to the installation (a separate PostgreSQL instance is needed
-for the messagelog database) and has some implications on the security server resource requirements as a separate
+for the messagelog database) and has some implications on the Security Server resource requirements as a separate
 instance uses some memory.
 
 ##### 2.3.2.2 OCSP responses from `/var/cache/xroad/`
@@ -246,9 +268,9 @@ In order to properly set up the data replication, the secondary nodes must be ab
 * the primary `serverconf` database (e.g. tcp port 5433).
 
 
-### 3.2 primary installation
+### 3.2 Primary installation
 
-1. Install the X-Road security server packages using the normal installation procedure or use an existing standalone node.
+1. Install the X-Road Security Server packages using the normal installation procedure or use an existing standalone node.
 2. Stop the xroad services.
 3. Create a separate PostgreSQL instance for the `serverconf` database (see section
    [4. Database replication setup](#4-database-replication-setup) for details).
@@ -256,7 +278,7 @@ In order to properly set up the data replication, the secondary nodes must be ab
    * `serverconf.hibernate.connection.url` : Change the url port number from `5432` to `5433` (or the port you specified)
 5. If you are using an already configured server as the primary, the existing configuration was replicated to the secondaries
    in step 3. Otherwise, proceed to configure the primary server: install the configuration anchor, set up basic information,
-   create authentication and signing keys and so on. See the security server installation guide \[[IG-SS](#13-references)\]
+   create authentication and signing keys and so on. See the Security Server installation guide \[[IG-SS](#13-references)\]
    for help with the basic setup.
 6. Set up the configuration file replication, see section
    [5. Configuring data replication with rsync over SSH](#5-configuring-data-replication-with-rsync-over-ssh)
@@ -276,9 +298,8 @@ In order to properly set up the data replication, the secondary nodes must be ab
       ```
 9. Start the X-Road services.
 
-
 ### 3.3 Secondary installation
-1. Install security server packages using the normal installation procedure. Alternatively you can also install only the packages
+1. Install Security Server packages using the normal installation procedure. Alternatively you can also install only the packages
    required for secondary nodes. `xroad-proxy-ui-api` package can be omitted, but the admin graphical user interface
    (which is provided by this package) can be handy for diagnostics. It should be noted that changing a secondary's
    configuration via the admin gui is not possible (except entering token PIN).
@@ -292,11 +313,15 @@ In order to properly set up the data replication, the secondary nodes must be ab
 5. Set up SSH between the primary and the secondary (the secondary must be able to access `/etc/xroad` via ssh)
    * Create an SSH keypair for `xroad` user and copy the public key to authorized keys of the primary node
    (`/home/xroad-slave/.ssh/authorized_keys`)
+   > On RHEL 9, 10: generate a new key which is compliant with FIPS-140-2, for example ECDSA with curve nistp256
+      ```bash
+      sudo -u xroad ssh-keygen -t ecdsa
+      ```
 6. Set up state synchronization using rsync+ssh. See section
    [5. Configuring data replication with rsync over SSH](#5-configuring-data-replication-with-rsync-over-ssh)
    * Make the initial synchronization between the primary and the secondary.
    ```bash
-   rsync -e ssh -avz --delete --exclude db.properties --exclude "/postgresql" --exclude "/conf.d/node.ini" --exclude "/gpghome" xroad-slave@<primary>:/etc/xroad/ /etc/xroad/
+   sudo -u xroad rsync -e ssh -avz --delete --exclude db.properties --exclude "/conf.d/node.ini" --exclude "*.tmp" --exclude "/postgresql" --exclude "/globalconf" --exclude "/gpghome" --exclude "secret-store-client-token" xroad-slave@<primary>:/etc/xroad/ /etc/xroad/
    ```
    Where `<primary>` is the primary server's DNS or IP address.
 7. Configure the node type as `slave` in `/etc/xroad/conf.d/node.ini`.
@@ -307,7 +332,7 @@ In order to properly set up the data replication, the secondary nodes must be ab
       ```
       Change the owner and group of the file to `xroad:xroad` if it is not already.
 8. Start the X-Road services.
-9. If you wish to use the secondary security server's admin user interface, you need to implement additional user group restrictions. As noted in step 1, changes to the secondary node security server configuration must not be made through its admin user interface, as any such changes would be overwritten by the replication. To disable UI editing privileges for all users, remove the following user groups from the secondary security server:
+9. If you wish to use the secondary Security Server's admin user interface, you need to implement additional user group restrictions. As noted in step 1, changes to the secondary node Security Server configuration must not be made through its admin user interface, as any such changes would be overwritten by the replication. To disable UI editing privileges for all users, remove the following user groups from the secondary Security Server:
 
    * `xroad-registration-officer`
    * `xroad-service-administrator`
@@ -315,37 +340,42 @@ In order to properly set up the data replication, the secondary nodes must be ab
    
    Note: `xroad-security-officer` should remain, otherwise you will not be able to enter token PIN codes.
 
-   After removing these groups, the super user created during the security server installation is a member of two UI privilege groups: `xroad-securityserver-observer` and `xroad-security-officer`. These groups allow read-only access to the admin user interface and provide a safe way to use the UI for checking the configuration status of the secondary security server. In addition, the groups allow the user to enter the token PIN code. Since admin UI users are UNIX users that are members of specific privilege groups, more users can be added to the groups as necessary. Security server installation scripts detect the node type of existing installations and modify user group creation accordingly. Instead, version upgrades do not overwrite or modify this configuration during security server updates.
+   After removing these groups, the super user created during the Security Server installation is a member of two UI privilege groups: `xroad-securityserver-observer` and `xroad-security-officer`. These groups allow read-only access to the admin user interface and provide a safe way to use the UI for checking the configuration status of the secondary Security Server. In addition, the groups allow the user to enter the token PIN code. Since admin UI users are UNIX users that are members of specific privilege groups, more users can be added to the groups as necessary. Security Server installation scripts detect the node type of existing installations and modify user group creation accordingly. Instead, version upgrades do not overwrite or modify this configuration during Security Server updates.
 
-   For more information on user groups and their effect on admin user interface privileges in the security server, see the  Security Server User Guide \[[UG-SS](#13-references)\].
+   For more information on user groups and their effect on admin user interface privileges in the Security Server, see the  Security Server User Guide \[[UG-SS](#13-references)\].
 
-   Also, the secondary security server's management REST API can be used to read the secondary's configuration. However, modifying the secondary's configuration using the management REST API is blocked. API keys are replicated from the primary to the secondaries, and the keys that are associated with the `xroad-securityserver-observer` role have read-only access to the secondary. In addition, the keys that are associated with the `xroad-securityserver-observer` and `xroad-security-officer` roles, are able to enter token PIN codes. The keys that are not associated with the `xroad-securityserver-observer` role, don't have any access to the secondary. See next item for more details.
+   Also, the secondary Security Server's management REST API can be used to read the secondary's configuration. However, modifying the secondary's configuration using the management REST API is blocked. API keys are replicated from the primary to the secondaries, and the keys that are associated with the `xroad-securityserver-observer` role have read-only access to the secondary. In addition, the keys that are associated with the `xroad-securityserver-observer` and `xroad-security-officer` roles, are able to enter token PIN codes. The keys that are not associated with the `xroad-securityserver-observer` role, don't have any access to the secondary. See next item for more details.
 
    For more information on the management REST API, see the  Security Server User Guide \[[UG-SS](#13-references)\].
 
 10. Note about API keys and caching.
-   If API keys have been created for primary node, those keys are replicated to secondaries, like everything else from `serverconf` database is.
-   The keys that are associated with the `xroad-securityserver-observer` role have read-only access to the secondary.
-   Instead, the keys that are not associated with the `xroad-securityserver-observer` role, don't have any access to the secondary and API calls will fail.
-   To avoid this, secondary REST API should only be accessed using keys associated with the `xroad-securityserver-observer` role, and only for operations that read configuration, not updates. <p>
-   Furthermore, API keys are accessed through a cache that assumes that all updates to keys (e.g. revoking keys, or changing permissions) are done using the same node.
-   If API keys are changed on primary, the changes are not reflected on the secondary caches until the next time `xroad-proxy-ui-api` process is restarted.
-   To address this issue, you should restart secondary nodes' `xroad-proxy-ui-api` processes after API keys are modified (and database has been replicated to secondaries), to ensure correct operation.<p>
-   Improvements to API key handling in clustered setups will be included in later releases.
+    If API keys have been created for primary node, those keys are replicated to secondaries, like everything else from `serverconf` database is.
+    The keys that are associated with the `xroad-securityserver-observer` role have read-only access to the secondary.
+    Instead, the keys that are not associated with the `xroad-securityserver-observer` role, don't have any access to the secondary and API calls will fail.
+    To avoid this, secondary REST API should only be accessed using keys associated with the `xroad-securityserver-observer` role, and only for operations that read configuration, not updates. 
+   
+    Furthermore, API keys are accessed through a cache that assumes that all updates to keys (e.g. revoking keys, or changing permissions) are done using the same node.
+    If API keys are changed on primary, the changes are not reflected on the secondary caches until the next time `xroad-proxy-ui-api` process is restarted.
+    To address this issue, you should restart secondary nodes' `xroad-proxy-ui-api` processes after API keys are modified (and database has been replicated to secondaries), to ensure correct operation.
+   
+    Improvements to API key handling in clustered setups will be included in later releases.
+
 11. It is possible to use the autologin-package with secondary nodes to enable automatic PIN-code insertion, however the autologin-package default implementation stores PIN-codes in plain text and should not be used in production environments. Instructions on how to configure the autologin-package to use a more secure custom PIN-code storing implementation can be found in [autologin documentation](../Utils/ug-autologin_x-road_v6_autologin_user_guide.md)
+
+12. Note about ACME: using ACME to order or renew certificates is not possible on secondaries, so the ACME HTTP-01 challenge port (typically TCP 80) does not need to be reachable here. Only the primary node responds to ACME challenges.
 
 The configuration is now complete. If you do not want to set up the health check service, continue to [chapter 6](#6-verifying-the-setup)
  to verify the setup.
 
 ### 3.4 Health check service configuration
-The load balancing support includes a health check service that can be used to ping the security server using HTTP to see if
+The load balancing support includes a health check service that can be used to ping the Security Server using HTTP to see if
 it is healthy and likely to be able to send and receive messages. The service is disabled by default but can be enabled
 via configuration options.
 
-| Proxy service configuration option | Default value | Description |
-|---|---|---|
-| health-check-interface | `0.0.0.0` (all network interfaces) | The network interface this service listens to. This should be an address the load balancer component can use to check the server status |
-| health-check-port | `0` (disabled) | The tcp port the service listens to for HTTP requests. The default value `0` disables the service. |
+| Proxy service configuration option | Default value                      | Description                                                                                                                             |
+| ---------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| health-check-interface             | `0.0.0.0` (all network interfaces) | The network interface this service listens to. This should be an address the load balancer component can use to check the server status |
+| health-check-port                  | `0` (disabled)                     | The tcp port the service listens to for HTTP requests. The default value `0` disables the service.                                      |
 
 Below is a configuration that can be added to  `/etc/xroad/conf.d/local.ini` on the primary that would enable the health check
 service on all the nodes once the configuration has been replicated. Changes to the settings require restarting the
@@ -363,8 +393,8 @@ and `HTTP 500 Internal Server Error` otherwise. A short message about the failur
 body of the response. The service runs as a part of the `xroad-proxy` service.
 
 In addition to implicitly verifying that the `xroad-proxy` service is running, the  health checks verify that:
-* The server authentication key is accessible and that the OCSP response for the certificate is `good`. This requires a
-running `xroad-signer` service in good condition.
+* The server authentication key is accessible and the software token is logged in. This requires a running `xroad-signer` service in good condition.
+* The OCSP response for the certificate is `good`. This requires a running `xroad-signer` service in good condition.
 * The `serverconf` database is accessible.
 * The `global configuration` is valid and not expired.
 
@@ -373,24 +403,25 @@ time, it will be considered a health check failure and will cause a `HTTP 500` r
 
 In addition, each status check result will be cached for a short while to avoid excess resource usage. A successful status
 check result will be cached for 2 seconds before a new verification is triggered. This is to make sure the OK results are
-as fresh as possible while avoiding per-request verification. In contrast, verification failures will be cached for 30
-seconds before a new verification is triggered. This should allow for the security server to get up and running after a
-failure or possible reboot before the status is queried again.
+as fresh as possible while avoiding per-request verification. The only exception is checking the software token state
+(logged in / out) since the software token status check result is cached for 300 seconds. In contrast, verification failures are 
+cached for 30 seconds before a new verification is triggered. This should allow for the Security Server to get up and 
+running after a failure or possible reboot before the status is queried again.
 
-Security server's health check interface can also be manually switched to a maintenance mode in order to inform the load
-balancing solution that the security server will be undergoing maintenance and should be removed from active use.
+Security Server's health check interface can also be manually switched to a maintenance mode in order to inform the load
+balancing solution that the Security Server will be undergoing maintenance and should be removed from active use.
 
 When in maintenance mode the health check interface will only respond with `HTTP 503 Service unavailable` and the message
 `Health check interface is in maintenance mode` and no actual health check diagnostics will be run. Maintenance mode is disabled
 by default and will automatically reset to its default when the proxy service is restarted.
 
-Maintenance mode can be enabled or disabled by sending `HTTP GET`-request from the target security server to its proxy admin port `5566`.
+Maintenance mode can be enabled or disabled by sending `HTTP GET`-request from the target Security Server to its proxy admin port `5566`.
 The intended new state can be defined using the `targetState` HTTP-parameter:
 
-|Command|URI|
-|---|---|
-|Enable maintenance mode|`http://localhost:5566/maintenance?targetState=true`|
-|Disable maintenance mode|`http://localhost:5566/maintenance?targetState=false`|
+| Command                  | URI                                                   |
+| ------------------------ | ----------------------------------------------------- |
+| Enable maintenance mode  | `http://localhost:5566/maintenance?targetState=true`  |
+| Disable maintenance mode | `http://localhost:5566/maintenance?targetState=false` |
 
 Proxy admin port will respond with `200 OK` and a message detailing the actualized maintenance mode state change,
 e.g. `Maintenance mode set: false => true`. In case the maintenance mode state could not be changed, the returned
@@ -406,7 +437,7 @@ process for a short while. As long as the authentication key is still cached, th
 the necessary signing context values for sending a message might no longer be cached. This means messages might fail to be sent
 even if the health check returns OK. As the authentication key expires from the cache (after a maximum of 5 minutes), the
 health check will start returning failures. This is a feature of caching and not a bug per se. In addition, logging out
-of a security server's keys should not occur by accident so it should not be a surprise that the node cannot send messages
+of a Security Server's keys should not occur by accident so it should not be a surprise that the node cannot send messages
 after not having access to it's keys.
 
 
@@ -434,19 +465,21 @@ Fetching health check response timed out for: Authentication key OCSP status
 
 Continue to [chapter 6](#6-verifying-the-setup) to verify the setup.
 
+#### 3.4.3 Proxy memory health check
+
+Besides the health checks mentioned above, Proxy can also be configured to check its own memory usage. To turn this memory check on `memory-usage-threshold` System Property needs to be set to a numerical value which represents a percentage of the maximum memory being used over which the health check starts failing. For example if this is set to 80, then the health check will fail if more than 80% of the maximum is being used by the Proxy. The maximum memory is configured by the java `-Xmx` flag. For more info about configuring the Security Server Proxy's memory allocation see [Security Server User Guide](../ug-ss_x-road_6_security_server_user_guide.md#211-updating-proxy-services-memory-allocation-command-line-arguments).
+
 ## 4. Database replication setup
 
-For technical details on the PostgreSQL replication, refer to the [official documentation](https://www.postgresql.org/docs/10/high-availability.html).
-Note that the versions of PostgreSQL distributed with RHEL and Ubuntu are different. At the time of writing, RHEL 7
-distributes PostgreSQL version 9.2, and RHEL 8 version 10; the replication configuration is the same
-for these versions. On Ubuntu 20.04 using PostgreSQL version 12 and on 22.04 using version 14, the configuration has some differences.
+For technical details on the PostgreSQL replication, refer to the [official documentation](https://www.postgresql.org/docs/current/high-availability.html).
+Note that the versions of PostgreSQL distributed with RHEL and Ubuntu are different. RHEL 9 uses PostgreSQL 15, RHEL 10 uses PostgreSQL 16, Ubuntu 22.04 uses version 14, and Ubuntu 24.04 uses version 16.
 
 ### 4.1 Setting up TLS certificates for database authentication
 
 This section describes how to create and set up certificate authentication between the secondary and primary database instances.
 
 For further details on the certificate authentication, see the
-[PostgreSQL documentation](https://www.postgresql.org/docs/10/auth-methods.html#AUTH-CERT).
+[PostgreSQL documentation](https://www.postgresql.org/docs/15/auth-methods.html#AUTH-CERT).
 
 1. Generate the Certificate Authority key and a self-signed certificate for the root-of-trust:
 
@@ -505,20 +538,46 @@ For further details on the certificate authentication, see the
 
 #### 4.2.1 on RHEL
 
-Create a new `systemctl` service unit for the new database. As root, execute the following command:
+On RHEL, we assume that the PostgreSQL default configuration files are located in the `PGDATA` directory `/var/lib/pgsql/serverconf`.
+>**Note:** If the location is different in your system (for example `/var/lib/pgsql/15/serverconf`), then directory `/var/lib/pgsql/serverconf` need to be replaced with your data directory (for example `/var/lib/pgsql/15/serverconf`) in the following scripts.
+
+Create a new `systemctl` service unit for the new database. As root, make a copy for the new service
+>**Note:** We assume that the default PostgreSQL database service file is `/lib/systemd/system/postgresql.service`, but depending on the PostgreSQL installation, the service file name can be a little bit different, for example `/lib/systemd/system/postgresql-15.service`.
 
 ```bash
-cat <<EOF >/etc/systemd/system/postgresql-serverconf.service
-.include /lib/systemd/system/postgresql.service
+cp /lib/systemd/system/postgresql.service /etc/systemd/system/postgresql-serverconf.service 
+```
+
+Edit `/etc/systemd/system/postgresql-serverconf.service` and override the following properties:
+
+```properties
 [Service]
+...
 Environment=PGPORT=5433
 Environment=PGDATA=/var/lib/pgsql/serverconf
-EOF
 ```
-Create the database and configure SELinux:
+
+Create the database:
 
 ```bash
-PGSETUP_INITDB_OPTIONS="--auth-local=peer --auth-host=md5" postgresql-setup initdb postgresql-serverconf
+# Init db
+sudo su postgres
+cd /tmp
+initdb --auth-local=peer --auth-host=scram-sha-256 --locale=en_US.UTF-8 --encoding=UTF8 -D /var/lib/pgsql/serverconf/
+exit
+```
+* >**Note:** if PostgreSQL is not installed with the default configuration, the database creation command may be different, for example:
+    ```bash
+    # Init db
+    sudo su postgres
+    cd /tmp
+    /usr/pgsql-15/bin/initdb --auth-local=peer --auth-host=scram-sha-256 --locale=en_US.UTF-8 --encoding=UTF8 -D /var/lib/pgsql/15/serverconf/
+    exit
+    ```
+
+Configure SELinux:
+
+```bash
 semanage port -a -t postgresql_port_t -p tcp 5433
 systemctl enable postgresql-serverconf
 ```
@@ -526,15 +585,16 @@ systemctl enable postgresql-serverconf
 #### 4.2.2 on Ubuntu
 
 ```bash
-sudo -u postgres pg_createcluster -p 5433 10 serverconf
+sudo -u postgres pg_createcluster -p 5433 16 serverconf
 ```
-In the above command, `10` is the postgresql major version. Use `pg_lsclusters` to find out what version(s) are available.
+In the above command, `16` is the *postgresql major version*. Use `pg_lsclusters` to find out what version(s) are available.
 
 ### 4.3 Configuring the primary instance for replication
 
 Edit `postgresql.conf` and set the following options:
->On RHEL, PostgreSQL config files are located in the `PGDATA` directory `/var/lib/pgql/serverconf`.  
->Ubuntu keeps the config in `/etc/postgresql/<version>/<cluster name>`, e.g. `/etc/postgresql/10/serverconf`)
+>* On RHEL, we assume that default configuration files are located in the `PGDATA` directory `/var/lib/pgsql/serverconf`.
+>  * **Note:** depending on the PostgreSQL installation, the configuration files can be located in different directory, for example `/var/lib/pgsql/15/serverconf`.
+>* Ubuntu keeps the config in `/etc/postgresql/<postgresql major version>/<cluster name>`, e.g. `/etc/postgresql/16/serverconf`.
 
 ```properties
 ssl = on
@@ -544,16 +604,6 @@ ssl_key_file  = '/etc/xroad/postgresql/server.key'
 
 listen_addresses  = '*'  # (default is localhost. Alternatively: localhost, <IP of the interface the secondaries connect to>")
 
-# PostgreSQL 9.2 (RHEL 7)
-wal_level = hot_standby
-
-# PostgreSQL 10 & 12 (RHEL 8, Ubuntu 20.04)
-wal_level = replica
-
-max_wal_senders   = 3   # should be ~ number of secondaries plus some small number. Here, we assume there are two secondaries.
-wal_keep_segments = 8   # keep some wal segments so that secondaries that are offline can catch up.
-
-# PostgreSQL >=14 (Ubuntu 22.04)
 wal_level = replica
 
 max_wal_senders = 3   # should be ~ number of secondaries plus some small number. Here, we assume there are two secondaries.
@@ -561,7 +611,7 @@ wal_keep_size   = 8   # keep some wal size so that secondaries that are offline 
 ```
 
 For more information about the streaming replication configuration options,
-see the [PostgreSQL documentation](https://www.postgresql.org/docs/10/runtime-config-replication.html).
+see the [PostgreSQL documentation](https://www.postgresql.org/docs/15/runtime-config-replication.html).
 
 Edit `pg_hba.conf` and enable connections to the replication pseudo database using client certificates. See chapter
 [4.1](#41-setting-up-tls-certificates-for-database-authentication) for the authentication setup.
@@ -570,22 +620,16 @@ Edit `pg_hba.conf` and enable connections to the replication pseudo database usi
 hostssl     replication     +slavenode  samenet     cert
 ```
 **Note:** The CN field in the certificate subject must match a replication user name in postgresql. 
-See the [PostgreSQL documentation](https://www.postgresql.org/docs/10/auth-pg-hba-conf.html) for more details.
+See the [PostgreSQL documentation](https://www.postgresql.org/docs/15/auth-pg-hba-conf.html) for more details.
 
 The `samenet` above assumes that the secondaries will be in the same subnet as the primary.
 
 Start the primary instance:
 
-**Ubuntu 20.04:**
+**Ubuntu:**
 
 ```bash
-systemctl start postgresql@12-serverconf
-```
-
-**Ubuntu 22.04:**
-
-```bash
-systemctl start postgresql@14-serverconf
+systemctl start postgresql@<postgresql major version>-serverconf
 ```
 
 **RHEL:**
@@ -604,6 +648,7 @@ Create a user named `serverconf` for local `serverconf` database access:
 
 ```bash
 sudo -u postgres psql -p 5433 -c "CREATE USER serverconf PASSWORD '<password>'";
+sudo -u postgres psql -p 5433 -c "CREATE USER serverconf_admin PASSWORD '<password>'";
 ```
 
 Copy the `serverconf` database from the default instance to the new instance:
@@ -626,6 +671,7 @@ Prerequisites:
 
 Go to the postgresql data directory:
  * RHEL: `/var/lib/pgsql/serverconf`
+    >**Note:** depending on the PostgreSQL installation, the configuration files can be located in different directory, for example `/var/lib/pgsql/15/serverconf`.
  * Ubuntu: `/var/lib/postgresql/<postgresql major version>/serverconf`
 
 Clear the data directory:
@@ -645,19 +691,12 @@ Where `<primary>` is the DNS or IP address of the primary node and `<nodename>` 
 NOTICE: WAL archiving is not enabled; you must ensure that all required WAL segments are copied through other means to complete the backup
 ```
 
-On *RHEL 7/8 (PostgreSQL <12)*, add the following `recovery.conf` to the data directory. Set the owner of the file to `postgres:postgres`, mode `0600`.
-```properties
-standby_mode = 'on'
-primary_conninfo = 'host=<primary> port=5433 user=<nodename> sslmode=verify-ca sslcert=/etc/xroad/postgresql/server.crt sslkey=/etc/xroad/postgresql/server.key sslrootcert=/etc/xroad/postgresql/ca.crt'
-trigger_file = '/var/lib/xroad/postgresql.trigger'
-```
-Where, as above, `<primary>` is the DNS or IP address of the primary node and `<nodename>` is the node name (the replication user name added to the primary database).
-
-On *Ubuntu 20.04 & 22.04 (PostgreSQL >=12)*, create an empty `standby.signal` file in the data directory. Set the owner of the file to `postgres:postgres`, mode `0600`.
+Create an empty `standby.signal` file in the data directory. Set the owner of the file to `postgres:postgres`, mode `0600`.
 
 Next, modify `postgresql.conf`:
->On RHEL, PostgreSQL config files are located in the `PGDATA` directory `/var/lib/pgql/serverconf`.  
->Ubuntu keeps the config in `/etc/postgresql/<version>/<cluster name>`, e.g. `/etc/postgresql/12/serverconf`)
+>* On RHEL, we assume that default configuration files are located in the `PGDATA` directory `/var/lib/pgsql/serverconf`.
+>  * **Note:** depending on the PostgreSQL installation, the configuration files can be located in different directory, for example `/var/lib/pgsql/15/serverconf`.
+>* Ubuntu keeps the config in `/etc/postgresql/<postgresql major version>/<cluster name>`, e.g. `/etc/postgresql/16/serverconf`.
 ```properties
 ssl = on
 ssl_ca_file   = '/etc/xroad/postgresql/ca.crt'
@@ -667,15 +706,15 @@ ssl_key_file  = '/etc/xroad/postgresql/server.key'
 listen_addresses = localhost
 
 # no need to send WAL logs
-# wal_level = minimal
-# max_wal_senders = 0
-# wal_keep_segments = 0
+# wal_level = replica
+# max_wal_senders = 3
+# wal_keep_size = 8
 
 hot_standby = on
 hot_standby_feedback = on
 ```
 
-*On Ubuntu 20.04 & 22.04 (PostgreSQL >=12) only*, add the primary_conninfo to postgresql.conf:
+Add the primary_conninfo to postgresql.conf:
 ```properties
 primary_conninfo = 'host=<primary> port=5433 user=<nodename> sslmode=verify-ca sslcert=/etc/xroad/postgresql/server.crt sslkey=/etc/xroad/postgresql/server.key sslrootcert=/etc/xroad/postgresql/ca.crt'
 ```
@@ -691,14 +730,9 @@ Finally, start the database instance
 systemctl start postgresql-serverconf
 ```
 
-**Ubuntu 20.04:**
+**Ubuntu:**
 ```bash
-systemctl start postgresql@12-serverconf
-```
-
-**Ubuntu 22.04:**
-```bash
-systemctl start postgresql@14-serverconf
+systemctl start postgresql@<postgresql major version>-serverconf
 ```
 
 ## 5. Configuring data replication with rsync over SSH
@@ -711,7 +745,7 @@ in normally.
 **Ubuntu:**
 
 ```bash
-adduser --system --shell /bin/bash --ingroup xroad xroad-slave
+adduser --system --shell /bin/bash --ingroup xroad --home /home/xroad-slave xroad-slave
 ```
 **RHEL:**
 
@@ -762,7 +796,7 @@ Environment=MASTER=<primary_host>
 
 ExecStartPre=/usr/bin/test ! -f /var/tmp/xroad/sync-disabled
 
-ExecStart=/usr/bin/rsync -e "ssh -o ConnectTimeout=5 " -aqz --timeout=10 --delete-delay --exclude db.properties --exclude "/conf.d/node.ini" --exclude "*.tmp" --exclude "/postgresql" --exclude "/globalconf" --exclude "/gpghome" --delay-updates --log-file=/var/log/xroad/slave-sync.log ${XROAD_USER}@${MASTER}:/etc/xroad/ /etc/xroad/
+ExecStart=/usr/bin/rsync -e "ssh -o ConnectTimeout=5 " -aqz --timeout=10 --delete-delay --exclude db.properties --exclude "/conf.d/node.ini" --exclude "*.tmp" --exclude "/postgresql" --exclude "/globalconf" --exclude "/gpghome" --exclude "secret-store-client-token" --delay-updates --log-file=/var/log/xroad/slave-sync.log ${XROAD_USER}@${MASTER}:/etc/xroad/ /etc/xroad/
 [Install]
 WantedBy=multi-user.target
 WantedBy=xroad-proxy.service
@@ -791,6 +825,7 @@ RHEL only: Configure SELinux to allow `rsync` to be run as a `systemd` service
 setsebool -P rsync_client 1
 setsebool -P rsync_full_access 1
 ```
+>**Note:** If the applications or services running on the system are customized, updating the SELinux policy to reflect the changes may be required, see [more information](https://access.redhat.com/articles/5494701).
 
 Finally, enable the services:
 ```bash
@@ -856,17 +891,17 @@ sudo -u postgres psql -p 5433 -c "select * from pg_stat_replication;"
 ```
 A successful replication with two secondary nodes could look like this:
 
-| pid  | usesysid | usename  | application_name |  client_addr   | client_hostname | client_port |         backend_start         |   state   | sent_location | write_location | flush_location | replay_location | sync_priority | sync_state |
-|------|----------|----------|------------------|----------------|-----------------|-------------|-------------------------------|-----------|---------------|----------------|----------------|-----------------|---------------|------------|
-| 1890 |    16719 | hdev-ss3 | walreceiver      | 172.31.128.151 |                 |       45275 | 2017-03-10 06:30:50.470084+02 | streaming | 0/4058A40     | 0/4058A40      | 0/4058A40      | 0/4058A40       |             0 | async      |
-| 1891 |    16718 | hdev-ss2 | walreceiver      | 172.31.128.82  |                 |       50174 | 2017-03-10 06:30:50.918481+02 | streaming | 0/4058A40     | 0/4058A40      | 0/4058A40      | 0/4058A40       |             0 | async      |
+| pid  | usesysid | usename  | application_name | client_addr    | client_hostname | client_port | backend_start                 | state     | sent_location | write_location | flush_location | replay_location | sync_priority | sync_state |
+| ---- | -------- | -------- | ---------------- | -------------- | --------------- | ----------- | ----------------------------- | --------- | ------------- | -------------- | -------------- | --------------- | ------------- | ---------- |
+| 1890 | 16719    | hdev-ss3 | walreceiver      | 172.31.128.151 |                 | 45275       | 2017-03-10 06:30:50.470084+02 | streaming | 0/4058A40     | 0/4058A40      | 0/4058A40      | 0/4058A40       | 0             | async      |
+| 1891 | 16718    | hdev-ss2 | walreceiver      | 172.31.128.82  |                 | 50174       | 2017-03-10 06:30:50.918481+02 | streaming | 0/4058A40     | 0/4058A40      | 0/4058A40      | 0/4058A40       | 0             | async      |
 
 For more information on the `pg_stat_replication` view, see the [PostgreSQL documentation](https://www.postgresql.org/docs/10/monitoring-stats.html#PG-STAT-REPLICATION-VIEW).
 
 ### 6.3 Verifying replication from the admin user interface
 
 Verifying the cluster setup via the admin interface requires the cluster to be part of an existing X-Road instance like
-`FI-DEV` or `FI-TEST` or using a custom, configured X-Road environment with at least a central server and the security
+`FI-DEV` or `FI-TEST` or using a custom, configured X-Road environment with at least a Central Server and the security
 server cluster behind a load balancer.
 
 To test the configuration file replication from the admin user interface, a key can be created in the admin interface of the
@@ -878,16 +913,16 @@ The keys and certificate changes should be propagated to the secondary nodes in 
 
 The `serverconf` database replication can also be tested on the admin UI once the basic configuration, as mentioned in
 [3. X-Road Installation and configuration](#3-x-road-installation-and-configuration) is done. A new subsystem can be added
-to the primary node. A registration request can be sent to the central server, but it is not required. The added subsystem
+to the primary node. A registration request can be sent to the Central Server, but it is not required. The added subsystem
 should appear on the secondary nodes immediately.
 
-## 7. Upgrading a clustered X-Road security server installation
+## 7. Upgrading a clustered X-Road Security Server installation
 
 This chapter briefly discusses ways of upgrading the X-Road software in a clustered environment. The offline option will
 disrupt message delivery while the online option should allow upgrades with minimal disruption.
 
 ### 7.1 Offline upgrade
-If the X-Road security server cluster can be shut down for an offline upgrade, the procedure remains fairly simple:
+If the X-Road Security Server cluster can be shut down for an offline upgrade, the procedure remains fairly simple:
 1. Stop the X-Road services (`xroad-proxy`, `xroad-signer`, `xroad-confclient`, `xroad-proxy-ui-api` and `xroad-monitor`) on all
    the nodes. You can read more about the services in the Security Server User Guide
 \[[UG-SS](#13-references)\] chapter on [System services](../ug-ss_x-road_6_security_server_user_guide.md#161-system-services).
@@ -966,7 +1001,7 @@ The steps are in more detail below, but in short, the procedure is:
 
 5. <a name="primary-upgrade-step-5">a)</a> If the maintenance mode was enabled, the maintenance status from the health check
       port was cleared on startup of the `xroad-proxy` service. The health check should start returning a `200 OK` status
-      as soon as security server can process messages.
+      as soon as Security Server can process messages.
 
    b) If the primary node was disabled manually from the external load balancer, verify that the primary node is working
       and enable it from the load balancer. To check if a node is healthy, you can use the health check service:
@@ -1018,6 +1053,7 @@ Repeat this process for each secondary node, one by one.
    ```bash
    service xroad-sync start
    ```
+   
 7. Restart the X-Road services and wait until the secondary node is healthy.
 
 8. After the node is healthy, enable the secondary node in the load balancer if you manually disabled it. If using the

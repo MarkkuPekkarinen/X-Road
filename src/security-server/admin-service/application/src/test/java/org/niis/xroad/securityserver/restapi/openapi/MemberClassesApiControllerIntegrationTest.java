@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -28,7 +28,7 @@ package org.niis.xroad.securityserver.restapi.openapi;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
-import org.niis.xroad.restapi.openapi.ResourceNotFoundException;
+import org.niis.xroad.common.exception.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,9 +43,9 @@ import java.util.Map;
 import java.util.Set;
 
 import static junit.framework.TestCase.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -77,19 +77,19 @@ public class MemberClassesApiControllerIntegrationTest extends AbstractApiContro
         instanceMemberClasses.put(INSTANCE_A, A_MEMBER_CLASSES);
         instanceMemberClasses.put(INSTANCE_B, B_MEMBER_CLASSES);
         instanceMemberClasses.put(INSTANCE_C, new ArrayList<>());
-        when(globalConfFacade.getMemberClasses(anyString()))
+        when(globalConfProvider.getMemberClasses(anyString()))
                 .thenAnswer((Answer<Set<String>>) invocation -> {
                     List<String> classes = instanceMemberClasses.get(invocation.getArgument(0));
                     if (classes == null) {
                         return new HashSet<>();
                     }
-                    return new HashSet(classes);
+                    return new HashSet<>(classes);
                 });
 
-        when(globalConfFacade.getMemberClasses())
+        when(globalConfProvider.getMemberClasses())
                 .thenReturn(UNION_MEMBER_CLASSES);
 
-        when(globalConfFacade.getInstanceIdentifiers())
+        when(globalConfProvider.getInstanceIdentifiers())
                 .thenReturn(INSTANCE_IDS);
 
         when(globalConfService.getMemberClassesForThisInstance())
@@ -97,7 +97,7 @@ public class MemberClassesApiControllerIntegrationTest extends AbstractApiContro
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_MEMBER_CLASSES" })
+    @WithMockUser(authorities = {"VIEW_MEMBER_CLASSES"})
     public void getMemberClassesForInstance() {
         ResponseEntity<Set<String>> response =
                 memberClassesApiController.getMemberClassesForInstance(INSTANCE_A);
@@ -117,13 +117,13 @@ public class MemberClassesApiControllerIntegrationTest extends AbstractApiContro
         try {
             memberClassesApiController.getMemberClassesForInstance("instance which does not exist");
             fail("should throw ResourceNotFoundException");
-        } catch (ResourceNotFoundException expected) {
+        } catch (NotFoundException expected) {
             // nothing should be found
         }
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_MEMBER_CLASSES" })
+    @WithMockUser(authorities = {"VIEW_MEMBER_CLASSES"})
     public void getMemberClasses() {
         ResponseEntity<Set<String>> response =
                 memberClassesApiController.getMemberClasses(true);

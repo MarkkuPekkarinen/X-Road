@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,19 +26,19 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import ee.ria.xroad.common.conf.serverconf.model.ClientType;
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.signer.protocol.dto.CertRequestInfo;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.exception.NotFoundException;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.NotFoundException;
+import org.niis.xroad.serverconf.impl.entity.ClientEntity;
+import org.niis.xroad.signer.api.dto.CertRequestInfo;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +48,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_ORPHANS_NOT_FOUND;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.ORPHANS_NOT_FOUND;
 
 /**
  * orphan cert and csr removal service
@@ -86,22 +87,16 @@ public class OrphanRemovalService {
 
     private boolean hasAliveSiblings(ClientId clientId) {
         // find out if siblings
-        Optional<ClientType> sibling = clientService.getAllLocalClients().stream()
+        Optional<ClientEntity> sibling = clientService.getAllLocalClientEntities().stream()
                 .filter(c -> c.getIdentifier().memberEquals(clientId))
                 .findFirst();
-        if (sibling.isPresent()) {
-            return true;
-        }
-        return false;
+        return sibling.isPresent();
     }
 
     private boolean isAlive(ClientId clientId) {
-        ClientType clientType = clientService.getLocalClient(clientId);
-        if (clientType != null) {
-            // cant have orphans if still alive
-            return true;
-        }
-        return false;
+        ClientEntity clientEntity = clientService.getLocalClientEntity(clientId);
+        // cant have orphans if still alive
+        return clientEntity != null;
     }
 
     /**
@@ -141,6 +136,7 @@ public class OrphanRemovalService {
         private List<KeyInfo> keys;
         private List<CertificateInfo> certs;
         private List<CertRequestInfo> csrs;
+
         boolean isEmpty() {
             return keys.isEmpty() && certs.isEmpty() && csrs.isEmpty();
         }
@@ -167,9 +163,7 @@ public class OrphanRemovalService {
             otherCerts.removeAll(orphanCerts);
             List<CertRequestInfo> otherCsrs = new ArrayList<>(keyInfo.getCertRequests());
             otherCsrs.removeAll(orphanCsrs);
-            if (otherCerts.isEmpty() && otherCsrs.isEmpty()) {
-                return true;
-            }
+            return otherCerts.isEmpty() && otherCsrs.isEmpty();
         }
         return false;
     }
@@ -195,14 +189,13 @@ public class OrphanRemovalService {
     /**
      * Deletes orphan keys, certs and csrs for given clientId
      * @param clientId
-     * @throws OrphansNotFoundException if orphans dont exist for this client. Possible reasons
-     * include also that this client is still alive (not deleted).
-     * @throws ActionNotPossibleException if delete-cert or delete-csr was not possible action
-     * @throws GlobalConfOutdatedException
-     * if global conf is outdated. This prevents key deletion.
+     * @throws OrphansNotFoundException    if orphans dont exist for this client. Possible reasons
+     *                                     include also that this client is still alive (not deleted).
+     * @throws ActionNotPossibleException  if delete-cert or delete-csr was not possible action
+     * @throws GlobalConfOutdatedException if global conf is outdated. This prevents key deletion.
      */
     public void deleteOrphans(ClientId clientId) throws OrphansNotFoundException,
-            ActionNotPossibleException, GlobalConfOutdatedException {
+                                                        ActionNotPossibleException, GlobalConfOutdatedException {
 
         auditDataHelper.put(clientId);
 
@@ -223,9 +216,9 @@ public class OrphanRemovalService {
             for (CertRequestInfo certRequestInfo : orphans.getCsrs()) {
                 tokenCertificateService.deleteCsr(certRequestInfo.getId());
             }
-        } catch (KeyNotFoundException | CsrNotFoundException | CertificateNotFoundException e) {
+        } catch (CsrNotFoundException e) {
             // we just internally looked up these items, so them not being found is an internal error
-            throw new RuntimeException(e);
+            throw XrdRuntimeException.systemException(e);
         }
     }
 
@@ -234,7 +227,7 @@ public class OrphanRemovalService {
      */
     public static class OrphansNotFoundException extends NotFoundException {
         public OrphansNotFoundException() {
-            super(new ErrorDeviation(ERROR_ORPHANS_NOT_FOUND));
+            super(ORPHANS_NOT_FOUND.build());
         }
     }
 }

@@ -29,17 +29,18 @@ import axios from 'axios';
 
 import * as api from '@/util/api';
 import {
+  CentralServerAddress,
   InitializationStatus,
   InitialServerConf,
-  CentralServerAddress,
   SystemStatus,
   TokenInitStatus,
   Version,
 } from '@/openapi-types';
 import { defineStore } from 'pinia';
-import { notificationsStore } from './notifications';
+import { ConfigurablePropertyDto, ConfigurablePropertyUpdateDto, useNotifications } from '@niis/shared-ui';
+import { KEY_CONTINUE_INIT } from '@/global';
 
-export const systemStore = defineStore('systemStore', {
+export const useSystem = defineStore('system', {
   state: () => {
     return {
       serverVersion: undefined as Version | undefined,
@@ -67,42 +68,40 @@ export const systemStore = defineStore('systemStore', {
       return state.systemStatus;
     },
     isServerInitialized(): boolean {
-      const initializationStatus: InitializationStatus | undefined =
-        this.systemStatus?.initialization_status;
+      const initializationStatus: InitializationStatus | undefined = this.systemStatus?.initialization_status;
 
       if (!initializationStatus) return false;
 
       return (
         0 < initializationStatus.instance_identifier.length &&
         0 < initializationStatus.central_server_address.length &&
-        TokenInitStatus.INITIALIZED ==
-          initializationStatus.software_token_init_status
+        TokenInitStatus.NOT_INITIALIZED != initializationStatus.software_token_init_status
       );
     },
   },
 
   actions: {
     async fetchServerVersion() {
-      return axios
-        .get<Version>('/system/version')
-        .then((resp) => (this.serverVersion = resp.data));
+      return axios.get<Version>('/system/version').then((resp) => (this.serverVersion = resp.data));
     },
     async fetchSystemStatus() {
-      return api
-        .get<SystemStatus>('/system/status')
-        .then((resp) => (this.systemStatus = resp.data));
+      return api.get<SystemStatus>('/system/status').then((resp) => (this.systemStatus = resp.data));
     },
     async updateCentralServerAddress(newAddress: CentralServerAddress) {
-      return api
-        .put<SystemStatus>('/system/server-address', newAddress)
-        .then((resp) => (this.systemStatus = resp.data));
+      return api.put<SystemStatus>('/system/server-address', newAddress).then((resp) => (this.systemStatus = resp.data));
+    },
+    async fetchConfigurableProperties() {
+      return api.get<ConfigurablePropertyDto[]>('/system/property').then((resp) => resp.data);
+    },
+    async updateConfigurableProperty(update: ConfigurablePropertyUpdateDto) {
+      return api.patch('/system/property', update);
     },
 
-    async initalizationRequest(formData: InitialServerConf) {
-      const notifications = notificationsStore();
+    async initializationRequest(formData: InitialServerConf) {
+      const notifications = useNotifications();
 
       return api.post('/initialization', formData).then(() => {
-        notifications.setContinueInit(true);
+        notifications.setFlag(KEY_CONTINUE_INIT, true);
       });
     },
   },

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,6 +25,7 @@
  */
 package ee.ria.xroad.common;
 
+import ee.ria.xroad.common.crypto.identifier.SignAlgorithm;
 import ee.ria.xroad.common.util.CryptoUtils;
 
 import lombok.SneakyThrows;
@@ -33,12 +34,16 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.ocsp.BasicOCSPRespBuilder;
 import org.bouncycastle.cert.ocsp.CertificateID;
 import org.bouncycastle.cert.ocsp.CertificateStatus;
+import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.cert.ocsp.OCSPResp;
 import org.bouncycastle.cert.ocsp.OCSPRespBuilder;
 import org.bouncycastle.cert.ocsp.RespID;
 import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.OperatorCreationException;
 
+import java.io.IOException;
 import java.security.PrivateKey;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -52,29 +57,32 @@ public final class OcspTestUtils {
 
     /**
      * Creates an OCSP response for the subject's certificate with the given status.
-     * @param subject the subject certificate
-     * @param issuer certificate of the subject certificate issuer
-     * @param signer certificate of the OCSP response signer
-     * @param signerKey key of the OCSP response signer
+     *
+     * @param subject    the subject certificate
+     * @param issuer     certificate of the subject certificate issuer
+     * @param signer     certificate of the OCSP response signer
+     * @param signerKey  key of the OCSP response signer
      * @param certStatus OCSP response status
      * @return OCSPResp
      * @throws Exception in case of any errors
      */
     @SneakyThrows
+    @SuppressWarnings("checkstyle:SneakyThrowsCheck")
     public static OCSPResp createOCSPResponse(X509Certificate subject,
-            X509Certificate issuer,
-            X509Certificate signer, PrivateKey signerKey,
-            CertificateStatus certStatus) {
+                                              X509Certificate issuer,
+                                              X509Certificate signer, PrivateKey signerKey,
+                                              CertificateStatus certStatus) {
         return createOCSPResponse(subject, issuer, signer, signerKey,
                 certStatus, null, null);
     }
 
     /**
      * Creates an OCSP response for the subject's certificate with the given status.
-     * @param subject the subject certificate
-     * @param issuer certificate of the subject certificate issuer
-     * @param signer certificate of the OCSP response signer
-     * @param signerKey key of the OCSP response signer
+     *
+     * @param subject    the subject certificate
+     * @param issuer     certificate of the subject certificate issuer
+     * @param signer     certificate of the OCSP response signer
+     * @param signerKey  key of the OCSP response signer
      * @param certStatus OCSP response status
      * @param thisUpdate date this response was valid on
      * @param nextUpdate date when next update should be requested
@@ -82,12 +90,12 @@ public final class OcspTestUtils {
      * @throws Exception in case of any errors
      */
     public static OCSPResp createOCSPResponse(X509Certificate subject,
-            X509Certificate issuer, X509Certificate signer, PrivateKey signerKey,
-            CertificateStatus certStatus, Date thisUpdate, Date nextUpdate)
-                    throws Exception {
+                                              X509Certificate issuer, X509Certificate signer, PrivateKey signerKey,
+                                              CertificateStatus certStatus, Date thisUpdate, Date nextUpdate)
+            throws OCSPException, CertificateEncodingException, IOException, OperatorCreationException {
         BasicOCSPRespBuilder builder = new BasicOCSPRespBuilder(
-                new RespID(new X500Name(
-                        signer.getSubjectX500Principal().getName())));
+                new RespID(X500Name.getInstance(
+                        signer.getSubjectX500Principal().getEncoded())));
         CertificateID cid = CryptoUtils.createCertId(subject, issuer);
 
         if (thisUpdate != null) {
@@ -97,25 +105,23 @@ public final class OcspTestUtils {
         }
 
         ContentSigner contentSigner = CryptoUtils.createContentSigner(
-                subject.getSigAlgName(), signerKey);
+                SignAlgorithm.ofName(subject.getSigAlgName()), signerKey);
 
         X509CertificateHolder[] chain = {new X509CertificateHolder(signer.getEncoded())};
         Object responseObject = builder.build(contentSigner, chain, new Date());
 
-        OCSPResp resp = new OCSPRespBuilder().build(
+        return new OCSPRespBuilder().build(
                 OCSPRespBuilder.SUCCESSFUL, responseObject);
-        return resp;
     }
 
     /**
      * Creates a "signature required" OCSP response.
+     *
      * @return OCSPResp
-     * @throws Exception in case of any errors
+     * @throws OCSPException in case of any errors
      */
-    public static OCSPResp createSigRequiredOCSPResponse() throws Exception {
-        OCSPResp resp = new OCSPRespBuilder().build(
-                OCSPRespBuilder.SIG_REQUIRED, null);
-        return resp;
+    public static OCSPResp createSigRequiredOCSPResponse() throws OCSPException {
+        return new OCSPRespBuilder().build(OCSPRespBuilder.SIG_REQUIRED, null);
     }
 
 }

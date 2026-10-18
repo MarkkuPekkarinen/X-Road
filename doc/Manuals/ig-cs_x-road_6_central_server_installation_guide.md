@@ -1,56 +1,70 @@
 # X-Road: Central Server Installation Guide <!-- omit in toc -->
 
-Version: 2.33  
+Version: 2.46
 Doc. ID: IG-CS
 
 ---
 
 ## Version history <!-- omit in toc -->
-| Date       | Version | Description                                                                                                                                                                                   | Author             |
-|------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
-| 01.12.2014 | 1.0     | Initial version                                                                                                                                                                               |                    |
-| 19.01.2015 | 1.1     | License information added                                                                                                                                                                     |                    |
-| 02.02.2015 | 1.2     | References fixed                                                                                                                                                                              |                    |
-| 18.03.2015 | 1.3     | Meta-package for Central Server                                                                                                                                                               |                    |
-| 02.04.2015 | 1.4     | „sdsb” changed to „xroad”                                                                                                                                                                     |                    |
-| 30.06.2015 | 1.5     | Minor corrections done                                                                                                                                                                        |                    |
-| 06.07.2015 | 1.6     | New repository address                                                                                                                                                                        |                    |
-| 17.09.2015 | 1.7     | Notes about high availability added, references updated                                                                                                                                       |                    |
-| 18.09.2015 | 1.8     | Minor corrections done                                                                                                                                                                        |                    |
-| 18.09.2015 | 2.0     | Editorial changes made                                                                                                                                                                        |                    |
-| 16.12.2015 | 2.1     | Added installation instructions for monitoring                                                                                                                                                |                    |
-| 09.12.2016 | 2.2     | Converted to markdown format                                                                                                                                                                  | Ilkka Seppälä      |
-| 20.12.2016 | 2.3     | Add chapter about additional configuration to Central Server's user manual                                                                                                                    | Ilkka Seppälä      |
-| 20.01.2017 | 2.4     | Added license text and version history                                                                                                                                                        | Sami Kallio        |
-| 25.08.2017 | 2.5     | Update installation instructions concerning the support for environmental monitoring                                                                                                          | Ilkka Seppälä      |
-| 05.03.2018 | 2.6     | Added terms and abbreviations reference, links to references and actual documents                                                                                                             | Tatu Repo          | 
-| 10.04.2018 | 2.7     | Updated chapter "[Installing the Support for Hardware Tokens](#26-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini' | Cybernetica AS     |
-| 14.10.2018 | 2.8     | Update package repository address                                                                                                                                                             | Petteri Kivimäki   |
-| 15.11.2018 | 2.9     | Add Ubuntu 18.04 installation instructions                                                                                                                                                    | Jarkko Hyöty       |
-| 05.02.2019 | 2.10    | Update ports                                                                                                                                                                                  | Jarkko Hyöty       |
-| 04.09.2019 | 2.11    | Update ports                                                                                                                                                                                  | Petteri Kivimäki   |
-| 11.09.2019 | 2.12    | Remove Ubuntu 14.04 from supported platforms                                                                                                                                                  | Jarkko Hyöty       |
-| 26.11.2019 | 2.13    | Add instructions for using remote database                                                                                                                                                    | Ilkka Seppälä      |
-| 29.04.2020 | 2.14    | Add instructions how to use remote database located in Microsoft Azure                                                                                                                        | Ilkka Seppälä      |
-| 24.06.2020 | 2.15    | Add repository sign key details in section [2.2 Reference data](#22-reference-data)                                                                                                           | Petteri Kivimäki   |
-| 30.07.2020 | 2.16    | Default database password is autogenerated.                                                                                                                                                   | Ilkka Seppälä      |
-| 02.09.2020 | 2.17    | Improve database setup instructions.                                                                                                                                                          | Ilkka Seppälä      |
-| 23.09.2020 | 2.18    | List database users.                                                                                                                                                                          | Ilkka Seppälä      |
-| 29.09.2020 | 2.19    | Add instructions for creating database structure and roles manually.                                                                                                                          | Ilkka Seppälä      |
-| 19.01.2021 | 2.20    | Add instructions for using an alternative Java distribution.                                                                                                                                  | Jarkko Hyöty       |
-| 04.02.2021 | 2.21    | Minor updates.                                                                                                                                                                                | Ilkka Seppälä      |
-| 16.04.2021 | 2.22    | Update remote database installation instructions.                                                                                                                                             | Jarkko Hyöty       |
-| 18.05.2021 | 2.23    | Update installation error handling section.                                                                                                                                                   | Ilkka Seppälä      |
-| 01.07.2021 | 2.24    | Update 3rd party key server                                                                                                                                                                   | Petteri Kivimäki   |
-| 18.08.2021 | 2.25    | Minor updates to Annex D                                                                                                                                                                      | Ilkka Seppälä      |
-| 24.08.2021 | 2.26    | Add instructions for running the database migrations manually.                                                                                                                                | Ilkka Seppälä      |
-| 25.08.2021 | 2.27    | Update X-Road references from version 6 to 7                                                                                                                                                  | Caro Hautamäki     |
-| 23.09.2022 | 2.28    | Added new Registration Web Service                                                                                                                                                            | Eneli Reimets      |
-| 26.09.2022 | 2.29    | Remove Ubuntu 18.04 support                                                                                                                                                                   | Andres Rosenthal   |
-| 19.04.2023 | 2.30    | Removed unused properties from db.properties                                                                                                                                                  | Mikk-Erik Bachmann |
-| 05.05.2023 | 2.31    | Minor updates                                                                                                                                                                                 | Justas Samuolis    |
-| 23.05.2023 | 2.32    | Backup Encryption Configuration                                                                                                                                                               | Eneli Reimets      |
-| 31.05.2023 | 2.33    | Add Central Server network diagram                                                                                                                                                            | Petteri Kivimäki |
+| Date       | Version | Description                                                                                                                                                                                   | Author               |
+|------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|
+| 01.12.2014 | 1.0     | Initial version                                                                                                                                                                               |                      |
+| 19.01.2015 | 1.1     | License information added                                                                                                                                                                     |                      |
+| 02.02.2015 | 1.2     | References fixed                                                                                                                                                                              |                      |
+| 18.03.2015 | 1.3     | Meta-package for Central Server                                                                                                                                                               |                      |
+| 02.04.2015 | 1.4     | „sdsb” changed to „xroad”                                                                                                                                                                     |                      |
+| 30.06.2015 | 1.5     | Minor corrections done                                                                                                                                                                        |                      |
+| 06.07.2015 | 1.6     | New repository address                                                                                                                                                                        |                      |
+| 17.09.2015 | 1.7     | Notes about high availability added, references updated                                                                                                                                       |                      |
+| 18.09.2015 | 1.8     | Minor corrections done                                                                                                                                                                        |                      |
+| 18.09.2015 | 2.0     | Editorial changes made                                                                                                                                                                        |                      |
+| 16.12.2015 | 2.1     | Added installation instructions for monitoring                                                                                                                                                |                      |
+| 09.12.2016 | 2.2     | Converted to markdown format                                                                                                                                                                  | Ilkka Seppälä        |
+| 20.12.2016 | 2.3     | Add chapter about additional configuration to Central Server's user manual                                                                                                                    | Ilkka Seppälä        |
+| 20.01.2017 | 2.4     | Added license text and version history                                                                                                                                                        | Sami Kallio          |
+| 25.08.2017 | 2.5     | Update installation instructions concerning the support for environmental monitoring                                                                                                          | Ilkka Seppälä        |
+| 05.03.2018 | 2.6     | Added terms and abbreviations reference, links to references and actual documents                                                                                                             | Tatu Repo            | 
+| 10.04.2018 | 2.7     | Updated chapter "[Installing the Support for Hardware Tokens](#28-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini' | Cybernetica AS       |
+| 14.10.2018 | 2.8     | Update package repository address                                                                                                                                                             | Petteri Kivimäki     |
+| 15.11.2018 | 2.9     | Add Ubuntu 18.04 installation instructions                                                                                                                                                    | Jarkko Hyöty         |
+| 05.02.2019 | 2.10    | Update ports                                                                                                                                                                                  | Jarkko Hyöty         |
+| 04.09.2019 | 2.11    | Update ports                                                                                                                                                                                  | Petteri Kivimäki     |
+| 11.09.2019 | 2.12    | Remove Ubuntu 14.04 from supported platforms                                                                                                                                                  | Jarkko Hyöty         |
+| 26.11.2019 | 2.13    | Add instructions for using remote database                                                                                                                                                    | Ilkka Seppälä        |
+| 29.04.2020 | 2.14    | Add instructions how to use remote database located in Microsoft Azure                                                                                                                        | Ilkka Seppälä        |
+| 24.06.2020 | 2.15    | Add repository sign key details in section [2.2 Reference data](#22-reference-data)                                                                                                           | Petteri Kivimäki     |
+| 30.07.2020 | 2.16    | Default database password is autogenerated.                                                                                                                                                   | Ilkka Seppälä        |
+| 02.09.2020 | 2.17    | Improve database setup instructions.                                                                                                                                                          | Ilkka Seppälä        |
+| 23.09.2020 | 2.18    | List database users.                                                                                                                                                                          | Ilkka Seppälä        |
+| 29.09.2020 | 2.19    | Add instructions for creating database structure and roles manually.                                                                                                                          | Ilkka Seppälä        |
+| 19.01.2021 | 2.20    | Add instructions for using an alternative Java distribution.                                                                                                                                  | Jarkko Hyöty         |
+| 04.02.2021 | 2.21    | Minor updates.                                                                                                                                                                                | Ilkka Seppälä        |
+| 16.04.2021 | 2.22    | Update remote database installation instructions.                                                                                                                                             | Jarkko Hyöty         |
+| 18.05.2021 | 2.23    | Update installation error handling section.                                                                                                                                                   | Ilkka Seppälä        |
+| 01.07.2021 | 2.24    | Update 3rd party key server                                                                                                                                                                   | Petteri Kivimäki     |
+| 18.08.2021 | 2.25    | Minor updates to Annex D                                                                                                                                                                      | Ilkka Seppälä        |
+| 24.08.2021 | 2.26    | Add instructions for running the database migrations manually.                                                                                                                                | Ilkka Seppälä        |
+| 25.08.2021 | 2.27    | Update X-Road references from version 6 to 7                                                                                                                                                  | Caro Hautamäki       |
+| 23.09.2022 | 2.28    | Added new Registration Web Service                                                                                                                                                            | Eneli Reimets        |
+| 26.09.2022 | 2.29    | Remove Ubuntu 18.04 support                                                                                                                                                                   | Andres Rosenthal     |
+| 19.04.2023 | 2.30    | Removed unused properties from db.properties                                                                                                                                                  | Mikk-Erik Bachmann   |
+| 05.05.2023 | 2.31    | Minor updates                                                                                                                                                                                 | Justas Samuolis      |
+| 23.05.2023 | 2.32    | Backup Encryption Configuration                                                                                                                                                               | Eneli Reimets        |
+| 31.05.2023 | 2.33    | Add Central Server network diagram                                                                                                                                                            | Petteri Kivimäki     |
+| 28.06.2023 | 2.34    | Update database properties to the new Spring datasource version                                                                                                                               | Raido Kaju           |
+| 13.09.2023 | 2.35    | Database integrity check errors before center upgrade                                                                                                                                         | Eneli Reimets        |
+| 14.10.2023 | 2.36    | Add Global configuration distribution over https                                                                                                                                              | Eneli Reimets        |
+| 08.12.2023 | 2.37    | Minor updates                                                                                                                                                                                 | Petteri Kivimäki     |
+| 02.01.2024 | 2.38    | Loopback ports added                                                                                                                                                                          | Justas Samuolis      |
+| 25.04.2024 | 2.39    | Updated for Ubuntu 24.04                                                                                                                                                                      | Madis Loitmaa        |
+| 12.06.2024 | 2.40    | Update network diagram                                                                                                                                                                        | Petteri Kivimäki     |
+| 21.10.2024 | 2.41    | Update for configurable parameters in the `/etc/xroad/devices.ini` after added support for ECDSA Configuration signing keys                                                                   | Ovidijus Narkevicius |
+| 10.03.2025 | 2.42    | Minor updates                                                                                                                                                                                 | Petteri Kivimäki     |
+| 21.03.2025 | 2.43    | Syntax and styling                                                                                                                                                                            | Pauline Dimmek       |
+| 03.06.2025 | 2.44    | Setup database connection with SSL certificates                                                                                                                                               | Eneli Reimets        |
+| 30.06.2025 | 2.45    | Update the method of adding X-Road apt repository                                                                                                                                             | Mikk-Erik Bachmann   |
+| 10.09.2026 | 2.46    | Document hardware token configuration via the `xroad.signer.modules` database property                                                                                                       | Ričardas Bučiūnas    |
+
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -71,6 +85,7 @@ Doc. ID: IG-CS
   - [2.5 Setup Package Repository](#25-setup-package-repository)
   - [2.6 Remote Database Setup (optional)](#26-remote-database-setup-optional)
   - [2.7 Package Installation](#27-package-installation)
+    - [2.7.1 Configuring TLS Certificates](#271-configuring-tls-certificates)
   - [2.8 Installing the Support for Hardware Tokens](#28-installing-the-support-for-hardware-tokens)
   - [2.9 Installing the Support for Monitoring](#29-installing-the-support-for-monitoring)
   - [2.10 Pre-configuration for Registration Web Service](#210-pre-configuration-for-registration-web-service)
@@ -83,12 +98,15 @@ Doc. ID: IG-CS
   - [3.4 Backup Encryption Configuration](#34-backup-encryption-configuration)
 - [4 Additional configuration](#4-additional-configuration)
   - [4.1 Global configuration V1 support](#41-global-configuration-v1-support)
+  - [4.2 Global configuration V2 support](#42-global-configuration-v2-support)
+  - [4.3 Global configuration V3 support](#43-global-configuration-v3-support)
 - [5 Installation Error Handling](#5-installation-error-handling)
-  - [5.1 Cannot Set LC_ALL to Default Locale](#51-cannot-set-lc_all-to-default-locale)
+  - [5.1 Cannot Set LC\_ALL to Default Locale](#51-cannot-set-lc_all-to-default-locale)
   - [5.2 PostgreSQL Is Not UTF8 Compatible](#52-postgresql-is-not-utf8-compatible)
   - [5.3 Could Not Create Default Cluster](#53-could-not-create-default-cluster)
   - [5.4 Is Postgres Running on Port 5432?](#54-is-postgres-running-on-port-5432)
   - [5.5 Upgrade supported from version X.Y.Z or newer](#55-upgrade-supported-from-version-xyz-or-newer)
+  - [5.6 Data quality issues in the database](#56-data-quality-issues-in-the-database)
 - [Annex A Central Server Default Database Properties](#annex-a-central-server-default-database-properties)
 - [Annex B Database Users](#annex-b-database-users)
 - [Annex C Deployment Options](#annex-c-deployment-options)
@@ -133,7 +151,7 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 ### 2.1 Prerequisites to Installation
 
-The Central Server software assumes an existing installation of the Ubuntu 20.04 LTS or 22.04 LTS operating system, on an x86-64bit platform. To provide management services, a Security Server is installed alongside the Central Server.
+The Central Server software assumes an existing installation of the Ubuntu 22.04 LTS or 24.04 LTS operating system, on an x86-64bit platform. To provide management services, a Security Server is installed alongside the Central Server.
 
 The Central Server’s software can be installed both on physical and virtualized hardware (of the latter, Xen and Oracle VirtualBox have been tested).
 
@@ -147,20 +165,21 @@ Note: The information in empty cells will be determined at the latest during the
 
 Caution: Data necessary for the functioning of the operating system is not included.
 
-| **Ref** |                                                                                                                                                                                                           | **Explanation**                                                                                                                                                                                                                                                                            |
-|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1.0     | Ubuntu 20.04, 64-bit, 2 GB RAM, 3 GB free disk space                                                                                                                                                      | Minimum requirements                                                                                                                                                                                                                                                                       |
-| 1.1     | https://artifactory.niis.org/xroad-release-deb                                                                                                                                                            | X-Road package repository                                                                                                                                                                                                                                                                  |
-| 1.2     | https://artifactory.niis.org/api/gpg/key/public                                                                                                                                                           | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index) |
-| 1.3     |                                                                                                                                                                                                           | Account name in the user interface                                                                                                                                                                                                                                                         |
-| 1.4     | TCP 4001 service for authentication certificate registration<br>TCP 80 distribution of the global configuration                                                                                           | Ports for inbound connections (from the external network to the Central Server)                                                                                                                                                                                                            |
-| 1.4.1   | TCP 4002 management services                                                                                                                                                                              | Port for inbound connections from the management Security Server                                                                                                                                                                                                                           |
-| 1.5     | TCP 80, 443 software updates                                                                                                                                                                              | Ports for outbound connections (from the Central Server to the external network)                                                                                                                                                                                                           |
-| 1.6     | TCP 80 HTTP between the Central Server and the management services' Security Server<br>TCP 4000 user interface<br>TCP 4002 HTTPS between the Central Server and the management services' Security Server  | Internal network ports, the user interface port, and management service ports for the management services' Security Server                                                                                                                                                                 |
-| 1.7     |                                                                                                                                                                                                           | Central Server internal IP address(es) and hostname(s)                                                                                                                                                                                                                                     |
-| 1.8     |                                                                                                                                                                                                           | Central Server public IP address, NAT address                                                                                                                                                                                                                                              |
-| 1.9     | <by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field>                                                                                            | Information about the user interface TLS certificate                                                                                                                                                                                                                                       |
-| 1.10    | <by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field>                                                                                            | Information about the services TLS certificate                                                                                                                                                                                                                                             |
+| **Ref** |                                                                                                                                                                                                                                                                                                  | **Explanation**                                                                                                                                                                                                                                                                            |
+|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.0     | Ubuntu 22.04 or 24.04 (x86-64), 2 GB RAM, 3 GB free disk space                                                                                                                                                                                                                                             | Minimum requirements                                                                                                                                                                                                                                                                       |
+| 1.1     | https://artifactory.niis.org/xroad-release-deb                                                                                                                                                                                                                                                   | X-Road package repository                                                                                                                                                                                                                                                                  |
+| 1.2     | https://artifactory.niis.org/api/gpg/key/public                                                                                                                                                                                                                                                  | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index) |
+| 1.3     |                                                                                                                                                                                                                                                                                                  | Account name in the user interface                                                                                                                                                                                                                                                         |
+| 1.4     | TCP 4001 service for authentication certificate registration<br>TCP 80 distribution of the global configuration<br>TCP 443 distribution of the global configuration                                                                                                                              | Ports for inbound connections (from the external network to the Central Server)                                                                                                                                                                                                            |
+| 1.4.1   | TCP 4002 management services                                                                                                                                                                                                                                                                     | Port for inbound connections from the management Security Server                                                                                                                                                                                                                           |
+| 1.5     | TCP 80, 443 software updates                                                                                                                                                                                                                                                                     | Ports for outbound connections (from the Central Server to the external network)                                                                                                                                                                                                           |
+| 1.6     | TCP 80 HTTP between the Central Server and the management services' Security Server<br>TCP 443 HTTP between the Central Server and the management services' Security Server<br>TCP 4000 user interface<br>TCP 4002 HTTPS between the Central Server and the management services' Security Server | Internal network ports, the user interface port, and management service ports for the management services' Security Server                                                                                                                                                                 |
+| 1.7     |                                                                                                                                                                                                                                                                                                  | Central Server internal IP address(es) and hostname(s)                                                                                                                                                                                                                                     |
+| 1.8     |                                                                                                                                                                                                                                                                                                  | Central Server public IP address, NAT address                                                                                                                                                                                                                                              |
+| 1.9     | <by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field>                                                                                                                                                                                   | Information about the user interface TLS certificate                                                                                                                                                                                                                                       |
+| 1.10    | <by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field>                                                                                                                                                                                   | Information about the services TLS certificate                                                                                                                                                                                                                                             |
+| 1.11    | <by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field>                                                                                                                                                                                   | Information about the global configuration TLS certificate                                                                                                                                                                                                                                 |
 
 It is strongly recommended to protect the Central Server from unwanted access using a firewall (hardware or software based). The firewall can be applied to both incoming and outgoing connections depending on the security requirements of the environment where the Central Server is deployed. It is recommended to allow incoming traffic to specific ports only from explicitly defined sources using IP filtering. **Special attention should be paid with the firewall configuration since incorrect configuration may leave the Central Server vulnerable to exploits and attacks.**
 
@@ -168,21 +187,32 @@ It is strongly recommended to protect the Central Server from unwanted access us
 
 The network diagram below provides an example of a basic Central Server setup.
 
-![network diagram](img/ig-cs_network_diagram.png)
+![network diagram](img/ig-cs_network_diagram.svg)
 
 The table below lists the required connections between different components. Please note that required connections between Security Servers and trust services (OCSP service, time-stamping service) have been omitted from the diagram and the table below. Their configuration is described in [IG-SS](#Ref_IG-SS).
 
-**Connection Type** | **Source**                        | **Target**                    | **Target Ports** | **Protocol** | **Note**                                                                                    |
------------|-----------------------------------|-------------------------------|------------|-----------|---------------------------------------------------------------------------------------------|
-Out | Monitoring Security Server        | X-Road Member Security Server | 5500, 5577 | tcp | Operational and environmental monitoring data collection                                    |
-In  | X-Road Member Security Server     | Central Server                | 80         | tcp | Global configuration distribution                                                           |
-In  | X-Road Member Security Server     | Central Server                | 4001       | tcp | Authentication certificate registration requests from X-Road Members' Security Servers      |
-In  | Management Security Server        | Central Server                | 4002       | tcp | Source in the internal network. Management service requests from Management Security Server |
-In  | X-Road Member Security Server     | Management Security Server    | 5500, 5577 | tcp | Management service requests from X-Road Members' Security Servers                           |
-In  | Central Monitoring Client         | Monitoring Security Server    | 80, 443    | tcp | Source in the internal network                                                              |
-In  | Admin, management REST API client | Central Server                | 4000       | tcp | Source in the internal network                                                              |
-In  | Admin                             | Management Security Server    | 4000       | tcp | Source in the internal network                                                              |
-In  | Admin                             | Monitoring Security Server    | 4000       | tcp | Source in the internal network                                                              |
+| **Connection Type** | **Source**                        | **Target**                    | **Target Ports**    | **Protocol** | **Note**                                                                                                                                                                         |
+|---------------------|-----------------------------------|-------------------------------|---------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Out                 | Monitoring Security Server        | X-Road Member Security Server | 5500, 5577          | tcp          | Operational and environmental monitoring data collection                                                                                                                         |
+| In                  | X-Road Member Security Server     | Central Server                | 80, 443             | tcp          | Global configuration distribution                                                                                                                                                |
+| In                  | X-Road Member Security Server     | Central Server                | 4001                | tcp          | Authentication certificate registration requests from X-Road Members' Security Servers                                                                                           |
+| In                  | Management Security Server        | Central Server                | 80, 443, 4001, 4002 | tcp          | Source in the internal network. Management service requests from Management Security Server. Global configuration distribution. Authentication certificate registration requests |
+| In                  | Monitoring Security Server        | Central Server                | 80, 443, 4001       | tcp          | Source in the internal network. Global configuration distribution. Authentication certificate registration requests                                                              |
+| In                  | X-Road Member Security Server     | Management Security Server    | 5500, 5577          | tcp          | Management service requests from X-Road Members' Security Servers                                                                                                                |
+| In                  | Central Monitoring Client         | Monitoring Security Server    | 8080, 8443          | tcp          | Source in the internal network                                                                                                                                                   |
+| In                  | Admin, management REST API client | Central Server                | 4000                | tcp          | Source in the internal network                                                                                                                                                   |
+| In                  | Admin                             | Management Security Server    | 4000                | tcp          | Source in the internal network                                                                                                                                                   |
+| In                  | Admin                             | Monitoring Security Server    | 4000                | tcp          | Source in the internal network                                                                                                                                                   |
+
+The table below lists the open ports for Central Server components utilizing the _loopback_ interface. A loopback interface is a virtual network interface on a computer, facilitating self-communication for processes and applications. This enables local communication and the ports must be accessible locally.
+
+| **Component**        | **Ports** | **Protocol** | **Note**                                      |
+|----------------------|-----------|--------------|-----------------------------------------------|
+| Registration Service | 8084      | tcp          | For incoming requests to Registration Service |
+| Management Service   | 8085      | tcp          | For incoming requests to Management Service   |
+| PostgreSQL database  | 5432      | tcp          | Default PostgreSQL database port              |
+| Signer               | 5560      | tcp          | Signer gRPC port                              |
+| Audit log            | 514       | udp          |                                               |
 
 ### 2.3 Requirements to the Central Server
 
@@ -193,7 +223,7 @@ Minimum recommended hardware parameters:
 - 100 Mbps network interface card.
 
 Requirements for software and settings:
-- an installed and configured Ubuntu 20.04 LTS or 22.04 LTS x86-64 operating system;
+- an installed and configured Ubuntu 22.04 LTS or 24.04 LTS x86-64 operating system;
 - the necessary connections are allowed in the firewall (reference data: 1.4; 1.4.1; 1.5; 1.6),
 - if the Central Server has a private IP address, a corresponding NAT record must be created in the firewall (reference data: 1.8).
 
@@ -205,9 +235,9 @@ Requirements for software and settings:
 
   User roles are discussed in detail in the X-Road Security Server User Guide [UG-SS](#Ref_UG-SS). Do not use the user name `xroad`, it is reserved for the X-Road system user.
 
-- Ensure that the packages `locales` and `software-properties-common` are present
+- Ensure that the packages `locales` and `lsb-release` are present
   
-  `sudo apt install locales software-properties-common`
+  `sudo apt install locales lsb-release`
 
 - Set the operating system locale.
 
@@ -218,12 +248,12 @@ Requirements for software and settings:
 
 Add the X-Road repository’s signing key to the list of trusted keys (**reference data: 1.2**):
 ```bash
-curl https://artifactory.niis.org/api/gpg/key/public | sudo apt-key add -
+curl -fsSL https://x-road.eu/gpg/key/public/niis-artifactory-public.gpg | sudo tee /usr/share/keyrings/niis-artifactory-keyring.gpg > /dev/null
 ```
 
 Add X-Road package repository (**reference data: 1.1**)
 ```bash
-sudo apt-add-repository -y "deb https://artifactory.niis.org/xroad-release-deb $(lsb_release -sc)-current main"
+echo "deb [signed-by=/usr/share/keyrings/niis-artifactory-keyring.gpg] https://artifactory.niis.org/xroad-release-deb $(lsb_release -sc)-current main" | sudo tee /etc/apt/sources.list.d/xroad.list > /dev/null
 ```
 
 ### 2.6 Remote Database Setup (optional)
@@ -246,7 +276,11 @@ psql -h <database host> -U <superuser> -tAc 'show server_version'
 
 The installer can create the database and users for you, but you need to create a configuration file containing the database administrator credentials. 
 
-For advanced setup, e.g. if storing the database administrator password on the server is not an option, you can create the database users and structure manually as described in [Annex D Create Database Structure Manually](#annex-d-create-database-structure-manually) and then continue to section 2.7. Otherwise, perform the following steps:
+For advanced setup, e.g. if storing the database administrator password on the server is not an option, you can create the database users and structure manually as described in [Annex D Create Database Structure Manually](#annex-d-create-database-structure-manually) and then continue to section 2.7. 
+
+For setting up a database connection with SSL certificates, you need to create an additional configuration file `db_libpq.env` in the `/etc/xroad/` folder. For more details see the section „Passing additional parameters to psql“ in [UG-CS](#Ref_UG-CS).
+
+When leaving the database and user creation to the installer, continue with the following steps:
 
 Create the property file:
 ```bash
@@ -302,47 +336,103 @@ Upon the first installation of the Central Server software, the system asks for 
   The certificate owner’s Distinguished Name must be entered in the format: `/CN=server.domain.tld`
   All IP addresses and domain names in use must be entered as alternative names in the format: `IP:1.2.3.4,IP:4.3.2.1,DNS:servername,DNS:servername2.domain.tld`
 
+- Identification of the TLS certificate that is used for securing the HTTPS access point used for global configuration distribution (reference data: 1.7; 1.11). The name and IP addresses detected from the operating system are suggested as default values.
+
+  The certificate owner’s Distinguished Name must be entered in the format: `/CN=server.domain.tld`.
+  All IP addresses and domain names in use must be entered as alternative names in the format: `IP:1.2.3.4,IP:4.3.2.1,DNS:servername,DNS:servername2.domain.tld`
+
+#### 2.7.1 Configuring TLS Certificates
+
+The installation process creates a self-signed TLS certificates. However, self-signed certificates are not recommended for production use, and should be substituted with certificate issued by a trusted Certificate Authority (CA).
+
+To configure the Central Server to use a certificate issued by a trusted CA for serving global configurations over HTTPS, replace the existing certificate files (`global-conf.crt`) and its associated private key (`global-conf.key`), located in the `/etc/xroad/ssl/` directory.
+
+Reload the nginx service for the certificate change to take effect.
+
+```bash
+systemctl reload nginx
+```
+
+
 ### 2.8 Installing the Support for Hardware Tokens
 
 To configure support for hardware security tokens (smartcard, USB token, Hardware Security Module), act as follows.
 
 1.  Install the hardware token support module using the following command:
 
-        sudo apt install xroad-addon-hwtokens
+    ```bash
+    sudo apt install xroad-addon-hwtokens
+    ```
 
 2.  Install and configure a PKCS\#11 driver for the hardware token according to the manufacturer's instructions.
 
-3.  Add the path to the PKCS\#11 driver to the file `/etc/xroad/devices.ini` (as described in the example given in the file).
+3.  Configure the module by adding an entry for it to the `xroad.signer.modules` configuration property, as described below.
 
 4.  After installing and configuring the driver, the xroad-signer service must be restarted:
 
-        sudo service xroad-signer restart
+    ```bash
+    sudo service xroad-signer restart
+    ```
 
-If you are running a high availability (HA) hardware token setup (such as a cluster with replicated tokens) then you may need to constrain the token identifier format such that the token replicas can be seen as the same token. The token identifier format can be changed in `/etc/xroad/devices.ini` via the `token_id_format` property (default value: `{moduleType}{slotIndex}{serialNumber}{label}`). Removing certain parts of the identifier will allow the HA setup to work correctly when one of the tokens goes down and is replaced by a replica. For example, if the token replicas are reported to be on different slots the `{slotIndex}` part should be removed from the identifier format.
+Hardware token (HSM) modules are configured as a single JSON document stored in the `xroad.signer.modules` configuration property, not as a file on disk. The document is a JSON object that maps a module identifier of your own choosing (used as the token's UID) to that module's settings, for example:
 
-Depending on the hardware token there may be a need for more additional configuration. All possible configurable parameters in the `/etc/xroad/devices.ini` are described in the next table.
+```json
+{
+  "softhsm2": {
+    "library": "/usr/lib/softhsm/libsofthsm2.so",
+    "os-locking-ok": true,
+    "library-cant-create-os-threads": true,
+    "slot-ids": [0],
+    "token-id-format": "1"
+  }
+}
+```
 
-| Parameter                               | Type        | Default Value                                  | Explanation                                                                                                                                                                                                                                               |
-|-----------------------------------------|-------------|------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| *enabled*                               | BOOLEAN     | *true*                                         | Indicates whether this device is enabled.                                                                                                                                                                                                                 |
-| *library*                               | STRING      |                                                | The path to the pkcs#11 library of the device driver.                                                                                                                                                                                                     |
-| *library_cant_create_os_threads*        | BOOLEAN     | *false*                                        | Indicates whether application threads, which are executing calls to the pkcs#11 library, may not use native operating system calls to spawn new threads (in other words, the library’s code may not create its own threads).                              |
-| *os_locking_ok*                         | BOOLEAN     | *false*                                        | Indicates whether the pkcs#11 library may use the native operation system threading model for locking.                                                                                                                                                    |
-| *sign_verify_pin*                       | BOOLEAN     | *false*                                        | Indicates whether the PIN should be entered per signing operation.                                                                                                                                                                                        |
-| *token_id_format*                       | STRING      | *{moduleType}{slotIndex}{serialNumber}{label}* | Specifies the identifier format used to uniquely identify a token. In certain high availability setups may need be constrained to support replicated tokens (eg. by removing the slot index part which may be diffirent for the token replicas).          |
-| *sign_mechanism*                        | STRING      | *CKM_RSA_PKCS*                                 | Specifies the signing mechanism. Supported values: *CKM_RSA_PKCS*, *CKM_RSA_PKCS_PSS*.                                                                                                                                                                    |
-| *pub_key_attribute_encrypt*             | BOOLEAN     | *true*                                         | Indicates whether public key can be used for encryption.                                                                                                                                                                                                  |
-| *pub_key_attribute_verify*              | BOOLEAN     | *true*                                         | Indicates whether public key can be used for verification.                                                                                                                                                                                                |
-| *pub_key_attribute_wrap*                | BOOLEAN     |                                                | Indicates whether public key can be used for wrapping other keys.                                                                                                                                                                                         |
-| *pub_key_attribute_allowed_mechanisms*  | STRING LIST |                                                | Specifies public key allowed mechanisms. Supported values: *CKM_RSA_PKCS*, *CKM_SHA256_RSA_PKCS*, *CKM_SHA384_RSA_PKCS*, *CKM_SHA512_RSA_PKCS*, and *CKM_RSA_PKCS_PSS*, *CKM_SHA256_RSA_PKCS_PSS*, *CKM_SHA384_RSA_PKCS_PSS*, *CKM_SHA512_RSA_PKCS_PSS*.  |
-| *priv_key_attribute_sensitive*          | BOOLEAN     | *true*                                         | Indicates whether private key is sensitive.                                                                                                                                                                                                               |
-| *priv_key_attribute_decrypt*            | BOOLEAN     | *true*                                         | Indicates whether private key can be used for encryption.                                                                                                                                                                                                 |
-| *priv_key_attribute_sign*               | BOOLEAN     | *true*                                         | Indicates whether private key can be used for signing.                                                                                                                                                                                                    |
-| *priv_key_attribute_unwrap*             | BOOLEAN     |                                                | Indicates whether private key can be used for unwrapping wrapped keys.                                                                                                                                                                                    |
-| *priv_key_attribute_allowed_mechanisms* | STRING LIST |                                                | Specifies private key allowed mechanisms. Supported values: *CKM_RSA_PKCS*, *CKM_SHA256_RSA_PKCS*, *CKM_SHA384_RSA_PKCS*, *CKM_SHA512_RSA_PKCS*, and *CKM_RSA_PKCS_PSS*, *CKM_SHA256_RSA_PKCS_PSS*, *CKM_SHA384_RSA_PKCS_PSS*, *CKM_SHA512_RSA_PKCS_PSS*. |
+All possible properties of a module entry are described in the next table.
 
-**Note 1:** Only parameter *library* is mandatory, all the others are optional.  
-**Note 2:** The item separator of the type STRING LIST is ",".
+| Property                                 | Type         | Default Value                                  | Explanation                                                                                                                                                                                                                                                                                                                        |
+|-------------------------------------------|--------------|-------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `enabled`                                  | BOOLEAN      | `true`                                          | Indicates whether this module is enabled. Setting `enabled: false` for the reserved module id `softToken` disables the built-in software token instead of a hardware module.                                                                                                                                                    |
+| `library`                                  | STRING       |                                                  | The path to the PKCS#11 library of the device driver, as seen by the signer process.                                                                                                                                                                                                                                              |
+| `library-cant-create-os-threads`           | BOOLEAN      |                                                  | Indicates whether application threads, which are executing calls to the PKCS#11 library, may not use native operating system calls to spawn new threads (in other words, the library's code may not create its own threads).                                                                                                    |
+| `os-locking-ok`                            | BOOLEAN      |                                                  | Indicates whether the PKCS#11 library may use the native operating system threading model for locking.                                                                                                                                                                                                                            |
+| `sign-verify-pin`                          | BOOLEAN      | `false`                                          | Indicates whether the PIN should be entered per signing operation.                                                                                                                                                                                                                                                                 |
+| `token-id-format`                          | STRING       | `{moduleType}{slotIndex}{serialNumber}{label}`  | Specifies the identifier format used to uniquely identify a token. In certain high availability setups may need to be constrained to support replicated tokens (e.g. by removing the slot index part which may be different for the token replicas).                                                                             |
+| `sign-mechanism`                           | STRING       | `CKM_RSA_PKCS`                                  | Specifies the signing mechanism. Supported values: `CKM_RSA_PKCS`, `CKM_RSA_PKCS_PSS`.                                                                                                                                                                                                                                            |
+| `rsa-sign-mechanism`                       | STRING       | value of `sign-mechanism`                       | Specifies the signing mechanism for RSA keys, overriding `sign-mechanism`. Supported values: `CKM_RSA_PKCS`, `CKM_RSA_PKCS_PSS`.                                                                                                                                                                                                  |
+| `ec-sign-mechanism`                        | STRING       | `CKM_ECDSA`                                     | Specifies the signing mechanism for EC keys. Supported values: `CKM_ECDSA`.                                                                                                                                                                                                                                                       |
+| `pub-key-attribute-encrypt`                | BOOLEAN      | `true`                                           | Indicates whether the public key can be used for encryption.                                                                                                                                                                                                                                                                      |
+| `pub-key-attribute-verify`                 | BOOLEAN      | `true`                                           | Indicates whether the public key can be used for verification.                                                                                                                                                                                                                                                                    |
+| `pub-key-attribute-wrap`                   | BOOLEAN      |                                                  | Indicates whether the public key can be used for wrapping other keys.                                                                                                                                                                                                                                                             |
+| `pub-key-attribute-verify-recover`         | BOOLEAN      |                                                  | Indicates whether the public key has the verify-recover attribute.                                                                                                                                                                                                                                                                |
+| `pub-key-attribute-trusted`                | BOOLEAN      |                                                  | Indicates whether the public key has the trusted attribute.                                                                                                                                                                                                                                                                       |
+| `pub-key-attribute-allowed-mechanisms`     | STRING LIST  |                                                  | Specifies public key allowed mechanisms. Supported values: `CKM_RSA_PKCS`, `CKM_SHA256_RSA_PKCS`, `CKM_SHA384_RSA_PKCS`, `CKM_SHA512_RSA_PKCS`, `CKM_RSA_PKCS_PSS`, `CKM_SHA256_RSA_PKCS_PSS`, `CKM_SHA384_RSA_PKCS_PSS`, `CKM_SHA512_RSA_PKCS_PSS`, `CKM_ECDSA`, `CKM_ECDSA_SHA256`, `CKM_ECDSA_SHA384`, `CKM_ECDSA_SHA512`.       |
+| `priv-key-attribute-sensitive`             | BOOLEAN      | `true`                                           | Indicates whether the private key is sensitive.                                                                                                                                                                                                                                                                                   |
+| `priv-key-attribute-decrypt`               | BOOLEAN      | `true`                                           | Indicates whether the private key can be used for decryption.                                                                                                                                                                                                                                                                     |
+| `priv-key-attribute-sign`                  | BOOLEAN      | `true`                                           | Indicates whether the private key can be used for signing.                                                                                                                                                                                                                                                                        |
+| `priv-key-attribute-unwrap`                | BOOLEAN      |                                                  | Indicates whether the private key can be used for unwrapping wrapped keys.                                                                                                                                                                                                                                                        |
+| `priv-key-attribute-sign-recover`          | BOOLEAN      |                                                  | Indicates whether the private key has the sign-recover attribute.                                                                                                                                                                                                                                                                 |
+| `priv-key-attribute-extractable`           | BOOLEAN      |                                                  | Indicates whether the private key has the extractable attribute.                                                                                                                                                                                                                                                                  |
+| `priv-key-attribute-always-sensitive`      | BOOLEAN      |                                                  | Indicates whether the private key has the always-sensitive attribute.                                                                                                                                                                                                                                                             |
+| `priv-key-attribute-never-extractable`     | BOOLEAN      |                                                  | Indicates whether the private key has the never-extractable attribute.                                                                                                                                                                                                                                                            |
+| `priv-key-attribute-wrap-with-trusted`     | BOOLEAN      |                                                  | Indicates whether the private key has the wrap-with-trusted attribute.                                                                                                                                                                                                                                                            |
+| `priv-key-attribute-allowed-mechanisms`    | STRING LIST  |                                                  | Specifies private key allowed mechanisms. Supported values: same as `pub-key-attribute-allowed-mechanisms`.                                                                                                                                                                                                                       |
+| `slot-ids`                                 | INTEGER LIST |                                                  | Restricts the module to the given PKCS#11 slot IDs. Useful when a driver reports more slots than there are physical tokens.                                                                                                                                                                                                       |
+| `batch-signing-enabled`                    | BOOLEAN      | `true`                                           | Indicates whether batch signing is enabled for this module.                                                                                                                                                                                                                                                                       |
+| `read-only`                                | BOOLEAN      | `false`                                          | Indicates whether the module is opened read-only.                                                                                                                                                                                                                                                                                 |
+
+**Note 1:** Only property `library` is mandatory, all the others are optional.
+**Note 2:** Properties of the type STRING LIST are JSON arrays of strings, e.g. `["CKM_RSA_PKCS", "CKM_ECDSA"]`.
+
+Set the property with `db_property.sh`, installed at `/usr/share/xroad/scripts/db_property.sh`:
+
+```bash
+sudo /usr/share/xroad/scripts/db_property.sh set xroad.signer.modules '{"softhsm2":{"library":"/usr/lib/softhsm/libsofthsm2.so","slot-ids":[0]}}' --yes
+```
+
+`xroad.signer.modules` is not exposed in the Central Server admin UI's System Parameters view; `db_property.sh` is the supported way to read and write it. The new value takes effect on the next `xroad-signer` restart — module configuration is read once at signer startup.
+
+**Migrating from a pre-version-8 `devices.ini`:** versions of X-Road before 8 configured hardware tokens in an INI file at `/etc/xroad/devices.ini`. On X-Road 8 this file is no longer read by the signer — do not create it. When upgrading, `migration-cli signer-devices <devices.ini file> <db.properties file>` converts an existing `devices.ini` into the `xroad.signer.modules` document described above; see the version 8 upgrade guide for details.
 
 ### 2.9 Installing the Support for Monitoring
 
@@ -368,18 +458,17 @@ Configuration parameters for management web service are specified in the [UG-SYS
 The installation is successful if the system services are started and the user interface is responding.
 
 -   Ensure from the command line that relevant X-Road services are in the `running` state (example output follows). Notice that it is normal for the xroad-confclient to be in `stopped` state on the Central Server since it operates in one-shot mode.
+    
+    ```bash
+    sudo systemctl list-units "xroad*"
 
-    - Ubuntu 20.04 or 22.04
-        ```bash
-        sudo systemctl list-units "xroad*"
-
-        UNIT                                      LOAD   ACTIVE SUB     DESCRIPTION
-        xroad-base.service                        loaded active exited  X-Road initialization
-        xroad-center-management-service.service   loaded active running X-Road Central Server Management Service
-        xroad-center-registration-service.service loaded active running X-Road Central Server Registration Service
-        xroad-center.service                      loaded active running X-Road Central Server
-        xroad-signer.service                      loaded active running X-Road signer
-        ```
+    UNIT                                      LOAD   ACTIVE SUB     DESCRIPTION
+    xroad-base.service                        loaded active exited  X-Road initialization
+    xroad-center-management-service.service   loaded active running X-Road Central Server Management Service
+    xroad-center-registration-service.service loaded active running X-Road Central Server Registration Service
+    xroad-center.service                      loaded active running X-Road Central Server
+    xroad-signer.service                      loaded active running X-Road signer
+    ```
 
 -   Ensure that the Central Server user interface at https://SECURITYSERVER:4000/ (**reference data: 1.8; 1.6**) can be opened in a Web browser. To log in, use the account name chosen during the installation (**reference data: 1.3**). While the user interface is still starting up, the Web browser may display the “502 Bad Gateway” error.
 
@@ -431,10 +520,10 @@ appoint the subsystem as the management service provider - [UG-CS](#Ref_UG-CS) s
 
 ### 3.4 Backup Encryption Configuration
 
-It is possible to automatically encrypt Central Server configuration backups. Central server uses The GNU Privacy Guard (https://www.gnupg.org)
+It is possible to automatically encrypt Central Server configuration backups. Central Server uses The GNU Privacy Guard (https://www.gnupg.org)
 for backup encryption and verification. Backups are always signed, but backup encryption is initially turned off.
 To turn encryption on, please override the default configuration in the file `/etc/xroad/conf.d/local.ini`, in the `[center]` section (add or edit this section).
-```bash
+```ini
 [center]
 
 backup-encryption-enabled = true
@@ -468,8 +557,19 @@ gpg --homedir <your_gpg_homedir_here> --import server-public-key.gpg
 
 ### 4.1 Global configuration V1 support
 
-The support for global configuration version V1 has been removed in X-Road version 6.20. The Central Server produces only V2 global configuration which is expected by Security Servers from version 6.8.x and up.
+The support for global configuration version V1 has been removed in X-Road version 6.20.
 
+### 4.2 Global configuration V2 support
+
+The Central Server produces global configuration version V2. Version V2 is supported by Security Servers from version 6.8.0 and up.
+
+### 4.3 Global configuration V3 support
+
+The Central Server produces global configuration version V3. Version V3 is supported by Security Servers from version 7.4.0 and up.
+
+### 4.3 Use EC Algorithm in Configuration Signing keys
+
+Since version 7.6.0, the Central Server supports EC algorithm for configuration signing keys. Refer to [UG-CS](#Ref_UG-CS) section „Migrating to EC based Configuration Signing keys“. By default, both internal and external configuration signing keys use the RSA algorithm.
 ## 5 Installation Error Handling
 
 ### 5.1 Cannot Set LC_ALL to Default Locale
@@ -506,7 +606,7 @@ then the PostgreSQL package is installed with the wrong locale. One way to fix i
 
 To complete the interrupted installation, run the command:
 
-`sudo apt -f install`
+`sudo apt --fix-broken install`
 
 ### 5.3 Could Not Create Default Cluster
 
@@ -521,7 +621,7 @@ Use the following command to create the PostgreSQL data cluster:
 
 The interrupted installation can be finished using
 
-`sudo apt -f install`
+`sudo apt --fix-broken install`
 
 ### 5.4 Is Postgres Running on Port 5432?
 
@@ -537,7 +637,7 @@ Then check if any of the following errors occurred during the installation of Po
 
 The interrupted installation can be finished using
 
-`sudo apt -f install`
+`sudo apt --fix-broken install`
 
 ### 5.5 Upgrade supported from version X.Y.Z or newer
 
@@ -596,17 +696,67 @@ Finally, we can upgrade to our target version 7.3.x as follows.
 apt upgrade xroad-centralserver
 ```
 
+### 5.6 Data quality issues in the database
+
+The following error message may come up during the Central Server upgrade.
+
+`Data quality issues in the XXXXX database. ...`
+
+Before upgrading the packages from the current version to the target version, incorrect data in the postgreSQL database needs to be fixed.
+
+For example, if the error message says:
+
+```bash
+root@test-cs:~# apt upgrade xroad-centralserver
+...
+Preparing to unpack .../xroad-center_7.4.0-1.ubuntu22.04_all.deb ...
+
+ERROR: Data quality issues in the centerui_production database. There are duplicate data in the table SYSTEM_PARAMETERS columns pair (KEY, HA_NODE_NAME):.........................................................] 
+----------------------------------------------------------------------------------------------------------------------------------------------
+id|key|value|created_at|updated_at|ha_node_name|count
+12|instanceIdentifier|cs|2021-03-10 07:37:26.59307|2021-03-10 07:37:26.59307|node_0|2
+1|instanceIdentifier|CS|2021-03-10 07:37:26.59307|2021-03-10 07:37:26.59307|node_0|2
+(2 rows)
+----------------------------------------------------------------------------------------------------------------------------------------------
+...
+Please fix incorrect data before continuing.
+```
+
+To fix incorrect data, login to the postreSQL database server. By default, the database is named `centerui_production`, database user and schema both are named `centerui`.
+
+```bash
+psql -h <database host> -U <database user> -d <database>
+```  
+
+and run script that shows all duplicate data in the SYSTEM_PARAMETERS table.
+
+```sql
+select * from (select *, count(*) over (partition by key, ha_node_name order by key, ha_node_name) as count
+      from system_parameters) as s
+where s.count > 1;
+```
+
+If script return data, then delete thus system parameters rows what system parameter value is not used or just delete one duplicate row if the values is same.
+
+```sql
+delete from system_parameters where id = 12;
+```
+
+The interrupted installation can be finished using:
+
+```bash
+sudo apt --fix-broken install
+```
+
 ## Annex A Central Server Default Database Properties
 
 `/etc/xroad/db.properties`
 
 ```properties
-username=centerui
-password=<randomly generated password stored is stored here>
-database=centerui_production
-schema=centerui
-host=127.0.0.1
-port=5432
+spring.datasource.username=centerui
+spring.datasource.password=<randomly generated password stored is stored here>
+spring.datasource.hikari.data-source-properties.currentSchema=centerui
+spring.datasource.url=jdbc:postgresql://127.0.0.1:5432/centerui_production
 skip_migrations=false
 ```
 
@@ -628,31 +778,31 @@ X-Road Central Server can be deployed in multiple ways. The simplest option is t
 
 The simplest deployment option is to use a single Central Server with local database. This is the default choice when setting up a development or testing environment. It's not recommended for production since there is a single point of failure.
 
-![Central server with local database](img/ig-cs_local_db.svg)
+![Central Server with local database](img/ig-cs_local_db.svg)
 
 ### C.3 Remote Database
 
 It is possible to use a remote database with Central Server. This option is sometimes used in development when there's need to externalize the database state.
 
-Central server supports a variety of cloud databases including AWS RDS and Azure Database for PostgreSQL. This deployment option is useful when doing development in cloud environment.
+Central Server supports a variety of cloud databases including AWS RDS and Azure Database for PostgreSQL. This deployment option is useful when doing development in cloud environment.
 
-![Central server with remote database](img/ig-cs_remote_db.svg)
+![Central Server with remote database](img/ig-cs_remote_db.svg)
 
-Central server itself can also be clustered. In clustered mode high-availability is built in to the system and the clients (Security Servers and configuration proxies) can continue operation despite a loss of a Central Server node.
+Central Server itself can also be clustered. In clustered mode high-availability is built in to the system and the clients (Security Servers and configuration proxies) can continue operation despite a loss of a Central Server node.
 
-![Central server cluster with remote database](img/ig-cs_cluster_remote_db.svg)
+![Central Server cluster with remote database](img/ig-cs_cluster_remote_db.svg)
 
 ### C.4 Remote Database Cluster
 
 When aiming for production it's recommended to use redundant front-end nodes (clustered Central Server) and a remote database cluster. This way there's no single point of failure and the system can recover from both front-end node and database failures.
 
-![Central server with remote database cluster](img/ig-cs_remote_db_cluster.svg)
+![Central Server with remote database cluster](img/ig-cs_remote_db_cluster.svg)
 
 ### C.5 Cloud Database Cluster
 
 When Central Server is deployed in cloud environment and aimed for production use, it's recommended to use a cloud database cluster. To achieve high availability, there should be redundant front-end nodes (clustered Central Server) in separate availability zones.
 
-![Central server with cloud database cluster](img/ig-cs_cloud_db_cluster.svg)
+![Central Server with cloud database cluster](img/ig-cs_cloud_db_cluster.svg)
 
 ### C.6 Summary
 
@@ -728,12 +878,10 @@ Edit `/etc/xroad/db.properties` file and add/update the following connection pro
 The default values can be found in [Annex A Central Server Default Database Properties](#annex-a-central-server-default-database-properties).
 
 ```properties
-username=<database_user>
-password=<database_user password>
-database=<database>
-host=<database_host>
-port=<database_port>
-schema=<database_schema>
+spring.datasource.username=<database_user>
+spring.datasource.password=<database_user_password>
+spring.datasource.hikari.data-source-properties.currentSchema=<database_schema>
+spring.datasource.url=jdbc:postgresql://<database_host>:<database_port>/<database>
 skip_migrations=<false by default, set to true to skip migrations>
 ```
 

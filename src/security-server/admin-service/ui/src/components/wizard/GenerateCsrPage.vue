@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,64 +25,55 @@
    THE SOFTWARE.
  -->
 <template>
-  <div>
-    <ValidationObserver ref="form2" v-slot="{ invalid }">
-      <div class="wizard-step-form-content pt-6">
-        <div v-for="item in csrForm" :key="item.id" class="wizard-row-wrap">
-          <div class="wizard-label">
-            {{ $t(`certificateProfile.${item.label_key}`) }}
-          </div>
-          <div>
-            <ValidationProvider
-              v-slot="{ errors }"
-              :name="item.id"
-              :rules="item.required && 'required'"
-            >
-              <v-text-field
-                v-model="item.default_value"
-                class="wizard-form-input"
-                :name="item.id"
-                type="text"
-                :disabled="item.read_only"
-                :error-messages="errors"
-                outlined
-                autofocus
-                data-test="dynamic-csr-input"
-              ></v-text-field>
-            </ValidationProvider>
-          </div>
-        </div>
-      </div>
-      <div class="button-footer">
-        <xrd-button outlined data-test="cancel-button" @click="cancel">{{
-          $t('action.cancel')
-        }}</xrd-button>
+  <XrdWizardStep>
+    <XrdFormBlock>
+      <XrdFormBlockRow v-for="item in csrForm" :key="item.id">
+        <v-text-field
+          v-model="componentModel(item.id).value"
+          v-bind="componentAttr(item.id).value"
+          class="xrd"
+          :data-test="`dynamic-csr-input_${item.id}`"
+          :name="item.id"
+          :disabled="item.read_only"
+          :autofocus="autofocusField === item.id"
+          :label="$t(`certificateProfile.${item.label_key}`)"
+        />
+      </XrdFormBlockRow>
+      <XrdFormBlockRow v-if="acmeCapable" description="csr.orderAcmeCertificate">
+        <v-checkbox
+          v-model="acmeOrders"
+          class="xrd"
+          data-test="order-acme-certificate-checkbox"
+          persistent-hint
+          :disabled="externalAccountBindingRequiredButMissing"
+          :hint="externalAccountBindingRequiredButMissingHint"
+        />
+      </XrdFormBlockRow>
+    </XrdFormBlock>
+    <template #footer>
+      <XrdBtn data-test="cancel-button" variant="outlined" text="action.cancel" @click="cancel" />
+      <v-spacer />
 
-        <xrd-button
-          outlined
-          class="previous-button"
-          data-test="previous-button"
-          @click="previous"
-          >{{ $t('action.previous') }}</xrd-button
-        >
-        <xrd-button :disabled="invalid" data-test="save-button" @click="done">{{
-          $t(saveButtonText)
-        }}</xrd-button>
-      </div>
-    </ValidationObserver>
-  </div>
+      <XrdBtn data-test="previous-button" variant="outlined" class="mr-2" text="action.previous" @click="previous" />
+      <XrdBtn data-test="save-button" :disabled="!meta.valid" :text="saveButtonText" @click="done" />
+    </template>
+  </XrdWizardStep>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { ValidationProvider, ValidationObserver } from 'vee-validate';
-import { mapState } from 'pinia';
-import { useCsrStore } from '@/store/modules/certificateSignRequest';
+import { defineComponent, Ref } from 'vue';
+import { useCsr } from '@/store/modules/certificateSignRequest';
+import { useForm } from 'vee-validate';
+import { CsrSubjectFieldDescription } from '@/openapi-types';
+import { mapState, mapWritableState } from 'pinia';
+import { XrdWizardStep, XrdFormBlock, XrdFormBlockRow, XrdBtn, veeDefaultFieldConfig } from '@niis/shared-ui';
 
-export default Vue.extend({
+export default defineComponent({
   components: {
-    ValidationObserver,
-    ValidationProvider,
+    XrdWizardStep,
+    XrdFormBlock,
+    XrdFormBlockRow,
+    XrdBtn,
   },
   props: {
     saveButtonText: {
@@ -93,10 +85,61 @@ export default Vue.extend({
       default: true,
     },
   },
+  emits: ['cancel', 'previous', 'done'],
+  setup() {
+    const {
+      csrForm,
+      setCsrForm,
+    }: {
+      csrForm: CsrSubjectFieldDescription[];
+      setCsrForm: (form: CsrSubjectFieldDescription[]) => void;
+    } = useCsr();
+    const validationSchema: Record<string, string> = csrForm.reduce((acc, cur) => ({ ...acc, [cur.id]: cur.required && 'required' }), {});
+    const initialValues: Record<string, string> = csrForm.reduce((acc, cur) => ({ ...acc, [cur.id]: cur.default_value }), {});
+    const { meta, values, defineField } = useForm({
+      validationSchema,
+      initialValues,
+    });
+    const formModels = {} as Record<string, Ref>;
+    const formAttrs = {} as Record<string, Ref>;
+
+    csrForm.forEach((formField) => {
+      const [field, fieldAttr] = defineField(formField.id, veeDefaultFieldConfig());
+      formModels[formField.id] = field;
+      formAttrs[formField.id] = fieldAttr;
+    });
+
+    return { meta, values, formModels, formAttrs, csrForm, setCsrForm };
+  },
+  data() {
+    return { acmeOrders: false };
+  },
   computed: {
-    ...mapState(useCsrStore, ['csrForm']),
+    ...mapState(useCsr, ['acmeCapable', 'eabRequired', 'acmeEabCredentialsStatus']),
+    ...mapWritableState(useCsr, ['acmeOrder']),
+    externalAccountBindingRequiredButMissing(): boolean {
+      return !!this.eabRequired && !this.acmeEabCredentialsStatus?.has_acme_external_account_credentials;
+    },
+    externalAccountBindingRequiredButMissingHint(): string | undefined {
+      return this.externalAccountBindingRequiredButMissing ? this.$t('csr.eabCredRequired') : undefined;
+    },
+    autofocusField(): string | undefined {
+      return this.csrForm
+        .filter((field) => !field.read_only)
+        .map((field) => field.id)
+        .shift();
+    },
+  },
+  created() {
+    this.acmeOrder = false;
   },
   methods: {
+    componentModel(id: string): Ref<string> {
+      return this.formModels[id];
+    },
+    componentAttr(id: string): Ref {
+      return this.formAttrs[id];
+    },
     cancel(): void {
       this.$emit('cancel');
     },
@@ -104,12 +147,16 @@ export default Vue.extend({
       this.$emit('previous');
     },
     done(): void {
+      this.setCsrForm(
+        this.csrForm.map((field: CsrSubjectFieldDescription) => ({
+          ...field,
+          default_value: this.values[field.id],
+        })),
+      );
       this.$emit('done');
     },
   },
 });
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/wizards';
-</style>
+<style lang="scss" scoped></style>

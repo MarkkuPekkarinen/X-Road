@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -30,13 +30,13 @@ import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.restapi.openapi.ControllerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +45,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,7 +56,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.INTERNAL_ERROR;
+import static org.niis.xroad.common.core.exception.ErrorCode.INTERNAL_ERROR;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -70,7 +71,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "org.niis.xroad.restapi.util"})
 @EnableAutoConfiguration(excludeName = {"org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration"})
 @ActiveProfiles("audit-test")
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(print = MockMvcPrint.LOG_DEBUG)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class AuditLoggingTest {
     private static final String URL = ControllerUtil.API_V1_PREFIX + "/test-audit/{var1}/{var2}";
@@ -78,7 +79,7 @@ class AuditLoggingTest {
     private static final String URL_VAR2 = "var2";
     private static final String BAD_VALUE = "bad-value";
 
-    @SpyBean
+    @MockitoSpyBean
     AuditEventLoggingFacadeImpl auditEventLoggingFacade;
 
     @Autowired
@@ -146,7 +147,7 @@ class AuditLoggingTest {
                 urlCaptor.capture());
 
         assertEquals(RestApiAuditEvent.INIT_CENTRAL_SERVER, eventCaptor.getValue());
-        assertEquals(INTERNAL_ERROR.getDescription(), reasonCaptor.getValue());
+        assertEquals(INTERNAL_ERROR.build().toString(), reasonCaptor.getValue());
 
         Map<String, Object> data = dataCaptor.getValue();
         assertEquals(0, data.size());
@@ -170,7 +171,7 @@ class AuditLoggingTest {
                 @PathVariable(URL_VAR1) String var1,
                 @PathVariable(URL_VAR2) String var2) {
             if (BAD_VALUE.equals(var1)) {
-                throw new ValidationFailureException(INTERNAL_ERROR);
+                throw new BadRequestException(INTERNAL_ERROR.build());
             }
             auditDataHelper.put(RestApiAuditProperty.ID, var1);
             auditDataHelper.put(RestApiAuditProperty.CERT_ID, var2);

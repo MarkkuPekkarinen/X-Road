@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,22 +27,26 @@ package org.niis.xroad.securityserver.restapi.auth;
 
 import ee.ria.xroad.common.util.JsonUtils;
 
-import lombok.extern.slf4j.Slf4j;
+import jakarta.servlet.http.Cookie;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.niis.xroad.confclient.rpc.ConfClientRpcClient;
+import org.niis.xroad.proxy.proto.ProxyRpcClient;
 import org.niis.xroad.restapi.auth.ApiKeyAuthenticationManager;
 import org.niis.xroad.restapi.auth.GrantedAuthorityMapper;
-import org.niis.xroad.restapi.auth.PamAuthenticationProvider;
 import org.niis.xroad.restapi.auth.securityconfigurer.CookieAndSessionCsrfTokenRepository;
 import org.niis.xroad.restapi.domain.Role;
 import org.niis.xroad.restapi.openapi.model.User;
+import org.niis.xroad.serverconf.impl.ServerConfDatabaseCtx;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -50,12 +54,13 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.DefaultCsrfToken;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-
-import javax.servlet.http.Cookie;
 
 import java.util.Collections;
 import java.util.Set;
@@ -63,15 +68,16 @@ import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.niis.xroad.restapi.auth.securityconfigurer.FormLoginWebSecurityConfig.FORM_LOGIN_AUTHENTICATION;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
-@AutoConfigureMockMvc
-@Slf4j
+@AutoConfigureMockMvc(print = MockMvcPrint.LOG_DEBUG)
+@AutoConfigureTestDatabase
+@ActiveProfiles("test")
 public class CsrfWebMvcTest {
     public static final String XSRF_HEADER = "X-XSRF-TOKEN";
     public static final String XSRF_COOKIE = "XSRF-TOKEN";
@@ -88,12 +94,21 @@ public class CsrfWebMvcTest {
     @Autowired
     private GrantedAuthorityMapper grantedAuthorityMapper;
 
-    @SpyBean
-    @Qualifier(PamAuthenticationProvider.FORM_LOGIN_PAM_AUTHENTICATION)
-    private PamAuthenticationProvider pamAuthenticationProvider;
+    @MockitoSpyBean
+    @Qualifier(FORM_LOGIN_AUTHENTICATION)
+    private AuthenticationProvider pamAuthenticationProvider;
 
-    @SpyBean
+    @MockitoSpyBean
     private ApiKeyAuthenticationManager apiKeyAuthenticationManager;
+
+    @MockitoBean
+    private ConfClientRpcClient confClientRpcClient;
+
+    @MockitoBean
+    private ProxyRpcClient proxyRpcClient;
+
+    @MockitoBean
+    ServerConfDatabaseCtx databaseCtx;
 
     @Before
     // setup mock auth in the SecurityContext and mock both auth providers (form login and api-key)
@@ -101,9 +116,9 @@ public class CsrfWebMvcTest {
         Set<GrantedAuthority> authorities = grantedAuthorityMapper
                 .getAuthorities(Collections.singletonList(Role.XROAD_SECURITYSERVER_OBSERVER));
         userPermissions = authorities.stream()
-                .filter(grantedAuthority -> !grantedAuthority.getAuthority()
-                        .equals(Role.XROAD_SECURITYSERVER_OBSERVER.getGrantedAuthorityName()))
                 .map(GrantedAuthority::getAuthority)
+                .filter(authority -> !authority
+                        .equals(Role.XROAD_SECURITYSERVER_OBSERVER.getGrantedAuthorityName()))
                 .collect(Collectors.toSet());
         Authentication mockAuth = new UsernamePasswordAuthenticationToken(username, "pass", authorities);
         SecurityContext securityContext = SecurityContextHolder.getContext();
@@ -121,7 +136,6 @@ public class CsrfWebMvcTest {
     public void login() throws Exception {
         MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/login");
         mockMvc.perform(mockRequest)
-                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(cookie().exists(XSRF_COOKIE))
                 .andReturn()
@@ -140,12 +154,11 @@ public class CsrfWebMvcTest {
                 .roles(Collections.singleton(Role.XROAD_SECURITYSERVER_OBSERVER.getGrantedAuthorityName()))
                 .permissions(userPermissions);
         String expectedUserJsonString = JsonUtils.getObjectWriter().writeValueAsString(expectedUser);
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/api/v1/user")
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("http://localhost:4000/api/v1/user")
                 .session(getMockSession())
                 .header(XSRF_HEADER, tokenValue)
                 .cookie(new Cookie(XSRF_COOKIE, tokenValue));
         mockMvc.perform(mockRequest)
-                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().json(expectedUserJsonString));
     }
@@ -163,7 +176,6 @@ public class CsrfWebMvcTest {
                 .header(XSRF_HEADER, "wrong-value")
                 .cookie(new Cookie(XSRF_COOKIE, tokenValue));
         mockMvc.perform(mockRequest)
-                .andDo(print())
                 .andExpect(status().isForbidden());
     }
 
@@ -180,7 +192,6 @@ public class CsrfWebMvcTest {
                 .header(XSRF_HEADER, tokenValue)
                 .cookie(new Cookie(XSRF_COOKIE, "wrong-value"));
         mockMvc.perform(mockRequest)
-                .andDo(print())
                 .andExpect(status().isForbidden());
     }
 
@@ -197,9 +208,8 @@ public class CsrfWebMvcTest {
                 .roles(Collections.singleton(Role.XROAD_SECURITYSERVER_OBSERVER.getGrantedAuthorityName()))
                 .permissions(userPermissions);
         String expectedUserJsonString = JsonUtils.getObjectWriter().writeValueAsString(expectedUser);
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/api/v1/user");
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("http://localhost:4000/api/v1/user");
         mockMvc.perform(mockRequest)
-                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().json(expectedUserJsonString))
                 .andExpect(cookie().doesNotExist(XSRF_COOKIE));

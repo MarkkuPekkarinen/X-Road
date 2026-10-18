@@ -1,7 +1,10 @@
 # X-Road® Data Exchange Layer
 
+[![DPG Badge](https://img.shields.io/badge/Verified-DPG%20(Since%20%202020)-3333AB?logo=data:image/svg%2bxml;base64,PHN2ZyB3aWR0aD0iMzEiIGhlaWdodD0iMzMiIHZpZXdCb3g9IjAgMCAzMSAzMyIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0LjIwMDggMjEuMzY3OEwxMC4xNzM2IDE4LjAxMjRMMTEuNTIxOSAxNi40MDAzTDEzLjk5MjggMTguNDU5TDE5LjYyNjkgMTIuMjExMUwyMS4xOTA5IDEzLjYxNkwxNC4yMDA4IDIxLjM2NzhaTTI0LjYyNDEgOS4zNTEyN0wyNC44MDcxIDMuMDcyOTdMMTguODgxIDUuMTg2NjJMMTUuMzMxNCAtMi4zMzA4MmUtMDVMMTEuNzgyMSA1LjE4NjYyTDUuODU2MDEgMy4wNzI5N0w2LjAzOTA2IDkuMzUxMjdMMCAxMS4xMTc3TDMuODQ1MjEgMTYuMDg5NUwwIDIxLjA2MTJMNi4wMzkwNiAyMi44Mjc3TDUuODU2MDEgMjkuMTA2TDExLjc4MjEgMjYuOTkyM0wxNS4zMzE0IDMyLjE3OUwxOC44ODEgMjYuOTkyM0wyNC44MDcxIDI5LjEwNkwyNC42MjQxIDIyLjgyNzdMMzAuNjYzMSAyMS4wNjEyTDI2LjgxNzYgMTYuMDg5NUwzMC42NjMxIDExLjExNzdMMjQuNjI0MSA5LjM1MTI3WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==)](https://www.digitalpublicgoods.net/r/x-road)
 [![Go to X-Road Community Slack](https://img.shields.io/badge/Go%20to%20Community%20Slack-grey.svg)](https://jointxroad.slack.com/)
 [![Get invited](https://img.shields.io/badge/No%20Slack-Get%20invited-green.svg)](https://x-road.global/community)
+[![Build status](https://github.com/nordic-institute/X-Road/actions/workflows/build.yaml/badge.svg)](https://github.com/nordic-institute/X-Road/actions?query=branch%3Adevelop++)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=nordic-institute_X-Road&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=nordic-institute_X-Road)
 
 ![X-Road logo](xroad_logo_small.png)
 
@@ -29,15 +32,19 @@ X-Road Data Exchange Layer is a standardised, cohesive, collaborative, interoper
 
 See [X-Road product website](https://x-road.global) for more information about X-Road.
 
+X-Road Governance Authorities and Operators can register their X-Road ecosystem with NIIS. More information about X-Road Product Registration is available on the [X-Road website](https://x-road.global/xroad-product-registration).
+
 ## Development of X-Road
 
-X-Road development model and all the related documentation is published and
-maintained in the [X-Road Development](https://github.com/nordic-institute/X-Road-development/)
-GitHub repository.
+X-Road development model is described on the [X-Road website](https://x-road.global/development-model).
 
 **How to contribute?**
 
 Guidelines for the X-Road contributors are available [here](CONTRIBUTING.md).
+
+**X-Road 8 "Spaceship"**
+
+[X-Road 8 "Spaceship"](https://x-road.global/spaceship) is the next major version of X-Road. The first production release is scheduled for December 2026. X-Road 8 is already available for testing with the [X-Road 8.0.0 Beta 2 release](https://nordic-institute.atlassian.net/wiki/spaces/XRDKB/pages/1909587969/X-Road+v8.0.0-beta2+Release+Notes).
 
 ## X-Road installation
 
@@ -47,7 +54,7 @@ See instructions in [src/BUILD.md](src/BUILD.md)
 
 **Local installation**
 
-X-Road central servers, configuration proxies and security servers can be automatically installed with the Ansible scripts found in ansible subdirectory. See instructions in [ansible/README.md](ansible/README.md)
+X-Road central servers, configuration proxies and security servers can be automatically installed with the Ansible scripts found in ansible subdirectory. See instructions in [development/ansible/README.md](development/ansible/README.md)
 
 ## X-Road technical documentation
 

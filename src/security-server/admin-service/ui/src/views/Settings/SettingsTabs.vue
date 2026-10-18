@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,54 +26,22 @@
  -->
 <template>
   <div>
-    <sub-tabs>
-      <v-tab
-        v-for="tab in tabs"
-        :key="tab.key"
-        :to="tab.to"
-        :data-test="tab.key"
-        exact-path
-        >{{ $t(tab.name) }}
-      </v-tab>
-    </sub-tabs>
+    <XrdViewNavigation :allowed-tabs="availableTabs" />
   </div>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { Permissions, RouteName } from '@/global';
-import { Tab } from '@/ui-types';
-import SubTabs from '@/components/layout/SubTabs.vue';
+import { defineComponent } from 'vue';
+import { XrdViewNavigation } from '@niis/shared-ui';
 import { mapState } from 'pinia';
-import { useUser } from '@/store/modules/user';
+import { useSettingsTabs } from '@/store/modules/settings-tabs';
 
-export default Vue.extend({
+export default defineComponent({
   components: {
-    SubTabs,
+    XrdViewNavigation,
   },
   computed: {
-    ...mapState(useUser, ['getAllowedTabs']),
-    tabs(): Tab[] {
-      const allTabs: Tab[] = [
-        {
-          key: 'system-parameters-tab-button',
-          name: 'tab.settings.systemParameters',
-          to: {
-            name: RouteName.SystemParameters,
-          },
-          permissions: [Permissions.VIEW_SYS_PARAMS],
-        },
-        {
-          key: 'backupandrestore-tab-button',
-          name: 'tab.settings.backupAndRestore',
-          to: {
-            name: RouteName.BackupAndRestore,
-          },
-          permissions: [Permissions.BACKUP_CONFIGURATION],
-        },
-      ];
-      return this.getAllowedTabs(allTabs);
-    },
+    ...mapState(useSettingsTabs, ['availableTabs']),
   },
 });
 </script>

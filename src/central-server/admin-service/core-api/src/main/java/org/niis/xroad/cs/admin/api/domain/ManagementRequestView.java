@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -52,6 +52,7 @@ public class ManagementRequestView {
     private String securityServerOwnerName;
     private SecurityServerId securityServerId;
     private String clientOwnerName;
+    private String clientSubsystemName;
     private ClientId clientId;
     private byte[] authCert;
     private CertificateDetails certificateDetails;

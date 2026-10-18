@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,27 +27,34 @@ package org.niis.xroad.securityserver.restapi.openapi;
 
 import org.junit.After;
 import org.junit.Before;
-import org.niis.xroad.restapi.common.backup.service.BackupService;
-import org.niis.xroad.restapi.common.backup.service.ConfigurationRestorationService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.niis.xroad.restapi.config.audit.MockableAuditEventLoggingFacade;
 import org.niis.xroad.restapi.converter.ClientIdConverter;
 import org.niis.xroad.restapi.converter.PublicApiKeyDataConverter;
 import org.niis.xroad.restapi.service.ApiKeyService;
+import org.niis.xroad.restapi.service.ConfigurablePropertiesService;
 import org.niis.xroad.securityserver.restapi.cache.CurrentSecurityServerId;
 import org.niis.xroad.securityserver.restapi.cache.CurrentSecurityServerSignCertificates;
 import org.niis.xroad.securityserver.restapi.config.AbstractFacadeMockingTestContext;
 import org.niis.xroad.securityserver.restapi.converter.ClientConverter;
-import org.niis.xroad.securityserver.restapi.repository.InternalTlsCertificateRepository;
+import org.niis.xroad.securityserver.restapi.mail.MailService;
+import org.niis.xroad.securityserver.restapi.service.ApplicationRestarter;
 import org.niis.xroad.securityserver.restapi.service.CertificateAuthorityService;
 import org.niis.xroad.securityserver.restapi.service.ClientService;
+import org.niis.xroad.securityserver.restapi.service.DiagnosticConnectionService;
 import org.niis.xroad.securityserver.restapi.service.DiagnosticService;
+import org.niis.xroad.securityserver.restapi.service.ExternalRpcCaService;
 import org.niis.xroad.securityserver.restapi.service.GlobalConfService;
+import org.niis.xroad.securityserver.restapi.service.InitialAdminUserService;
 import org.niis.xroad.securityserver.restapi.service.InitializationService;
 import org.niis.xroad.securityserver.restapi.service.InternalServerTestService;
+import org.niis.xroad.securityserver.restapi.service.InternalTlsCertificateService;
 import org.niis.xroad.securityserver.restapi.service.KeyService;
 import org.niis.xroad.securityserver.restapi.service.NotificationService;
+import org.niis.xroad.securityserver.restapi.service.OpMonitorCaService;
 import org.niis.xroad.securityserver.restapi.service.PossibleActionsRuleEngine;
-import org.niis.xroad.securityserver.restapi.service.SecurityServerConfigurationBackupGenerator;
+import org.niis.xroad.securityserver.restapi.service.SecurityServerBackupService;
 import org.niis.xroad.securityserver.restapi.service.ServerConfService;
 import org.niis.xroad.securityserver.restapi.service.SystemService;
 import org.niis.xroad.securityserver.restapi.service.TokenCertificateService;
@@ -57,82 +64,98 @@ import org.niis.xroad.securityserver.restapi.service.VersionService;
 import org.niis.xroad.securityserver.restapi.util.TestUtils;
 import org.niis.xroad.securityserver.restapi.wsdl.WsdlValidator;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.web.context.request.RequestContextHolder;
 
 /**
  * Base for all api controller tests that need mocked beans in the application context. All api controller
- * test classes inheriting this will shared the same mock bean configuration, and have a common
+ * test classes inheriting this will share the same mock bean configuration, and have a common
  * Spring Application Context therefore drastically reducing the execution time of the tests.
- *
+ * <p>
  * Service layer mocking strategy varies
- * - real implementations are used for services not defined as @MockBean or @SpyBean here
- * (example: {@link ClientService}
- * - mocks are always used for services defined as @MockBeans
- * (example: {@link BackupService}
- * - mocking depends on a case by case basis when @SpyBean is used. Some tests use 100% real implementation, others
+ * - real implementations are used for services not defined as @MockitoBean or @MockitoSpyBean here
+ * (example: {@link ClientService})
+ * - mocks are always used for services defined as @MockitoBeans
+ * (example: {@link CertificateAuthorityService})
+ * - mocking depends on a case by case basis when @MockitoSpyBean is used. Some tests use 100% real implementation, others
  * mock some parts
  * (example: {@link KeyService}
- *
- * Mocks the usual untestable facades (such as SignerProxyFacade) via {@link AbstractFacadeMockingTestContext}
+ * <p>
+ * Mocks the usual untestable facades (such as SignerRpcClient) via {@link AbstractFacadeMockingTestContext}
  */
+@ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureWebTestClient
 public abstract class AbstractApiControllerTestContext extends AbstractFacadeMockingTestContext {
-
-    @MockBean
+    @MockitoBean
     CertificateAuthorityService certificateAuthorityService;
-    @MockBean
-    BackupService backupService;
-    @MockBean
-    SecurityServerConfigurationBackupGenerator backupGenerator;
-    @MockBean
-    ConfigurationRestorationService configurationRestorationService;
-    @MockBean
+    @MockitoBean
+    SecurityServerBackupService backupService;
+    @MockitoBean
     UrlValidator urlValidator;
-    @MockBean
+    @MockitoBean
     SystemService systemService;
-    @MockBean
+    @MockitoBean
+    InternalTlsCertificateService internalTlsCertificateService;
+    @MockitoBean
+    ExternalRpcCaService externalRpcCaService;
+    @MockitoBean
+    OpMonitorCaService opMonitorCaService;
+    @MockitoBean
+    ConfigurablePropertiesService configurablePropertiesService;
+    @MockitoBean
     CurrentSecurityServerSignCertificates currentSecurityServerSignCertificates;
-    @MockBean
+    @MockitoBean
     CurrentSecurityServerId currentSecurityServerId;
-    @MockBean
+    @MockitoBean
     InitializationService initializationService;
-    @MockBean
-    InternalTlsCertificateRepository mockRepository;
-    @MockBean
+    @MockitoBean
+    InitialAdminUserService initialAdminUserService;
+    @MockitoBean
     VersionService versionService;
-    @MockBean
+    @MockitoBean
     InternalServerTestService internalServerTestService;
     // temporarily public accessor, I have plan to merge restapi.controller and restapi.openapi packages
-    @MockBean
+    @MockitoBean
     public NotificationService notificationService;
-    @MockBean
+    @MockitoBean
     public ApiKeyService apiKeyService;
-    @MockBean
+    @MockitoBean
     public PublicApiKeyDataConverter publicApiKeyDataConverter;
+    @MockitoBean
+    JavaMailSender mailSender;
+    @MockitoBean
+    ApplicationRestarter applicationRestarter;
 
-    @SpyBean
+    @MockitoSpyBean
     DiagnosticService diagnosticService;
-    @SpyBean
+    @MockitoSpyBean
+    DiagnosticConnectionService diagnosticConnectionService;
+    @MockitoSpyBean
     GlobalConfService globalConfService;
-    @SpyBean
+    @MockitoSpyBean
     KeyService keyService;
-    @SpyBean
+    @MockitoSpyBean
     TokenService tokenService;
-    @SpyBean
+    @MockitoSpyBean
     TokenCertificateService tokenCertificateService;
-    @SpyBean
+    @MockitoSpyBean
     ServerConfService serverConfService;
-    @SpyBean
+    @MockitoSpyBean
+    MailService mailService;
+    @MockitoSpyBean
     WsdlValidator wsdlValidator;
-    @SpyBean
+    @MockitoSpyBean
     MockableAuditEventLoggingFacade auditEventLoggingFacade;
-    @SpyBean
+    @MockitoSpyBean
     PossibleActionsRuleEngine possibleActionsRuleEngine;
-    @SpyBean
+    @MockitoSpyBean
     ClientConverter clientConverter;
-    @SpyBean
+    @MockitoSpyBean
     ClientIdConverter clientIdConverter;
 
     /**
@@ -141,11 +164,13 @@ public abstract class AbstractApiControllerTestContext extends AbstractFacadeMoc
      * (e.g. request scoped beans will not work without an existing request)
      */
     @Before
+    @BeforeEach
     public void mockServlet() {
         TestUtils.mockServletRequestAttributes();
     }
 
     @After
+    @AfterEach
     public void cleanUpServlet() {
         RequestContextHolder.resetRequestAttributes();
     }

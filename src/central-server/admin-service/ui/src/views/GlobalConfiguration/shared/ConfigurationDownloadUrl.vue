@@ -25,52 +25,40 @@
    THE SOFTWARE.
  -->
 <template>
-  <div id="download-url" class="mt-5">
-    <v-card flat>
-      <div class="card-top">
-        <div class="card-main-title">
-          {{ $t('globalConf.downloadUrl.title') }}
-        </div>
-      </div>
-      <v-data-table
-        v-if="urls"
-        :headers="headers"
-        :items="urls"
-        :items-per-page="-1"
-        :loading="loading"
-        item-key="url"
-        hide-default-footer
-        class="anchors-table"
-      >
-        <template #[`item.url`]="{ item }">
-          <div class="xrd-clickable" @click="openInNewTab(item.url)">
-            <v-icon class="internal-conf-icon">mdi-link</v-icon>
-            {{ item.url }}
-          </div>
-        </template>
-        <template #footer>
-          <div class="custom-footer"></div>
-        </template>
-      </v-data-table>
-    </v-card>
-  </div>
+  <XrdCard id="download-url" title="globalConf.downloadUrl.title">
+    <v-data-table
+      v-if="urls"
+      item-key="url"
+      class="xrd"
+      hide-default-footer
+      :headers="headers"
+      :items="urls"
+      :items-per-page="-1"
+      :loading="loading"
+    >
+      <template #[`item.url`]="{ item }">
+        <XrdLabelWithIcon icon="link" :label="item.url" clickable @navigate="openInNewTab(item.url)" />
+      </template>
+    </v-data-table>
+  </XrdCard>
 </template>
 
 <script lang="ts">
 /**
  * View for 'backup and restore' tab
  */
-import Vue from 'vue';
+import { defineComponent, PropType } from 'vue';
 import { mapStores } from 'pinia';
 import { ConfigurationType, GlobalConfDownloadUrl } from '@/openapi-types';
-import { Prop } from 'vue/types/options';
-import { useConfigurationSourceStore } from '@/store/modules/configuration-sources';
-import { DataTableHeader } from 'vuetify';
+import { useConfigurationSource } from '@/store/modules/configuration-sources';
+import { XrdCard, XrdLabelWithIcon } from '@niis/shared-ui';
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
 
-export default Vue.extend({
+export default defineComponent({
+  components: { XrdCard, XrdLabelWithIcon },
   props: {
     configurationType: {
-      type: String as Prop<ConfigurationType>,
+      type: String as PropType<ConfigurationType>,
       required: true,
     },
   },
@@ -80,19 +68,16 @@ export default Vue.extend({
     };
   },
   computed: {
-    ...mapStores(useConfigurationSourceStore),
+    ...mapStores(useConfigurationSource),
     urls(): GlobalConfDownloadUrl[] {
-      return [
-        this.configurationSourceStore.getDownloadUrl(this.configurationType),
-      ];
+      return [this.configurationSourceStore.getDownloadUrl(this.configurationType)];
     },
     headers(): DataTableHeader[] {
       return [
         {
-          text: this.$t('globalConf.downloadUrl.urlAddress') as string,
+          title: this.$t('globalConf.downloadUrl.urlAddress') as string,
           align: 'start',
-          value: 'url',
-          class: 'xrd-table-header text-uppercase',
+          key: 'url',
         },
       ];
     },
@@ -103,9 +88,7 @@ export default Vue.extend({
   methods: {
     fetchDownloadUrl() {
       this.loading = true;
-      this.configurationSourceStore
-        .fetchDownloadUrl(this.configurationType)
-        .finally(() => (this.loading = false));
+      this.configurationSourceStore.fetchDownloadUrl(this.configurationType).finally(() => (this.loading = false));
     },
     openInNewTab(url: string) {
       window.open(url, '_blank', 'noreferrer');
@@ -113,45 +96,3 @@ export default Vue.extend({
   },
 });
 </script>
-
-<style lang="scss" scoped>
-@import '~styles/colors';
-
-.card-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  color: $XRoad-Black70;
-  font-weight: bold;
-  padding-top: 5px;
-  padding-bottom: 5px;
-}
-
-.card-main-title {
-  color: $XRoad-Black100;
-  font-style: normal;
-  font-weight: bold;
-  font-size: 18px;
-  line-height: 24px;
-  margin-left: 16px;
-}
-
-.card-top {
-  padding-top: 15px;
-  margin-bottom: 10px;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.internal-conf-icon {
-  margin-right: 15px;
-  color: $XRoad-Purple100;
-}
-
-.custom-footer {
-  border-top: thin solid rgba(0, 0, 0, 0.12); /* Matches the color of the Vuetify table line */
-  height: 16px;
-}
-</style>

@@ -1,7 +1,7 @@
 # X-Road: Central Server Architecture
 **Technical Specification**
 
-Version: 2.8  
+Version: 2.9  
 Doc. ID: ARC-CS
 
 
@@ -28,7 +28,8 @@ Doc. ID: ARC-CS
 | 11.08.2021 | 2.5     | Update chapter 5.2 about high-availability setup                                                     | Ilkka Seppälä      |
 | 23.09.2022 | 2.6     | Added new Registration Web Service                                                                   | Eneli Reimets      |
 | 01.06.2023 | 2.7     | Update references                                                                                    | Petteri Kivimäki   |
-| 20.06.2023 | 2.8     | Updated to reflect changes in version 7.3.0                                                          | Madis Loitmaa      | 
+| 20.06.2023 | 2.8     | Updated to reflect changes in version 7.3.0                                                          | Madis Loitmaa      |
+| 21.03.2025 | 2.9     | Syntax and styling                                                                                   | Pauline Dimmek     |
 
 ## Table of Contents
 
@@ -134,7 +135,7 @@ Technologies used in the Central Server can be found here: \[[ARC-TEC](#Ref_ARC-
 
 ### 2.1 Administration Service
 
-Central Server Administration Service allows management of X-Road members and Security Servers and define the global configuration parameters that are distributed to the Security Servers. 
+Central Server Administration Service allows management of X-Road members and Security Servers and defines the global configuration parameters that are distributed to the Security Servers. 
 
 User action events that change the system state or configuration are logged into the audit log. The actions are logged regardless of whether the outcome was a success or a failure. The complete list of the audit log events is described in \[[SPEC-AL](#Ref_SPEC-AL)\].
 

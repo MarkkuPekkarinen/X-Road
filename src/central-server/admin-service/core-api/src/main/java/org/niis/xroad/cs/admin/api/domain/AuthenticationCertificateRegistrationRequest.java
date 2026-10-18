@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -39,7 +39,7 @@ import org.niis.xroad.common.managementrequest.model.ManagementRequestType;
 @NoArgsConstructor
 @Accessors(chain = true)
 @EqualsAndHashCode(callSuper = true)
-public class AuthenticationCertificateRegistrationRequest extends RequestWithProcessing {
+public final class AuthenticationCertificateRegistrationRequest extends RequestWithProcessing {
     private byte[] authCert;
     private String address;
 

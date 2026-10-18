@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,16 +25,20 @@
  */
 package org.niis.xroad.common.managementrequest.model;
 
+import ee.ria.xroad.common.crypto.identifier.DigestAlgorithm;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.message.SoapMessageImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.client.SignerSignClient;
 
 @Slf4j
 public class ClientRegRequest extends GenericClientRequest {
 
-    public ClientRegRequest(ClientId client, SoapMessageImpl request) throws Exception {
-        super(client, request);
+    public ClientRegRequest(SignerRpcClient signerRpcClient, SignerSignClient signerSignClient, ClientId client, SoapMessageImpl request,
+                            DigestAlgorithm signatureDigestAlgorithm) {
+        super(signerRpcClient, signerSignClient, client, request, signatureDigestAlgorithm);
     }
 
 }

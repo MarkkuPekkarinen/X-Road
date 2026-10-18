@@ -28,15 +28,28 @@ package org.niis.xroad.securityserver.restapi.config;
 import ee.ria.xroad.common.util.process.ExternalProcessRunner;
 
 import org.niis.xroad.common.api.throttle.IpThrottlingFilter;
+import org.niis.xroad.common.properties.config.keys.AdminServiceConfigKeys;
+import org.niis.xroad.common.properties.spring.SpringConditionConfig;
+import org.niis.xroad.monitor.rpc.MonitorRpcClient;
 import org.niis.xroad.restapi.config.AddCorrelationIdFilter;
 import org.niis.xroad.restapi.config.ApiCachingConfiguration;
 import org.niis.xroad.restapi.util.CaffeineCacheBuilder;
+import org.niis.xroad.securityserver.restapi.service.diagnostic.DiagnosticCollector;
+import org.niis.xroad.securityserver.restapi.service.diagnostic.DiagnosticReportService;
+import org.niis.xroad.securityserver.restapi.service.diagnostic.OsVersionCollector;
+import org.niis.xroad.securityserver.restapi.service.diagnostic.XrdPackagesCollector;
+import org.niis.xroad.securityserver.restapi.service.diagnostic.XrdProcessesCollector;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 
-import javax.servlet.Filter;
+import java.util.List;
 
 import static org.niis.xroad.securityserver.restapi.service.CertificateAuthorityService.GET_CERTIFICATE_AUTHORITIES_CACHE;
 
@@ -46,16 +59,35 @@ import static org.niis.xroad.securityserver.restapi.service.CertificateAuthority
 @Configuration
 public class SecurityServerConfiguration {
 
+    private static final int IP_THROTTLING_FILTER_ORDER = AddCorrelationIdFilter.CORRELATION_ID_FILTER_ORDER + 3;
+
     @Bean
     public ExternalProcessRunner externalProcessRunner() {
         return new ExternalProcessRunner();
     }
 
     @Bean
-    @Order(AddCorrelationIdFilter.CORRELATION_ID_FILTER_ORDER + 3)
+    @Conditional(RateLimitEnabledCondition.class)
     @Profile("nontest")
-    public Filter ipThrottlingFilter(AdminServiceProperties properties) {
-        return new IpThrottlingFilter(properties);
+    public FilterRegistrationBean<IpThrottlingFilter> ipThrottlingFilter(AdminServiceProperties properties) {
+        var filter = new IpThrottlingFilter(properties);
+        var bean = new FilterRegistrationBean<>(filter);
+        bean.setOrder(IP_THROTTLING_FILTER_ORDER);
+        bean.addUrlPatterns(IpThrottlingFilter.ADMIN_UI_PATTERNS);
+        return bean;
+    }
+
+    static class RateLimitEnabledCondition implements Condition {
+
+        @Override
+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            var config = SpringConditionConfig.resolve(context.getEnvironment(), AdminServiceConfigKeys.instance());
+            if (!config.value(AdminServiceConfigKeys.RATE_LIMIT_ENABLED)) {
+                return false;
+            }
+            return config.value(AdminServiceConfigKeys.RATE_LIMIT_REQUESTS_PER_SECOND) > 0
+                    || config.value(AdminServiceConfigKeys.RATE_LIMIT_REQUESTS_PER_MINUTE) > 0;
+        }
     }
 
     @Bean
@@ -63,4 +95,29 @@ public class SecurityServerConfiguration {
         return CaffeineCacheBuilder.newExpireAfterWriteCache(GET_CERTIFICATE_AUTHORITIES_CACHE, cachingProperties.getCacheDefaultTtl());
     }
 
+    @Bean
+    public DiagnosticReportService diagnosticReportService(List<DiagnosticCollector<?>> diagnosticCollectors) {
+        return new DiagnosticReportService(diagnosticCollectors);
+    }
+
+    @Bean
+    @Profile("nontest")
+    @Order(DiagnosticCollector.ORDER_GROUP1)
+    public OsVersionCollector osVersionCollector(MonitorRpcClient monitorClient) {
+        return new OsVersionCollector(monitorClient);
+    }
+
+    @Bean
+    @Profile("nontest")
+    @Order(DiagnosticCollector.ORDER_GROUP5)
+    public XrdPackagesCollector xrdPackagesCollector(MonitorRpcClient monitorClient) {
+        return new XrdPackagesCollector(monitorClient);
+    }
+
+    @Bean
+    @Profile("nontest")
+    @Order(DiagnosticCollector.ORDER_GROUP5)
+    public XrdProcessesCollector xrdProcessesCollector(MonitorRpcClient monitorClient) {
+        return new XrdProcessesCollector(monitorClient);
+    }
 }

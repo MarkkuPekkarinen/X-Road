@@ -1,21 +1,23 @@
 # X-Road: Environmental Monitoring Architecture
 
-Version: 1.9  
+Version: 1.12  
 Doc. ID: ARC-ENVMON
 
-| Date       | Version | Description                                                                                                     | Author             |
-|------------|---------|-----------------------------------------------------------------------------------------------------------------|--------------------|
-| 15.12.2015 | 1.0     | Initial version                                                                                                 | Ilkka Seppälä         |
-| 04.01.2017 | 1.1     | Fix documentation links                                                                                         | Ilkka Seppälä         |
-| 20.01.2017 | 1.2     | Added license text, table of contents and version history                                                       | Sami Kallio |
-| 23.2.2017  | 1.3     | Added reference to the Security Server targeting extension and moved the modified X-Road protocol details there | Olli Lindgren |
-| 18.8.2017  | 1.4     | Added details about the security server certificates monitoring data                                            | Olli Lindgren |
-| 18.10.2017 | 1.5     |                                                                                                                 | Joni Laurila |
-| 02.03.2018 | 1.6     | Added numbering, terms document references, removed unnecessary anchors                                         | Tatu Repo
-| 20.01.2020 | 1.7     | Update XroadProcessLister description                                                                           | Jarkko Hyöty
-| 25.06.2020 | 1.8     | Add chapter [2.2.1 JMX interface](#221-jmx-interface)                                                           | Petteri Kivimäki
-| 01.06.2023 | 1.9     | Update references                                                                                               | Petteri Kivimäki |
-
+| Date       | Version | Description                                                                                                     | Author            |
+|------------|---------|-----------------------------------------------------------------------------------------------------------------|-------------------|
+| 15.12.2015 | 1.0     | Initial version                                                                                                 | Ilkka Seppälä     |
+| 04.01.2017 | 1.1     | Fix documentation links                                                                                         | Ilkka Seppälä     |
+| 20.01.2017 | 1.2     | Added license text, table of contents and version history                                                       | Sami Kallio       |
+| 23.2.2017  | 1.3     | Added reference to the Security Server targeting extension and moved the modified X-Road protocol details there | Olli Lindgren     |
+| 18.8.2017  | 1.4     | Added details about the security server certificates monitoring data                                            | Olli Lindgren     |
+| 18.10.2017 | 1.5     |                                                                                                                 | Joni Laurila      |
+| 02.03.2018 | 1.6     | Added numbering, terms document references, removed unnecessary anchors                                         | Tatu Repo         |
+| 20.01.2020 | 1.7     | Update XroadProcessLister description                                                                           | Jarkko Hyöty      |
+| 25.06.2020 | 1.8     | Add chapter [2.2.1 JMX interface](#221-jmx-interface)                                                           | Petteri Kivimäki  |
+| 01.06.2023 | 1.9     | Update references                                                                                               | Petteri Kivimäki  |
+| 04.10.2023 | 1.10    | Remove Akka references                                                                                          | Ričardas Bučiūnas |
+| 16.02.2024 | 1.11    | Add information about JMX and authentication                                                                    | Petteri Kivimäki  |
+| 11.11.2025 | 1.12    | Drop JMX interface                                                                                              | Justas Samuolis   |
 
 # Table of Contents
 <!-- toc -->
@@ -27,7 +29,6 @@ Doc. ID: ARC-ENVMON
 - [2 Components](#2-components)
   * [2.1 Monitoring metaservice (proxymonitor add-on)](#21-monitoring-metaservice-proxymonitor-add-on)
   * [2.2 Monitoring service (xroad-monitor)](#22-monitoring-service-xroad-monitor)
-      * [2.2.1 JMX interface](#221-jmx-interface)
   * [2.3 Central monitoring client](#23-central-monitoring-client)
   * [2.4 Central monitoring data collector](#24-central-monitoring-data-collector)
   * [2.5 Central server admin user interface](#25-central-server-admin-user-interface)
@@ -73,7 +74,7 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 ### 2.1 Monitoring metaservice (proxymonitor add-on)
 
-Monitoring metaservice responds to queries for monitoring data from security server's serverproxy interface. This metaservice requests the current monitoring data from local monitoring service, using [Akka](http://akka.io/). Monitoring metaservice translates the monitoring data to a SOAP XML response.
+Monitoring metaservice responds to queries for monitoring data from security server's serverproxy interface. This metaservice requests the current monitoring data from local monitoring service, using [gRPC](https://grpc.io/). Monitoring metaservice translates the monitoring data to a SOAP XML response.
 
 Monitoring service handles authorization of the requests, see [Access control](#33-access-control). It reads monitoring configuration from distributed global monitoring configuration (see [UC-GCONF, PR-GCONF](#12-references)).
 
@@ -81,7 +82,7 @@ Monitoring metaservice is installed as a proxy add-on, with name `xroad-addon-pr
 
 ### 2.2 Monitoring service (xroad-monitor)
 
-Monitoring service is responsible for collecting the monitoring data from one security server instance. It distributes the collected data to monitoring clients (normally the local monitoring metaservice) when requested through an Akka interface.
+Monitoring service is responsible for collecting the monitoring data from one security server instance. It distributes the collected data to monitoring clients (normally the local monitoring metaservice) when requested through an gRPC interface.
 
 Monitoring service uses several _sensors_ to collect the data. Sensors and related functionalities are build on top of [Dropwizard Metrics](https://github.com/dropwizard/metrics).
 
@@ -128,20 +129,6 @@ The following sensors produce monitoring data:
 
 
 Monitoring service is installed as a separate package, with name `xroad-monitor`. It runs in a separate process.
-
-#### 2.2.1 JMX interface
-
-The service also publishes the monitoring data via JMX. Local monitoring agents can use this as an alternative way to fetch monitoring data. With the default configuration, JMX is disabled.
-
-![monitoring JMX agent](img/monitoring-jmx.png)
-
-JMX is enabled by adding the required configuration in `/etc/xroad/services/local.properties` file. The file is opened for editing and changes are made on the `XROAD_MONITOR_PARAMS` variable value. After the `XROAD_MONITOR_PARAMS` variable value has been updated, the `xroad-monitor` service must be restarted.
-
-The example configuration below enables JMX, binds it to port `9999` on any available interface with SSL and password authentication enabled:
-
-```properties
-XROAD_MONITOR_PARAMS=-Djava.rmi.server.hostname=0.0.0.0 -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.ssl=true
-```
 
 ### 2.3 Central monitoring client
 
@@ -231,7 +218,7 @@ xmlns:prod="http://vrk-test.x-road.fi/producer">
 </SOAP-ENV:Envelope>
 ```
 
-For monitoring queries this is not enough. In a clustered security server configuration, one service can be served from multiple security servers. When X-Road routes the message, it picks one candidate based on which one answers the quickest. When executing monitoring queries, we need to be able to fetch monitoring data from a specific security server in a cluster. To make this possible the Security server targeting extension for the X-Road message protocol \[[PR-TARGETSS](#12-references)\] is used, which adds a new SOAP header element `securityServer`. Using this element, the caller identifies which security server should respond with the monitoring data (`servercode` = `fdev-ss1.i.palveluvayla.com`). To execute a query, we call service `getSecurityServerMetrics`:
+For monitoring queries this is not enough. In a clustered security server configuration, one service can be served from multiple security servers. When X-Road routes the message, it picks one candidate based on which one answers the quickest. When executing monitoring queries, we need to be able to fetch monitoring data from a specific security server in a cluster. To make this possible the Security server targeting extension for the X-Road message protocol \[[PR-TARGETSS](#12-references)\] is used, which adds a new SOAP header element `securityServer`. Using this element, the caller identifies which security server should respond with the monitoring data (`servercode` = `fdev-ss1.i.x-road.global`). To execute a query, we call service `getSecurityServerMetrics`:
 
 ```xml
 <SOAP-ENV:Envelope
@@ -255,7 +242,7 @@ For monitoring queries this is not enough. In a clustered security server config
             <id:xRoadInstance>fdev</id:xRoadInstance>
             <id:memberClass>GOV</id:memberClass>
             <id:memberCode>1710128-9</id:memberCode>
-            <id:serverCode>fdev-ss1.i.palveluvayla.com</id:serverCode>
+            <id:serverCode>fdev-ss1.i.x-road.global</id:serverCode>
         </xrd:securityServer>
         <xrd:id>ID11234</xrd:id>
         <xrd:protocolVersion>4.0</xrd:protocolVersion>
@@ -290,7 +277,7 @@ The response looks like:
          <id:xRoadInstance>fdev</id:xRoadInstance>
          <id:memberClass>GOV</id:memberClass>
          <id:memberCode>1710128-9</id:memberCode>
-         <id:serverCode>fdev-ss1.i.palveluvayla.com</id:serverCode>
+         <id:serverCode>fdev-ss1.i.x-road.global</id:serverCode>
       </xrd:securityServer>
       <xrd:id>ID11234</xrd:id>
       <xrd:protocolVersion>4.0</xrd:protocolVersion>
@@ -299,7 +286,7 @@ The response looks like:
    <SOAP-ENV:Body>
       <m:getSecurityServerMetricsResponse>
          <m:metricSet>
-            <m:name>SERVER:fdev/GOV/1710128-9/fdev-ss1.i.palveluvayla.com</m:name>
+            <m:name>SERVER:fdev/GOV/1710128-9/fdev-ss1.i.x-road.global</m:name>
             <m:stringMetric>
                <m:name>proxyVersion</m:name>
                <m:value>6.7.7-1.20151201075839gitb72b28e</m:value>
@@ -404,8 +391,6 @@ Monitoring queries are allowed from
 Central monitoring client is configured using central server admin user interface, see [Admin user interface](#25-central-server-admin-user-interface).
 
 Attempts to query monitoring data from other clients results in an `AccessDenied` -error.
-
-JMX API, in case port and network access is enabled, will provide monitoring data directly without access control checks by security server. 
 
 #### 3.3.1 Limiting central monitoring client access for environmental monitor data
 

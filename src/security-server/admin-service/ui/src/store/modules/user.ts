@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,37 +25,51 @@
  * THE SOFTWARE.
  */
 
+import { RouteRecordName } from 'vue-router';
 import { defineStore } from 'pinia';
-import { mainTabs } from '@/global';
-import axiosAuth from '../../axios-auth';
-import axios from 'axios';
-import {
-  InitializationStatus,
-  SecurityServer,
-  TokenInitStatus,
-  User,
-} from '@/openapi-types';
-import { Tab } from '@/ui-types';
-import i18n from '@/i18n';
+
+import { i18n, Tab, useAppState } from '@niis/shared-ui';
+
+import { InitializationStatus, SecurityServer, TokenInitStatus, User } from '@/openapi-types';
 import { routePermissions } from '@/routePermissions';
-import { useSystemStore } from './system';
+import { SessionStatus } from '@/ui-types';
+import * as api from '@/util/api';
+
+import axiosAuth from '../../axios-auth';
+
+import { useSystem } from './system';
+
+interface State {
+  authenticated: boolean;
+  permissions: string[];
+  roles: string[];
+  username?: string;
+  currentSecurityServer?: SecurityServer;
+  initializationStatus?: InitializationStatus;
+  bannedRoutes?: RouteRecordName[];
+}
 
 export const useUser = defineStore('user', {
-  state: () => {
+  state: (): State => {
     return {
+      username: undefined,
+      currentSecurityServer: undefined,
+      initializationStatus: undefined,
       authenticated: false,
-      sessionAlive: undefined as boolean | undefined,
       permissions: [] as string[],
-      username: '',
-      currentSecurityServer: {} as SecurityServer,
-      initializationStatus: undefined as InitializationStatus | undefined,
-      bannedRoutes: [] as string[], // Array for routes the user doesn't have permission to access.
+      roles: [] as string[],
+      bannedRoutes: [] as RouteRecordName[], // Array for routes the user doesn't have permission to access.
     };
   },
-  persist: true, // This store is saved into browser local storage (pinia-plugin-persistedstate)
+  persist: {
+    storage: localStorage,
+  },
   getters: {
     hasPermission: (state) => (perm: string) => {
       return state.permissions.includes(perm);
+    },
+    hasRole: (state) => (role: string) => {
+      return state.roles.includes(role);
     },
     hasAnyOfPermissions: (state) => (perm: string[]) => {
       // Return true if the user has at least one of the tabs permissions
@@ -64,22 +79,11 @@ export const useUser = defineStore('user', {
       (state) =>
       (tabs: Tab[]): Tab[] => {
         // returns filtered array of Tab objects based on the 'permission' attribute
-        const filteredTabs = tabs.filter((tab: Tab) => {
+        return tabs.filter((tab: Tab) => {
           const routeName = tab.to.name;
-
-          if (routeName && !state.bannedRoutes?.includes(routeName)) {
-            // Return true if the user has permission
-            return true;
-          }
-          return false;
+          return !!(routeName && !state.bannedRoutes?.includes(routeName));
         });
-
-        return filteredTabs;
       },
-
-    firstAllowedTab(): Tab {
-      return this.getAllowedTabs(mainTabs)[0];
-    },
 
     isAnchorImported(state): boolean {
       return state.initializationStatus?.is_anchor_imported ?? false;
@@ -91,6 +95,10 @@ export const useUser = defineStore('user', {
 
     isServerCodeInitialized(state): boolean {
       return state.initializationStatus?.is_server_code_initialized ?? false;
+    },
+
+    isEnforceTokenPolicyEnabled(state): boolean {
+      return state.initializationStatus?.enforce_token_pin_policy ?? false;
     },
 
     softwareTokenInitializationStatus(state): TokenInitStatus | undefined {
@@ -106,19 +114,15 @@ export const useUser = defineStore('user', {
         state.initializationStatus?.is_anchor_imported &&
         state.initializationStatus.is_server_code_initialized &&
         state.initializationStatus.is_server_owner_initialized &&
-        (state.initializationStatus.software_token_init_status ===
-          TokenInitStatus.INITIALIZED ||
-          state.initializationStatus.software_token_init_status ===
-            TokenInitStatus.UNKNOWN)
+        (state.initializationStatus.software_token_init_status === TokenInitStatus.INITIALIZED ||
+          state.initializationStatus.software_token_init_status === TokenInitStatus.UNKNOWN)
       );
     },
   },
 
   actions: {
     async loginUser(authData: { username: string; password: string }) {
-      const data = `username=${encodeURIComponent(
-        authData.username,
-      )}&password=${encodeURIComponent(authData.password)}`;
+      const data = `username=${encodeURIComponent(authData.username)}&password=${encodeURIComponent(authData.password)}`;
 
       return axiosAuth({
         url: '/login',
@@ -129,8 +133,9 @@ export const useUser = defineStore('user', {
         data,
       })
         .then(() => {
+          sessionStorage.clear();
           this.authenticated = true;
-          this.sessionAlive = true;
+          useAppState().setSessionAlive();
         })
         .catch((error) => {
           throw error;
@@ -138,22 +143,25 @@ export const useUser = defineStore('user', {
     },
 
     async fetchSessionStatus() {
-      return axios
-        .get('/notifications/session-status')
+      return api
+        .get<SessionStatus>('/notifications/session-status')
         .then((res) => {
-          this.sessionAlive = res?.data?.valid ?? false;
+          useAppState().setSessionAlive(res?.data?.valid ?? false);
+          return res;
         })
-        .catch(() => {
-          this.sessionAlive = false;
+        .catch((err) => {
+          useAppState().setSessionAlive(false);
+          throw err;
         });
     },
 
     async fetchUserData() {
-      return axios
+      return api
         .get<User>('/user')
         .then((res) => {
           this.username = res.data.username;
           this.setPermissions(res.data.permissions);
+          this.setRoles(res.data.roles);
         })
         .catch((error) => {
           throw error;
@@ -172,11 +180,7 @@ export const useUser = defineStore('user', {
         // Check that the route has name and permissions
         if (route.name && route?.permissions) {
           // Find out routes that the user doesn't have permissions to access
-          if (
-            !route.permissions.some((permission: string) =>
-              permissions.includes(permission),
-            )
-          ) {
+          if (!route.permissions.some((permission: string) => permissions.includes(permission))) {
             // Add a banned route to the array
             tempBannedRoutes.push(route.name);
           }
@@ -186,14 +190,15 @@ export const useUser = defineStore('user', {
       this.bannedRoutes = tempBannedRoutes;
     },
 
+    setRoles(roles: string[]) {
+      this.roles = roles.map((role) => (role.startsWith('ROLE_') ? role.slice(5) : role));
+    },
     async fetchCurrentSecurityServer() {
-      return axios
+      return api
         .get<SecurityServer[]>('/security-servers?current_server=true')
         .then((resp) => {
           if (resp.data?.length !== 1) {
-            throw new Error(
-              i18n.t('stores.user.currentSecurityServerNotFound') as string,
-            );
+            throw new Error(i18n.global.t('stores.user.currentSecurityServerNotFound') as string);
           }
           this.currentSecurityServer = resp.data[0];
         })
@@ -207,8 +212,10 @@ export const useUser = defineStore('user', {
       this.clearAuth();
 
       // Reset system data
-      const system = useSystemStore();
+      const system = useSystem();
       system.clearSystemStore();
+
+      sessionStorage.clear();
 
       // Call backend for logout
       return axiosAuth
@@ -225,8 +232,8 @@ export const useUser = defineStore('user', {
     },
 
     async fetchInitializationStatus() {
-      return axios
-        .get('/initialization/status')
+      return api
+        .get<InitializationStatus>('/initialization/status')
         .then((resp) => {
           this.initializationStatus = resp.data;
         })
@@ -237,23 +244,18 @@ export const useUser = defineStore('user', {
 
     setInitializationStatus(): void {
       // Sets the initialization state to done
-      const initStatus: InitializationStatus = {
+      this.initializationStatus = {
         is_anchor_imported: true,
         is_server_code_initialized: true,
         is_server_owner_initialized: true,
         software_token_init_status: TokenInitStatus.INITIALIZED,
+        enforce_token_pin_policy: false,
       };
-
-      this.initializationStatus = initStatus;
     },
 
-    // This action is currenlty needed only for unit testing
+    // This action is currently needed only for unit testing
     storeInitStatus(status: InitializationStatus) {
       this.initializationStatus = status;
-    },
-
-    setSessionAlive(value: boolean) {
-      this.sessionAlive = value;
     },
 
     authUser() {

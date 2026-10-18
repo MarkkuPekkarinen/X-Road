@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,8 +26,8 @@
  */
 package org.niis.xroad.restapi.openapi.validator;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -44,6 +44,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Constraint(validatedBy = NoControlCharsValidator.class)
 public @interface NoControlChars {
     String message() default "must not contain control characters";
+
     Class<?>[] groups() default {};
+
     Class<? extends Payload>[] payload() default {};
 }

@@ -1,21 +1,21 @@
 /*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,46 +27,47 @@
 
 package org.niis.xroad.cs.admin.core.service;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenStatusInfo;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.core.exception.ErrorOrigin;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.common.exception.NotFoundException;
-import org.niis.xroad.common.exception.ServiceException;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.SignerProxyException;
 import org.niis.xroad.cs.admin.api.dto.TokenInfo;
 import org.niis.xroad.cs.admin.api.dto.TokenLoginRequest;
 import org.niis.xroad.cs.admin.api.facade.SignerProxyFacade;
 import org.niis.xroad.cs.admin.api.service.ConfigurationSigningKeysService;
 import org.niis.xroad.cs.admin.core.converter.TokenInfoMapper;
-import org.niis.xroad.cs.admin.core.exception.SignerProxyException;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
+import org.niis.xroad.signer.protocol.dto.TokenInfoProto;
+import org.niis.xroad.signer.protocol.dto.TokenStatusInfo;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static ee.ria.xroad.signer.protocol.dto.TokenStatusInfo.OK;
-import static ee.ria.xroad.signer.protocol.dto.TokenStatusInfo.USER_PIN_FINAL_TRY;
-import static ee.ria.xroad.signer.protocol.dto.TokenStatusInfo.USER_PIN_LOCKED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.niis.xroad.common.core.exception.ErrorCode.INTERNAL_ERROR;
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_NOT_FOUND;
 import static org.niis.xroad.cs.admin.api.dto.PossibleTokenAction.LOGIN;
 import static org.niis.xroad.cs.admin.api.dto.PossibleTokenAction.LOGOUT;
 import static org.niis.xroad.cs.admin.core.service.TokensServiceImpl.SOFTWARE_TOKEN_ID;
+import static org.niis.xroad.signer.protocol.dto.TokenStatusInfo.OK;
+import static org.niis.xroad.signer.protocol.dto.TokenStatusInfo.USER_PIN_FINAL_TRY;
+import static org.niis.xroad.signer.protocol.dto.TokenStatusInfo.USER_PIN_LOCKED;
 
 @ExtendWith(MockitoExtension.class)
 class TokensServiceImplTest {
@@ -93,8 +94,8 @@ class TokensServiceImplTest {
     private TokensServiceImpl tokensService;
 
     @Test
-    void getTokens() throws Exception {
-        ee.ria.xroad.signer.protocol.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
+    void getTokens() {
+        org.niis.xroad.signer.api.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
         when(signerProxyFacade.getTokens()).thenReturn(List.of(signerTokenInfo));
         when(tokenInfoMapper.toTarget(signerTokenInfo)).thenReturn(tokenInfo);
 
@@ -105,98 +106,101 @@ class TokensServiceImplTest {
     }
 
     @Test
-    void getTokensShouldThrowException() throws Exception {
-        doThrow(new Exception()).when(signerProxyFacade).getTokens();
+    void getTokensShouldThrowException() {
+        doThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).build()).when(signerProxyFacade).getTokens();
 
         assertThatThrownBy(() -> tokensService.getTokens())
-                .isInstanceOf(ServiceException.class)
-                .hasMessage("Error getting tokens");
+                .isInstanceOf(InternalServerErrorException.class)
+                .hasMessage("Error[code=token_fetch_failed]");
     }
 
     @Test
-    void loginShouldThrowWhenTokenNotFound() throws Exception {
-        when(signerProxyFacade.getToken(TOKEN_ID)).thenThrow(new CodedException("Signer.TokenNotFound"));
+    void loginShouldThrowWhenTokenNotFound() {
+        when(signerProxyFacade.getToken(TOKEN_ID))
+                .thenThrow(XrdRuntimeException.systemException(TOKEN_NOT_FOUND).origin(ErrorOrigin.SIGNER).build());
 
         assertThatThrownBy(() -> tokensService.login(new TokenLoginRequest(TOKEN_ID, PASSWORD)))
                 .isInstanceOf(NotFoundException.class)
-                .hasMessage("Token not found");
+                .hasMessage("Error[code=token_not_found]");
     }
 
     @Test
-    void loginShouldThrowPinLocked() throws Exception {
-        final ee.ria.xroad.signer.protocol.dto.TokenInfo signerTokenInfo = mockTokenInfo(USER_PIN_LOCKED);
+    void loginShouldThrowPinLocked() {
+        final org.niis.xroad.signer.api.dto.TokenInfo signerTokenInfo = mockTokenInfo(USER_PIN_LOCKED);
 
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(signerTokenInfo);
 
         assertThatThrownBy(() -> tokensService.login(new TokenLoginRequest(TOKEN_ID, PASSWORD)))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Token PIN locked");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=token_pin_locked]");
 
         assertAuditMessages();
     }
 
     @Test
-    void loginShouldThrowFinalTryException() throws Exception {
+    void loginShouldThrowFinalTryException() {
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(mockTokenInfo(OK), mockTokenInfo(USER_PIN_FINAL_TRY));
-        doThrow(new CodedException("")).when(signerProxyFacade).activateToken(TOKEN_ID, PASSWORD.toCharArray());
+        doThrow(XrdRuntimeException.systemInternalError("error")).when(signerProxyFacade).activateToken(TOKEN_ID, PASSWORD.toCharArray());
 
         assertThatThrownBy(() -> tokensService.login(new TokenLoginRequest(TOKEN_ID, PASSWORD)))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Tries left: 1");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=token_pin_final_try]");
         assertAuditMessages();
         verify(signerProxyFacade, times(2)).getToken(TOKEN_ID);
     }
 
     @Test
-    void loginShouldThrowUserPinLockedOnActivation() throws Exception {
+    void loginShouldThrowUserPinLockedOnActivation() {
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(mockTokenInfo(OK), mockTokenInfo(USER_PIN_LOCKED));
-        doThrow(new CodedException("")).when(signerProxyFacade).activateToken(TOKEN_ID, PASSWORD.toCharArray());
+        doThrow(XrdRuntimeException.systemInternalError("error"))
+                .when(signerProxyFacade).activateToken(TOKEN_ID, PASSWORD.toCharArray());
 
         assertThatThrownBy(() -> tokensService.login(new TokenLoginRequest(TOKEN_ID, PASSWORD)))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Token PIN locked");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=token_pin_locked]");
         assertAuditMessages();
         verify(signerProxyFacade, times(2)).getToken(TOKEN_ID);
     }
 
     @Test
-    void loginShouldThrowOtherException() throws Exception {
+    void loginShouldThrowOtherException() {
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(mockTokenInfo(OK));
-        doThrow(new Exception()).when(signerProxyFacade).activateToken(TOKEN_ID, PASSWORD.toCharArray());
+        doThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).origin(ErrorOrigin.SIGNER).build())
+                .when(signerProxyFacade).activateToken(TOKEN_ID, PASSWORD.toCharArray());
 
         assertThatThrownBy(() -> tokensService.login(new TokenLoginRequest(TOKEN_ID, PASSWORD)))
                 .isInstanceOf(SignerProxyException.class)
-                .hasMessage("Token activation failed");
+                .hasMessage("Error[code=token_activation_failed, metadata=[signer.internal_error]]");
         assertAuditMessages();
     }
 
     @Test
-    void loginShouldThrowIncorrectPinFormatWhenTooShort() throws Exception {
+    void loginShouldThrowIncorrectPinFormatWhenTooShort() {
         Map<String, String> tokenParams = Map.of("Min PIN length", "42");
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(mockTokenInfo(tokenParams));
 
         assertThatThrownBy(() -> tokensService.login(new TokenLoginRequest(TOKEN_ID, PASSWORD)))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Incorrect PIN format");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=token_incorrect_pin_format]");
 
         assertAuditMessages();
     }
 
     @Test
-    void loginShouldThrowIncorrectPinFormatWhenTooLong() throws Exception {
+    void loginShouldThrowIncorrectPinFormatWhenTooLong() {
         Map<String, String> tokenParams = Map.of("Max PIN length", "7");
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(mockTokenInfo(tokenParams));
 
         assertThatThrownBy(() -> tokensService.login(new TokenLoginRequest(TOKEN_ID, PASSWORD)))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Incorrect PIN format");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=token_incorrect_pin_format]");
 
         assertAuditMessages();
     }
 
     @Test
-    void login() throws Exception {
-        final ee.ria.xroad.signer.protocol.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
+    void login() {
+        final org.niis.xroad.signer.api.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(signerTokenInfo);
         when(tokenInfoMapper.toTarget(signerTokenInfo)).thenReturn(tokenInfo);
 
@@ -211,8 +215,8 @@ class TokensServiceImplTest {
     }
 
     @Test
-    void logout() throws Exception {
-        final ee.ria.xroad.signer.protocol.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
+    void logout() {
+        final org.niis.xroad.signer.api.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(signerTokenInfo);
         when(tokenInfoMapper.toTarget(signerTokenInfo)).thenReturn(tokenInfo);
 
@@ -227,38 +231,40 @@ class TokensServiceImplTest {
     }
 
     @Test
-    void logoutShouldThrowNotFound() throws Exception {
-        when(signerProxyFacade.getToken(TOKEN_ID)).thenThrow(new CodedException("Signer.TokenNotFound"));
+    void logoutShouldThrowNotFound() {
+        when(signerProxyFacade.getToken(TOKEN_ID))
+                .thenThrow(XrdRuntimeException.systemException(TOKEN_NOT_FOUND).origin(ErrorOrigin.SIGNER).build());
 
         assertThatThrownBy(() -> tokensService.logout(TOKEN_ID))
                 .isInstanceOf(NotFoundException.class)
-                .hasMessage("Token not found");
+                .hasMessage("Error[code=token_not_found]");
     }
 
     @Test
-    void logoutShouldThrowOtherExceptionWhenGetTokenFails() throws Exception {
-        when(signerProxyFacade.getToken(TOKEN_ID)).thenThrow(new Exception());
+    void logoutShouldThrowOtherExceptionWhenGetTokenFails() {
+        when(signerProxyFacade.getToken(TOKEN_ID))
+                .thenThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).origin(ErrorOrigin.SIGNER).build());
 
         assertThatThrownBy(() -> tokensService.logout(TOKEN_ID))
                 .isInstanceOf(SignerProxyException.class)
-                .hasMessage("Signer proxy exception");
+                .hasMessage("Error[code=signer_proxy_error, metadata=[signer.internal_error]]");
     }
 
     @Test
-    void logoutShouldThrowExceptionWhenDeactivateFails() throws Exception {
-        final ee.ria.xroad.signer.protocol.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
+    void logoutShouldThrowExceptionWhenDeactivateFails() {
+        final org.niis.xroad.signer.api.dto.TokenInfo signerTokenInfo = mockTokenInfo(OK);
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(signerTokenInfo);
         doThrow(new RuntimeException()).when(signerProxyFacade).deactivateToken(TOKEN_ID);
 
         assertThatThrownBy(() -> tokensService.logout(TOKEN_ID))
                 .isInstanceOf(SignerProxyException.class)
-                .hasMessage("Token deactivation failed");
+                .hasMessage("Error[code=token_deactivation_failed]");
         assertAuditMessages();
     }
 
     @Test
-    void hasHardwareTokensReturnsTrue() throws Exception {
-        ee.ria.xroad.signer.protocol.dto.TokenInfo signerTokenInfo = mockTokenInfo("1");
+    void hasHardwareTokensReturnsTrue() {
+        org.niis.xroad.signer.api.dto.TokenInfo signerTokenInfo = mockTokenInfo("1");
         when(signerProxyFacade.getTokens()).thenReturn(List.of(signerTokenInfo));
 
         boolean result = tokensService.hasHardwareTokens();
@@ -267,8 +273,8 @@ class TokensServiceImplTest {
     }
 
     @Test
-    void hasHardwareTokensReturnsFalse() throws Exception {
-        ee.ria.xroad.signer.protocol.dto.TokenInfo signerTokenInfo = mockTokenInfo(SOFTWARE_TOKEN_ID);
+    void hasHardwareTokensReturnsFalse() {
+        org.niis.xroad.signer.api.dto.TokenInfo signerTokenInfo = mockTokenInfo(SOFTWARE_TOKEN_ID);
         when(signerProxyFacade.getTokens()).thenReturn(List.of(signerTokenInfo));
 
         boolean result = tokensService.hasHardwareTokens();
@@ -276,26 +282,33 @@ class TokensServiceImplTest {
         assertThat(result).isFalse();
     }
 
-    private ee.ria.xroad.signer.protocol.dto.TokenInfo mockTokenInfo(String tokenId,
-                                                                     TokenStatusInfo status,
-                                                                     Map<String, String> tokenParams,
-                                                                     List<KeyInfo> keyInfos) {
-        return new ee.ria.xroad.signer.protocol.dto.TokenInfo(
-                "type", TOKEN_FRIENDLY_NAME, tokenId, false, true,
-                false, TOKEN_SERIAL_NUMBER, "label", 13, status, keyInfos, tokenParams
-        );
+    private org.niis.xroad.signer.api.dto.TokenInfo mockTokenInfo(String tokenId,
+                                                                  TokenStatusInfo status,
+                                                                  Map<String, String> tokenParams) {
+        return new org.niis.xroad.signer.api.dto.TokenInfo(TokenInfoProto.newBuilder()
+                .setType("type")
+                .setFriendlyName(TOKEN_FRIENDLY_NAME)
+                .setId(tokenId)
+                .setReadOnly(false)
+                .setAvailable(true)
+                .setActive(false)
+                .setSerialNumber(TOKEN_SERIAL_NUMBER)
+                .setLabel("label")
+                .setStatus(status)
+                .putAllTokenInfo(tokenParams)
+                .build());
     }
 
-    private ee.ria.xroad.signer.protocol.dto.TokenInfo mockTokenInfo(TokenStatusInfo status) {
-        return mockTokenInfo(TOKEN_ID, status, new HashMap<>(), new ArrayList<>());
+    private org.niis.xroad.signer.api.dto.TokenInfo mockTokenInfo(TokenStatusInfo status) {
+        return mockTokenInfo(TOKEN_ID, status, new HashMap<>());
     }
 
-    private ee.ria.xroad.signer.protocol.dto.TokenInfo mockTokenInfo(Map<String, String> tokenParams) {
-        return mockTokenInfo(TOKEN_ID, OK, tokenParams, new ArrayList<>());
+    private org.niis.xroad.signer.api.dto.TokenInfo mockTokenInfo(Map<String, String> tokenParams) {
+        return mockTokenInfo(TOKEN_ID, OK, tokenParams);
     }
 
-    private ee.ria.xroad.signer.protocol.dto.TokenInfo mockTokenInfo(String tokenId) {
-        return mockTokenInfo(tokenId, OK, new HashMap<>(), new ArrayList<>());
+    private org.niis.xroad.signer.api.dto.TokenInfo mockTokenInfo(String tokenId) {
+        return mockTokenInfo(tokenId, OK, new HashMap<>());
     }
 
     private void assertAuditMessages() {

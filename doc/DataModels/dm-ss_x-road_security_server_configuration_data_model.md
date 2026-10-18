@@ -1,24 +1,32 @@
 # X-Road: Security Server Configuration Data Model
 
-Version: 1.8
+Version: 1.16
 Doc. ID: DM-SS
 
 ## Version history
 
-| Date       | Version | Description                                                         | Author                          |
-|------------|---------|---------------------------------------------------------------------|---------------------------------|
-| 11.06.2015 | 0.1     | Initial version                                                     | Mait Märdin, Margus Freudenthal |
-| 21.08.2015 | 0.4     | Added sections related to saving database history                   | Mait Märdin                     |
-| 31.08.2015 | 0.5     | Removed backend URL that was removed from code                      | Margus Freudenthal              |
-| 20.09.2015 | 1.0     | Editorial changes made                                              | Imbi Nõgisto                    |
-| 19.10.2015 | 1.1     | Indexes added                                                       | Martin Lind                     |
-| 11.12.2015 | 1.2     | Small fixes                                                         | Siim Annuk                      |
-| 28.01.2019 | 1.3     | Wsdl changes to servicedescription. Document converted to Markdown. | Ilkka Seppälä                   |
-| 26.03.2019 | 1.4     | Added tables for API keys                                           | Janne Mattila                   |
-| 04.07.2019 | 1.5     | REST access rights                                                  | Jarkko Hyöty                    |
-| 16.09.2019 | 1.6     | Remove Ubuntu 14.04 support                                         | Jarkko Hyöty                    |
-| 26.09.2022 | 1.7     | Remove Ubuntu 18.04 support                                         | Andres Rosenthal                |
-| 10.05.2023 | 1.8     | Security Categories removed.                                        | Justas Samuolis                 |
+| Date       | Version | Description                                                                                                    | Author                          |
+|------------|---------|----------------------------------------------------------------------------------------------------------------|---------------------------------|
+| 11.06.2015 | 0.1     | Initial version                                                                                                | Mait Märdin, Margus Freudenthal |
+| 21.08.2015 | 0.4     | Added sections related to saving database history                                                              | Mait Märdin                     |
+| 31.08.2015 | 0.5     | Removed backend URL that was removed from code                                                                 | Margus Freudenthal              |
+| 20.09.2015 | 1.0     | Editorial changes made                                                                                         | Imbi Nõgisto                    |
+| 19.10.2015 | 1.1     | Indexes added                                                                                                  | Martin Lind                     |
+| 11.12.2015 | 1.2     | Small fixes                                                                                                    | Siim Annuk                      |
+| 28.01.2019 | 1.3     | Wsdl changes to servicedescription. Document converted to Markdown.                                            | Ilkka Seppälä                   |
+| 26.03.2019 | 1.4     | Added tables for API keys                                                                                      | Janne Mattila                   |
+| 04.07.2019 | 1.5     | REST access rights                                                                                             | Jarkko Hyöty                    |
+| 16.09.2019 | 1.6     | Remove Ubuntu 14.04 support                                                                                    | Jarkko Hyöty                    |
+| 26.09.2022 | 1.7     | Remove Ubuntu 18.04 support                                                                                    | Andres Rosenthal                |
+| 10.05.2023 | 1.8     | Security Categories removed.                                                                                   | Justas Samuolis                 |
+| 08.12.2023 | 1.9     | Added "Disabled" and related "in progress" client states                                                       | Madis Loitmaa                   |
+| 26.01.2024 | 1.10    | When client is deleted, respective identifier is deleted as well                                               | Eneli Reimets                   |
+| 12.03.2025 | 1.11    | Minor fixes                                                                                                    | Eneli Reimets                   |
+| 21.03.2025 | 1.12    | Syntax and styling                                                                                             | Pauline Dimmek                  |
+| 07.04.2025 | 1.13    | Table "configuration_client" added, "service_securitycategories" removed from diagram                          | Justas Samuolis                 |
+| 30.03.2026 | 1.14    | Added unique constraints to identifier tables and removed unnnecessary columns (service_code, service_version) | Eneli Reimets                   |
+| 01.04.2026 | 1.15    | Update minimum PostgreSQL version to 15                                                                        | Egidijus M                      |
+| 23.09.2026 | 1.16    | Table "dataflow_state" added                                                                                   | Eneli Reimets                   |
 
 ## Table of Contents
 <!-- vim-markdown-toc GFM -->
@@ -56,7 +64,8 @@ Doc. ID: DM-SS
   * [2.9 HISTORY](#29-history)
     * [2.9.1 Attributes](#291-attributes)
   * [2.10 IDENTIFIER](#210-identifier)
-    * [2.10.1 Attributes](#2101-attributes)
+    * [2.10.1 Indexes and Constraints](#2101-indexes-and-constraints)
+    * [2.10.2 Attributes](#2102-attributes)
   * [2.11 LOCALGROUP](#211-localgroup)
     * [2.11.1 Indexes](#2111-indexes)
     * [2.11.2 Attributes](#2112-attributes)
@@ -66,17 +75,23 @@ Doc. ID: DM-SS
   * [2.13 SERVICE](#213-service)
     * [2.13.1 Indexes](#2131-indexes)
     * [2.13.2 Attributes](#2132-attributes)
-  * [2.14 TSP](#215-tsp)
-    * [2.14.1 Indexes](#2151-indexes)
-    * [2.14.2 Attributes](#2152-attributes)
-  * [2.15 UIUSER](#216-uiuser)
-    * [2.15.1 Attributes](#2161-attributes)
-  * [2.16 SERVICEDESCRIPTION](#217-servicedescription)
-    * [2.16.1 Indexes](#2171-indexes)
-    * [2.16.2 Attributes](#2172-attributes)
-  * [2.17 ENDPOINT](#218-endpoint)
-    * [2.17.1 Indexes](#2181-indexes)
-    * [2.17.2 Attributes](#2182-attributes)
+  * [2.14 TSP](#214-tsp)
+    * [2.14.1 Indexes](#2141-indexes)
+    * [2.14.2 Attributes](#2142-attributes)
+  * [2.15 UIUSER](#215-uiuser)
+    * [2.15.1 Attributes](#2151-attributes)
+  * [2.16 SERVICEDESCRIPTION](#216-servicedescription)
+    * [2.16.1 Indexes](#2161-indexes)
+    * [2.16.2 Attributes](#2162-attributes)
+  * [2.17 ENDPOINT](#217-endpoint)
+    * [2.17.1 Indexes](#2171-indexes)
+    * [2.17.2 Attributes](#2172-attributes)
+  * [2.18 CONFIGURATION_CLIENT](#218-configuration_client)
+    * [2.18.1 Indexes](#2181-indexes) 
+    * [2.18.2 Attributes](#2182-attributes)  
+  * [2.19 DATAFLOW_STATE](#219-dataflow_state)
+    * [2.19.1 Indexes](#2191-indexes)
+    * [2.19.2 Attributes](#2192-attributes)
 
 <!-- vim-markdown-toc -->
 
@@ -92,7 +107,7 @@ This document describes database model of X-Road security server.
 
 ### 1.2 Database Version
 
-This database assumes PostgreSQL version 9.2 or later.
+This database assumes PostgreSQL version 15 or later.
 
 ### 1.3 Creating, Backing Up and Restoring the Database
 
@@ -108,6 +123,7 @@ This section describes a general mechanism for storing history of the database t
   * history
   * databasechangelog
   * databasechangeloglock
+  * dataflow_state — technical runtime state, not audited; see section 2.19
 
 When a row is created, updated or deleted in one of the history-aware tables, the trigger update_history is activated and invokes the stored procedure add_history_rows. For each changed column, add_history_rows inserts a row into the history table. The details of the stored procedures are described in section 1.6.
 
@@ -201,6 +217,9 @@ The field clientstatus shows the progress of registering in central server the c
 * _registered_ -- the registration request sent to the central server is approved and the connection between the client and the security server is registered in the global configuration. In this state the security server can exchange messages on behalf of the client.
 * _deletion in progress_ -- the security server has successfully sent client deletion request to the central server. From this state, the only possible action is to delete the client from security server configuration.
 * _global error_ -- the client was in state “registered”, but the connection between the client and the security server has been deleted from the global configuration. From this state the administrator can either wait for updated global configuration (in case the deletion was caused by an error), contact the systems administrator of the central server or delete the client.
+* _disabled_ -- the client is temporarily disabled
+* _disabling in progress__ -- the administrator has successfully sent clientDisable request. When the security server receives updated global configuration, it enters the "disabled" state. 
+* _enabling in progress__ -- the administrator has successfully sent clientEnable request. When the security server receives updated global configuration, it returns to "registered" state.
 
 #### 2.5.1 Indexes
 
@@ -268,12 +287,12 @@ Member of a local group. A group membership record is created when the administr
 
 #### 2.8.2 Attributes
 
-| Name        | Type           | Modifiers        | Description    |
-|:----------- |:-----------------:|:----------- |:-----------------|
-| id [PK] | bigint | NOT NULL | Primary key. |
-| groupmemberid [FK] | bigint | NOT NULL | Identifier of the member or the subsystem who is a member of the local group. References id attribute of IDENTIFIER entity. |
-| added | timestamp with time zone | NOT NULL | The time when the group member  was added. |
-| localgroup_id [FK] | bigint |  | The local group. References id attribute of LOCALGROUP entity. |
+| Name               |            Type             | Modifiers | Description                                                                                                                 |
+|:-------------------|:---------------------------:|:----------|:----------------------------------------------------------------------------------------------------------------------------|
+| id [PK]            |           bigint            | NOT NULL  | Primary key.                                                                                                                |
+| groupmemberid [FK] |           bigint            | NOT NULL  | Identifier of the member or the subsystem who is a member of the local group. References id attribute of IDENTIFIER entity. |
+| added              | timestamp without time zone | NOT NULL  | The time when the group member  was added.                                                                                  |
+| localgroup_id [FK] |           bigint            |           | The local group. References id attribute of LOCALGROUP entity.                                                              |
 
 ### 2.9 HISTORY
 
@@ -295,23 +314,33 @@ Operations (insertions, updates and deletions of records) on the tables of this 
 
 ### 2.10 IDENTIFIER
 
-Identifier that can be used to identify various objects on X-Road. An identifier record is only created together with records of other entities and only one record of each identifier is ever created. For example, if a security server client record is created and its identifier is not found among identifier records, new one is created. The record is never modified or deleted.
+Identifier that can be used to identify various objects on X-Road. An identifier record is only created together with records of other entities and only one record of each identifier is ever created. For example, if a security server client record is created and its identifier is not found among identifier records, a new one is created.
 
-#### 2.10.1 Attributes
+#### 2.10.1 Indexes and Constraints
 
-| Name           |          Type          | Modifiers | Description                                                                                                                                                                                                                                                                                                         |
-|:---------------|:----------------------:|:----------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| id [PK]        |         bigint         | NOT NULL  | Primary key.                                                                                                                                                                                                                                                                                                        |
-| discriminator  | character varying(255) | NOT NULL  | Technical attribute, specifying the Java class to which the identifier is mapped. Possible values are C (ClientId), S (ServiceId), CS (CentralServiceId), GG (GlobalGroupId), LG (LocalGroupId), SS (SecurityServerId). The corresponding Java classes are located in the `ee.ria.xroad.common.identifier` package. |
-| type           | character varying(255) |           | Specifies the type of the object that the identifier identifies. Possible values, defined in enum `ee.ria.xroad.common.identifier.XroadObjectType`, are MEMBER, SUBSYSTEM, SERVICE, CENTRALSERVICE, GLOBALGROUP, LOCALGROUP, SERVER.                                                                                |
-| xroadinstance  | character varying(255) |           | X-Road instance identifier. Present in identifiers of all types, except LOCALGROUP.                                                                                                                                                                                                                                 |
-| memberclass    | character varying(255) |           | Member class. Present in identifiers of MEMBER, SUBSYSTEM, SERVER and SERVICE type.                                                                                                                                                                                                                                 |
-| membercode     | character varying(255) |           | Member code. Present in identifiers of MEMBER, SUBSYSTEM, SERVER and SERVICE type.                                                                                                                                                                                                                                  |
-| subsystemcode  | character varying(255) |           | Subsystem code. Present in identifiers of SUBSYSTEM and SERVICE type.                                                                                                                                                                                                                                               |
-| serviceversion | character varying(255) |           | Service version. Present in identifiers of SERVICE type.                                                                                                                                                                                                                                                            |
-| servicecode    | character varying(255) |           | Service code. Present in identifiers of SERVICE type.                                                                                                                                                                                                                                                               |
-| groupcode      | character varying(255) |           | Group code. Present in identifiers of GLOBALGROUP and LOCALGROUP type.                                                                                                                                                                                                                                              |
-| servercode     | character varying(255) |           | Security server code. Present in identifiers of SERVER type.                                                                                                                                                                                                                                                        |
+| Name                           | Columns                                                                                                   |
+|:-------------------------------|:----------------------------------------------------------------------------------------------------------|
+| identifier_pkey                | id                                                                                                        |
+| identifier_object_type_check   | object_type ∈ ('MEMBER', 'SUBSYSTEM', 'GLOBALGROUP', 'LOCALGROUP')                                        |
+| identifier_unique_object_index | xroad_instance, member_class, member_code, subsystem_code, server_code, group_code *(partial, see note)*  |
+
+**Note:**  
+The unique index `identifier_unique_object_index` applies only to rows where`object_type IN ('MEMBER', 'SUBSYSTEM', 'GLOBALGROUP')`. Rows with `object_type = 'LOCALGROUP'` are excluded from the uniqueness constraint.
+
+#### 2.10.2 Attributes
+
+| Name           |            Type             | Modifiers | Description                                                                                                                                                                                         |
+|:---------------|:---------------------------:|:----------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| id [PK]        |           bigint            | NOT NULL  | Primary key.                                                                                                                                                                                        |
+| object_type    |   character varying(255)    | NOT NULL  | Specifies the type of the object that the identifier identifies. Possible values, defined in enum `ee.ria.xroad.common.identifier.XroadObjectType`, are MEMBER, SUBSYSTEM, GLOBALGROUP, LOCALGROUP. |
+| xroad_instance |   character varying(255)    |           | X-Road instance identifier. Present in identifiers of all types, except LOCALGROUP.                                                                                                                 |
+| member_class   |   character varying(255)    |           | Member class. Present in identifiers of MEMBER and SUBSYSTEM type.                                                                                                                                  |
+| member_code    |   character varying(255)    |           | Member code. Present in identifiers of MEMBER and SUBSYSTEM type.                                                                                                                                   |
+| subsystem_code |   character varying(255)    |           | Subsystem code. Present in identifiers of SUBSYSTEM type.                                                                                                                                           |
+| group_code     |   character varying(255)    |           | Group code. Present in identifiers of GLOBALGROUP and LOCALGROUP type.                                                                                                                              |
+| server_code    |   character varying(255)    |           | Empty, used to keep the same identifier table structure as in Central Server.                                                                                                                       |
+| created_at     | timestamp without time zone | NOT NULL  | Record creation time, managed automatically.                                                                                                                                                        |
+| updated_at     | timestamp without time zone | NOT NULL  | Record last modified time, managed automatically.                                                                                                                                                   |
 
 ### 2.11 LOCALGROUP
 
@@ -325,13 +354,13 @@ Group of members and/or subsystems. The group is local to a security server clie
 
 #### 2.11.2 Attributes
 
-| Name        | Type           | Modifiers        | Description           |
-|:----------- |:-----------------:|:----------- |:-----------------|
-| id [PK] | bigint | NOT NULL | Primary key |
-| groupcode] | character varying(255) | NOT NULL | The code of the group. |
-| description | character varying(255) | NOT NULL | The description of the group. |
-| updated | timestamp with time zone | NOT NULL | The time when the description of the group was last updated. |
-| client_id [FK] | bigint |  | The security server client for whom the local group is defined. References id attribute of CLIENT entity. |
+| Name           |            Type             | Modifiers | Description                                                                                               |
+|:---------------|:---------------------------:|:----------|:----------------------------------------------------------------------------------------------------------|
+| id [PK]        |           bigint            | NOT NULL  | Primary key                                                                                               |
+| groupcode]     |   character varying(255)    | NOT NULL  | The code of the group.                                                                                    |
+| description    |   character varying(255)    | NOT NULL  | The description of the group.                                                                             |
+| updated        | timestamp without time zone | NOT NULL  | The time when the description of the group was last updated.                                              |
+| client_id [FK] |           bigint            |           | The security server client for whom the local group is defined. References id attribute of CLIENT entity. |
 
 ### 2.12 SERVERCONF
 
@@ -376,7 +405,7 @@ Service provided by a security server client. A service record is created when t
 
 ### 2.14 TSP
 
-Timestamping service provider (TSP) that is used by the security server to time-stamp messages stored in the message log. Only connection parameters to the TSP are included. The data needed for verifying time stamps is read from the global configuration. A TSP record is created when the administrator adds a new TSP in the user interface. The record is deleted when the administrator deletes the TSP in the user interface. The record is never modified. 
+Timestamping service provider (TSP) that is used by the security server to time-stamp messages stored in the message log. Only connection parameters to the TSP are included. The data needed for verifying time stamps is read from the global configuration. A TSP record is created when the administrator adds a new TSP in the user interface. The record is deleted when the administrator deletes the TSP in the user interface. The record is never modified.
 
 #### 2.14.1 Indexes
 
@@ -386,12 +415,13 @@ Timestamping service provider (TSP) that is used by the security server to time-
 
 #### 2.14.2 Attributes
 
-| Name        | Type           | Modifiers   | Description      |
-|:----------- |:--------------:|:----------- |:-----------------|
-| id [PK]     | bigint         | NOT NULL    | Primary key.     |
-| conf_id [FK] | bigint |  | Identifies the serverconf. References the id in SERVERCONF table. |
-| name  | character varying(255) |  | The name of the TSP. Used for displaying in the user interface. |
-| url  | character varying(255) | NOT NULL | The URL of the TSP. The security server will send time-stamping request using HTTP POST method.  |
+| Name         |          Type          | Modifiers | Description                                                                                                                         |
+|:-------------|:----------------------:|:----------|:------------------------------------------------------------------------------------------------------------------------------------|
+| id [PK]      |         bigint         | NOT NULL  | Primary key.                                                                                                                        |
+| conf_id [FK] |         bigint         |           | Identifies the serverconf. References the id in SERVERCONF table.                                                                   |
+| name         | character varying(255) |           | The name of the TSP. Used for displaying in the user interface.                                                                     |
+| url          | character varying(255) | NOT NULL  | The URL of the TSP. The security server will send time-stamping request using HTTP POST method.                                     |
+| cost_type    | character varying(255) | NOT NULL  | The cost  type of the TSP, either FREE, PAID or UNDEFINED. Can be used to prioritize the usage of one type of services or the other |
 
 ### 2.15 UIUSER
 
@@ -417,15 +447,15 @@ Pointer to a SERVICEDESCRIPTION containing the descriptions of services provided
 
 #### 2.16.2 Attributes
 
-| Name        | Type           | Modifiers        | Description     |
-|:----------- |:-----------------:|:----------- |:------------------|
-| id [PK] | bigint | NOT NULL | Primary key. |
-| client_id [FK] | bigint |   | The security server client providing the services described in this SERVICEDESCRIPTION. References id attribute of CLIENT entity. |
-| url | character varying(255) | NOT NULL | The URL of the SERVICEDESCRIPTION. The URL points to the information system of the security server client. |
-| disabled | boolean | NOT NULL | A flag indicating whether the SERVICEDESCRIPTION and all its services are disabled. |
-| disablednotice | character varying(255) |   | The error message returned in response to a call to a service belonging to a disabled SERVICEDESCRIPTION. |
-| refresheddate | timestamp with time zone |   | The time when the SERVICEDESCRIPTION was last refreshed. |
-| type | character varying(255) | NOT NULL | The type of the service description. At the time of writing 'WSDL' and 'OPENAPI3' types are supported. |
+| Name           |            Type             | Modifiers | Description                                                                                                                       |
+|:---------------|:---------------------------:|:----------|:----------------------------------------------------------------------------------------------------------------------------------|
+| id [PK]        |           bigint            | NOT NULL  | Primary key.                                                                                                                      |
+| client_id [FK] |           bigint            |           | The security server client providing the services described in this SERVICEDESCRIPTION. References id attribute of CLIENT entity. |
+| url            |   character varying(255)    | NOT NULL  | The URL of the SERVICEDESCRIPTION. The URL points to the information system of the security server client.                        |
+| disabled       |           boolean           | NOT NULL  | A flag indicating whether the SERVICEDESCRIPTION and all its services are disabled.                                               |
+| disablednotice |   character varying(255)    |           | The error message returned in response to a call to a service belonging to a disabled SERVICEDESCRIPTION.                         |
+| refresheddate  | timestamp without time zone |           | The time when the SERVICEDESCRIPTION was last refreshed.                                                                          |
+| type           |   character varying(255)    | NOT NULL  | The type of the service description. At the time of writing 'WSDL' and 'OPENAPI3' types are supported.                            |
 
 ### 2.17 ENDPOINT
 
@@ -446,3 +476,47 @@ Pointer to a SERVICEDESCRIPTION containing the descriptions of services provided
 | method         | character varying(255)  | NOT NULL | The allowed HTTP method (REST services) |
 | path           | character varying(2048) | NOT NULL | Allowed URL path (REST services) |
 | generated      | boolean        | NOT NULL | Is the endpoint automatically generated (true) or manually added (false) |
+
+### 2.18 CONFIGURATION_CLIENT
+
+Table to store configuration client data.
+
+#### 2.18.1 Indexes
+
+| Name                                   | Columns |
+|:---------------------------------------|:-------:|
+| configuration_client_pkey              |   id    |
+| configuration_client_name_key (unique) |  name   |
+
+#### 2.18.2 Attributes
+
+| Name      |          Type          | Modifiers | Description       |
+|:----------|:----------------------:|:----------|:------------------|
+| id [PK]   |         serial         | NOT NULL  | Primary key.      |
+| name      | character varying(255) | NOT NULL  | Property name.    |
+| content   |          text          | NOT NULL  | Property content. |
+
+### 2.19 DATAFLOW_STATE
+
+Proxy data-plane flow lifecycle state, shared by every proxy node of a clustered Security Server: a flow created or transitioned through one node is immediately visible to the others.
+
+On the first `prepare` or `start` signal, one row is created. The flow's process ID is stored in `flow_id`, and `state` is set to `PROVISIONED` for `prepare` or `STARTED` for `start`. Later lifecycle calls for the same flow update the same row: `started` sets the state to `STARTED`, `suspend` to `SUSPENDED`, `terminate` to `TERMINATED`, and `completed` to `COMPLETED`. A second row is never created for the same `flow_id`.
+
+**Retention.** `TERMINATED` and `COMPLETED` rows are retained, and the table currently has no automatic cleanup or expiration. The state of a completed flow is no longer needed for functional flow handling, but remains available for debugging through the flow-state endpoint.
+
+#### 2.19.1 Indexes
+
+| Name                                  | Columns |
+|:---------------------------------------|:-------:|
+| dataflow_state_pkey                    |   id    |
+| uniq_dataflow_state_flow_id (unique)   | flow_id |
+
+#### 2.19.2 Attributes
+
+| Name         |          Type           | Modifiers | Description                                                                                                        |
+|:-------------|:-----------------------:|:----------|:---------------------------------------------------------------------------------------------------------------------|
+| id [PK]      |          serial         | NOT NULL  | Primary key.                                                                                                        |
+| flow_id      | character varying(255)  | NOT NULL  | The Dataspace Protocol process ID (the transfer-process correlation identifier the control plane assigns).        |
+| state        | character varying(32)   | NOT NULL  | The flow's current lifecycle state: one of `PROVISIONED`, `STARTED`, `SUSPENDED`, `COMPLETED`, `TERMINATED`. |
+| created_at   | timestamp(6)            | NOT NULL  | Row creation time. Set automatically by the `set_timestamps` trigger, not by the application.                     |
+| updated_at   | timestamp(6)            | NOT NULL  | Time of the row's last lifecycle update. Set automatically by the `set_timestamps` trigger on every insert/update. |

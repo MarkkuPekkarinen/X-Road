@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,24 +25,29 @@
  */
 package org.niis.xroad.securityserver.restapi.wsdl;
 
+import ee.ria.xroad.common.util.CryptoUtils;
+import ee.ria.xroad.common.util.XmlUtils;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.serverconf.ServerConfProvider;
+import org.springframework.stereotype.Component;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import javax.wsdl.BindingOperation;
 import javax.wsdl.Definition;
 import javax.wsdl.Port;
 import javax.wsdl.Service;
+import javax.wsdl.WSDLException;
 import javax.wsdl.extensions.ExtensibilityElement;
 import javax.wsdl.extensions.UnknownExtensibilityElement;
 import javax.wsdl.extensions.soap.SOAPAddress;
@@ -53,6 +58,7 @@ import javax.wsdl.factory.WSDLFactory;
 import javax.wsdl.xml.WSDLLocator;
 import javax.wsdl.xml.WSDLReader;
 import javax.xml.namespace.QName;
+import javax.xml.parsers.ParserConfigurationException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -61,20 +67,20 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_WSDL_DOWNLOAD_FAILED;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.WSDL_DOWNLOAD_FAILED;
 
 /**
  * Utils for WSDL parsing
  */
 @Slf4j
+@Component
+@RequiredArgsConstructor
 public final class WsdlParser {
     private static final String SOAP_NAMESPACE =
             "http://schemas.xmlsoap.org/wsdl/soap/";
@@ -98,18 +104,18 @@ public final class WsdlParser {
     private static final int BUF_SIZE = 8192;
     private static final long MAX_DESCRIPTION_SIZE = 10 * 1024 * 1024;
 
-    private WsdlParser() {
-    }
+    private final ServerConfProvider serverConfProvider;
 
     /**
      * Extracts the list of services that are described in the given WSDL.
+     *
      * @param wsdlUrl the URL from which the WSDL is available
      * @return collection of ServiceInfo objects
      * @throws WsdlNotFoundException if a WSDL was not found at given URL
-     * @throws WsdlParseException if anything else than WsdlNotFoundException went wrong in parsing (e.g. document
-     * size exceeds the limit defined by {@link #MAX_DESCRIPTION_SIZE})
+     * @throws WsdlParseException    if anything else than WsdlNotFoundException went wrong in parsing (e.g. document
+     *                               size exceeds the limit defined by {@link #MAX_DESCRIPTION_SIZE})
      */
-    public static Collection<ServiceInfo> parseWSDL(String wsdlUrl) throws WsdlNotFoundException, WsdlParseException {
+    public Collection<ServiceInfo> parseWSDL(String wsdlUrl) throws WsdlNotFoundException, WsdlParseException {
         try {
             return internalParseWSDL(wsdlUrl);
         } catch (PrivateWsdlNotFoundException e) {
@@ -117,14 +123,17 @@ public final class WsdlParser {
             throw new WsdlNotFoundException(e);
         } catch (Exception e) {
             log.error("Reading WSDL from {} failed", wsdlUrl, e);
-            throw new WsdlParseException(clarifyWsdlParsingException(e));
+            throw new WsdlParseException(clarifyWsdlParsingException(unwrapOriginalCause(e)));
         }
+    }
+
+    private static Exception unwrapOriginalCause(Exception e) {
+        return e instanceof XrdRuntimeException && e.getCause() instanceof Exception cause ? cause : e;
     }
 
     private static Exception clarifyWsdlParsingException(Exception e) {
         if (identicalOperationsUnderSamePort(e)) {
-            return new RuntimeException(
-                    "WSDL violates specification: " + e.getMessage());
+            return XrdRuntimeException.systemInternalError("WSDL violates specification: " + e.getMessage());
         }
 
         return e;
@@ -137,30 +146,20 @@ public final class WsdlParser {
 
     }
 
-    private static Collection<ServiceInfo> internalParseWSDL(String wsdlUrl) throws Exception {
+    private Collection<ServiceInfo> internalParseWSDL(String wsdlUrl) {
         log.info("running WSDL parser");
-        WSDLFactory wsdlFactory = WSDLFactory.newInstance(
-                "com.ibm.wsdl.factory.WSDLFactoryImpl");
-
-        WSDLReader wsdlReader = wsdlFactory.newWSDLReader();
-        wsdlReader.setFeature("javax.wsdl.importDocuments", false);
-        wsdlReader.setFeature("com.ibm.wsdl.parseXMLSchemas", false);
-
-        Definition definition =
-                wsdlReader.readWSDL(new TrustAllSslCertsWsdlLocator(wsdlUrl));
-
-        Collection<Service> services = definition.getServices().values();
+        Collection<Service> services = getServices(wsdlUrl);
 
         Map<String, ServiceInfo> result = new HashMap<>();
 
         for (Service service : services) {
-            for (Port port : (Collection<Port>) service.getPorts().values()) {
+            for (Port port : service.getPorts().values()) {
                 if (!hasSoapOverHttpBinding(port)) {
                     continue;
                 }
 
                 String url = getUrl(port);
-                for (BindingOperation operation : (List<BindingOperation>) port.getBinding().getBindingOperations()) {
+                for (BindingOperation operation : port.getBinding().getBindingOperations()) {
                     String title = getChildValue("title",
                             operation.getOperation().getDocumentationElement());
 
@@ -175,7 +174,34 @@ public final class WsdlParser {
         return result.values();
     }
 
-    private static boolean hasSoapOverHttpBinding(Port port) throws Exception {
+    private Collection<Service> getServices(String wsdlUrl) {
+        try {
+            WSDLFactory wsdlFactory = WSDLFactory.newInstance(
+                    "com.ibm.wsdl.factory.WSDLFactoryImpl");
+
+            WSDLReader wsdlReader = wsdlFactory.newWSDLReader();
+            wsdlReader.setFeature("javax.wsdl.importDocuments", false);
+            wsdlReader.setFeature("com.ibm.wsdl.parseXMLSchemas", false);
+
+            var locator = new TrustAllSslCertsWsdlLocator(serverConfProvider, wsdlUrl);
+            Definition definition = wsdlReader.readWSDL(locator.getBaseURI(), parseSecurely(locator.getBaseInputSource()));
+
+            return definition.getServices().values();
+        } catch (WSDLException e) {
+            throw XrdRuntimeException.systemException(e);
+        }
+    }
+
+    private static Document parseSecurely(InputSource inputSource) {
+        try {
+            return XmlUtils.newDocumentBuilder(true).parse(inputSource);
+        } catch (ParserConfigurationException | SAXException | IOException e) {
+            throw XrdRuntimeException.systemException(e);
+        }
+    }
+
+
+    private static boolean hasSoapOverHttpBinding(Port port) {
         for (ExtensibilityElement ext : (List<ExtensibilityElement>) port.getBinding().getExtensibilityElements()) {
 
             if (ext.getElementType().equals(SOAP_BINDING)) {
@@ -205,7 +231,7 @@ public final class WsdlParser {
     }
 
     private static String getVersion(BindingOperation operation) {
-        for (ExtensibilityElement ext : (List<ExtensibilityElement>) operation.getExtensibilityElements()) {
+        for (ExtensibilityElement ext : operation.getExtensibilityElements()) {
             if (ext.getElementType().getLocalPart().equals(VERSION)) {
                 return getValue(
                         ((UnknownExtensibilityElement) ext).getElement());
@@ -259,13 +285,14 @@ public final class WsdlParser {
 
         /**
          * Constructs a new service info object.
-         * @param name the name of the service
-         * @param title the title of the service
-         * @param url the URL of the service
+         *
+         * @param name    the name of the service
+         * @param title   the title of the service
+         * @param url     the URL of the service
          * @param version the version of the service
          */
         public ServiceInfo(String name, String title, String url,
-                String version) {
+                           String version) {
             this.name = name;
             this.title = title;
             this.url = url;
@@ -283,10 +310,11 @@ public final class WsdlParser {
     }
 
     private static final class TrustAllSslCertsWsdlLocator implements WSDLLocator {
-
+        private final ServerConfProvider serverConfProvider;
         private final String wsdlUrl;
 
-        TrustAllSslCertsWsdlLocator(String wsdlUrl) {
+        TrustAllSslCertsWsdlLocator(ServerConfProvider serverConfProvider, String wsdlUrl) {
+            this.serverConfProvider = serverConfProvider;
             this.wsdlUrl = wsdlUrl;
         }
 
@@ -326,7 +354,7 @@ public final class WsdlParser {
 
         @Override
         public InputSource getImportInputSource(String parentLocation,
-                String importLocation) {
+                                                String importLocation) {
             return null;
         }
 
@@ -345,36 +373,8 @@ public final class WsdlParser {
             // no-op
         }
 
-        private void configureHttps(HttpsURLConnection conn) throws Exception {
-            TrustManager[] trustAllCerts = new TrustManager[] {
-                    new X509TrustManager() {
-                        @Override
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return null;
-                        }
-
-                        @Override
-                        @SuppressWarnings("java:S4830") // Won't fix: Works as designed
-                        // ("Server certificates should be verified")
-                        public void checkClientTrusted(
-                                X509Certificate[] certs, String authType) {
-                            // never called as used by client
-                        }
-
-                        @Override
-                        @SuppressWarnings("java:S4830") // Won't fix: Works as designed
-                        // ("Server certificates should be verified")
-                        public void checkServerTrusted(
-                                X509Certificate[] certs, String authType) {
-                            // trust all
-                        }
-                    }
-            };
-
-            SSLContext ctx = SSLContext.getInstance("SSL");
-            ctx.init(new KeyManager[] {new ClientSslKeyManager()}, trustAllCerts, new SecureRandom());
-
-            conn.setSSLSocketFactory(ctx.getSocketFactory());
+        private void configureHttps(HttpsURLConnection conn) {
+            conn.setSSLSocketFactory(WsdlSslContextFactory.trustAllSslSocketFactory(CryptoUtils.SSL_PROTOCOL, serverConfProvider));
             conn.setHostnameVerifier(HostnameVerifiers.ACCEPT_ALL);
         }
     }
@@ -403,9 +403,9 @@ public final class WsdlParser {
     /**
      * Thrown if WSDL file is not found
      */
-    public static class WsdlNotFoundException extends ServiceException {
+    public static class WsdlNotFoundException extends BadRequestException {
         public WsdlNotFoundException(Throwable cause) {
-            super(cause, new ErrorDeviation(ERROR_WSDL_DOWNLOAD_FAILED));
+            super(cause, WSDL_DOWNLOAD_FAILED.build());
         }
     }
 }

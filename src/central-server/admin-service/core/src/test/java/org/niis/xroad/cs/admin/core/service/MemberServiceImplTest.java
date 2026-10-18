@@ -1,21 +1,21 @@
-/**
+/*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,29 +28,35 @@ package org.niis.xroad.cs.admin.core.service;
 
 import ee.ria.xroad.common.identifier.ClientId;
 
-import io.vavr.control.Option;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.niis.xroad.common.exception.DataIntegrityException;
+import org.niis.xroad.common.exception.ConflictException;
 import org.niis.xroad.common.exception.NotFoundException;
+import org.niis.xroad.common.identifiers.jpa.entity.MemberIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.SecurityServerIdEntity;
 import org.niis.xroad.cs.admin.api.domain.GlobalGroupMember;
 import org.niis.xroad.cs.admin.api.domain.MemberId;
 import org.niis.xroad.cs.admin.api.domain.SecurityServer;
 import org.niis.xroad.cs.admin.api.domain.SecurityServerClient;
 import org.niis.xroad.cs.admin.api.dto.MemberCreationRequest;
 import org.niis.xroad.cs.admin.api.exception.ErrorMessage;
+import org.niis.xroad.cs.admin.api.service.GlobalGroupMemberService;
+import org.niis.xroad.cs.admin.core.dataspace.ServerClientRemovedEvent;
 import org.niis.xroad.cs.admin.core.entity.GlobalGroupEntity;
 import org.niis.xroad.cs.admin.core.entity.GlobalGroupMemberEntity;
 import org.niis.xroad.cs.admin.core.entity.MemberClassEntity;
 import org.niis.xroad.cs.admin.core.entity.SecurityServerEntity;
+import org.niis.xroad.cs.admin.core.entity.ServerClientEntity;
+import org.niis.xroad.cs.admin.core.entity.SubsystemEntity;
 import org.niis.xroad.cs.admin.core.entity.XRoadMemberEntity;
 import org.niis.xroad.cs.admin.core.entity.mapper.ClientIdMapper;
 import org.niis.xroad.cs.admin.core.entity.mapper.ClientIdMapperImpl;
@@ -60,10 +66,13 @@ import org.niis.xroad.cs.admin.core.entity.mapper.SecurityServerClientMapper;
 import org.niis.xroad.cs.admin.core.entity.mapper.SecurityServerClientMapperImpl;
 import org.niis.xroad.cs.admin.core.entity.mapper.SecurityServerMapper;
 import org.niis.xroad.cs.admin.core.repository.GlobalGroupMemberRepository;
+import org.niis.xroad.cs.admin.core.repository.IdentifierRepository;
 import org.niis.xroad.cs.admin.core.repository.MemberClassRepository;
+import org.niis.xroad.cs.admin.core.repository.ServerClientRepository;
 import org.niis.xroad.cs.admin.core.repository.XRoadMemberRepository;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
@@ -79,7 +88,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_EXISTS;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.MEMBER_CODE;
@@ -96,9 +107,17 @@ class MemberServiceImplTest {
     @Mock
     private MemberClassRepository memberClassRepository;
     @Mock
+    private IdentifierRepository<MemberIdEntity> memberIds;
+    @Mock
+    private GlobalGroupMemberService globalGroupMemberService;
+    @Mock
     private SecurityServerMapper securityServerMapper;
     @Mock
     private AuditDataHelper auditData;
+    @Mock
+    private ServerClientRepository serverClientRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Spy
     private ClientIdMapper clientIdMapper = new ClientIdMapperImpl();
@@ -117,17 +136,20 @@ class MemberServiceImplTest {
     class AddMethod {
         private final String memberName = "member name";
         private final MemberId memberId = MemberId.create("TEST", MEMBER_CLASS, "MEMBER");
+        private final MemberIdEntity memberIdEntity = MemberIdEntity.create(memberId);
 
         @Test
         @DisplayName("should create client when not already present")
         void shouldCreateClientWhenNotAlreadyPresent() {
-            when(xRoadMemberRepository.findOneBy(memberId)).thenReturn(Option.none());
+            when(memberIds.findOrCreate(memberIdEntity)).thenReturn(memberIdEntity);
+            when(xRoadMemberRepository.findOneBy(memberId)).thenReturn(Optional.empty());
             when(xRoadMemberRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             when(memberClassRepository.findByCode(MEMBER_CLASS))
                     .thenReturn(Optional.of(new MemberClassEntity(MEMBER_CLASS, "")));
 
-            SecurityServerClient result = memberService.add(new MemberCreationRequest(memberName, MEMBER_CLASS, memberId));
+            SecurityServerClient result = memberService
+                    .add(new MemberCreationRequest(memberName, MEMBER_CLASS, memberId));
 
             assertEquals("MEMBER", result.getIdentifier().getMemberCode());
 
@@ -145,15 +167,16 @@ class MemberServiceImplTest {
         void shouldNotCreateClientWhenAlreadyPresent() {
             XRoadMemberEntity presentSecurityServerClient = mock(XRoadMemberEntity.class);
 
-            when(xRoadMemberRepository.findOneBy(memberId)).thenReturn((Option.of(presentSecurityServerClient)));
+            when(xRoadMemberRepository.findOneBy(memberId)).thenReturn((Optional.of(presentSecurityServerClient)));
 
             String clientIdentifier = memberId.toShortString();
 
-            Executable testable = () -> memberService.add(new MemberCreationRequest(memberName, MEMBER_CLASS, memberId));
+            Executable testable = () -> memberService
+                    .add(new MemberCreationRequest(memberName, MEMBER_CLASS, memberId));
 
-            DataIntegrityException exception = assertThrows(DataIntegrityException.class, testable);
-            assertEquals(MEMBER_EXISTS.getDescription(), exception.getMessage());
-            assertThat(exception.getErrorDeviation().getMetadata())
+            ConflictException exception = assertThrows(ConflictException.class, testable);
+            assertEquals(MEMBER_EXISTS.code(), exception.getErrorDeviation().code());
+            assertThat(exception.getErrorDeviation().metadata())
                     .hasSize(1)
                     .containsExactly(clientIdentifier);
 
@@ -178,11 +201,11 @@ class MemberServiceImplTest {
         @Test
         @DisplayName("Should find client from xRoadMemberRepository")
         void shouldFindClient() {
-            doReturn(Option.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
 
             var result = memberService.findMember(clientId);
 
-            assertTrue(result.isDefined());
+            assertTrue(result.isPresent());
         }
     }
 
@@ -197,7 +220,9 @@ class MemberServiceImplTest {
         @Test
         @DisplayName("Should delete client from xRoadMemberRepository")
         void shouldDeleteClient() {
-            doReturn(Option.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Set.<ServerClientEntity>of()).when(xRoadMember).getServerClients();
+            doReturn(Set.<SubsystemEntity>of()).when(xRoadMember).getSubsystems();
 
             memberService.delete(clientId);
 
@@ -208,17 +233,119 @@ class MemberServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should publish a server-client-removed event per security server the member or its subsystems"
+                + " were registered on")
+        void shouldPublishRemovalEventPerRegisteredServer() {
+            var ss1 = mock(SecurityServerEntity.class);
+            var ss2 = mock(SecurityServerEntity.class);
+            var ss1Id = SecurityServerIdEntity.create("TEST", MEMBER_CLASS, "SS-OWNER", "SS1");
+            var ss2Id = SecurityServerIdEntity.create("TEST", MEMBER_CLASS, "SS-OWNER", "SS2");
+            doReturn(ss1Id).when(ss1).getServerId();
+            doReturn(ss2Id).when(ss2).getServerId();
+
+            var subsystemOnSs1 = mock(SubsystemEntity.class);
+            var subsystemOnSs2 = mock(SubsystemEntity.class);
+            doReturn(Set.of(new ServerClientEntity(ss1, subsystemOnSs1))).when(subsystemOnSs1).getServerClients();
+            doReturn(Set.of(new ServerClientEntity(ss2, subsystemOnSs2))).when(subsystemOnSs2).getServerClients();
+
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Set.of(new ServerClientEntity(ss1, xRoadMember))).when(xRoadMember).getServerClients();
+            doReturn(Set.of(subsystemOnSs1, subsystemOnSs2)).when(xRoadMember).getSubsystems();
+
+            memberService.delete(clientId);
+
+            ArgumentCaptor<ServerClientRemovedEvent> captor = ArgumentCaptor.forClass(ServerClientRemovedEvent.class);
+            verify(eventPublisher, times(2)).publishEvent(captor.capture());
+
+            List<ServerClientRemovedEvent> events = captor.getAllValues();
+            assertThat(events).extracting(ServerClientRemovedEvent::securityServerId)
+                    .containsExactlyInAnyOrder(ss1Id, ss2Id);
+            assertThat(events).extracting(ServerClientRemovedEvent::memberId)
+                    .containsOnly(clientId.getMemberId());
+            assertThat(events.get(0).removedAt()).isEqualTo(events.get(1).removedAt());
+        }
+
+        @Test
+        @DisplayName("Should publish nothing when the member has no registrations")
+        void shouldPublishNothingWhenNotRegistered() {
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Set.<ServerClientEntity>of()).when(xRoadMember).getServerClients();
+            doReturn(Set.<SubsystemEntity>of()).when(xRoadMember).getSubsystems();
+
+            memberService.delete(clientId);
+
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
         @DisplayName("Should not delete client when it's non-existent")
         void shouldThrowExceptionWhenClientNotFound() {
-            doReturn(Option.none()).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Optional.empty()).when(xRoadMemberRepository).findMember(clientId);
 
             Executable testable = () -> memberService.delete(clientId);
 
             NotFoundException actualThrown = assertThrows(NotFoundException.class, testable);
-            assertEquals(ErrorMessage.MEMBER_NOT_FOUND.getDescription(), actualThrown.getMessage());
+            assertEquals(ErrorMessage.MEMBER_NOT_FOUND.code(), actualThrown.getErrorDeviation().code());
             verify(xRoadMemberRepository).findMember(clientId);
             verify(auditData).put(RestApiAuditProperty.MEMBER_CLASS, MEMBER_CLASS);
             verify(auditData).put(MEMBER_CODE, "MEMBER");
+        }
+    }
+
+    @Nested
+    @DisplayName("unregisterMember(ClientId memberId, SecurityServerId securityServerId)")
+    class UnregisterMember {
+        private final ClientId memberId = ClientId.Conf.create("TEST", MEMBER_CLASS, "MEMBER");
+        private final SecurityServerIdEntity securityServerId =
+                SecurityServerIdEntity.create("TEST", MEMBER_CLASS, "MEMBER", "SERVER-CODE");
+
+        @Mock
+        private XRoadMemberEntity xRoadMember;
+        @Mock
+        private SecurityServerEntity securityServer;
+
+        @Test
+        @DisplayName("Should delete the server client row and publish a removal event")
+        void shouldUnregisterMemberAndPublishRemovalEvent() {
+            var serverClient = new ServerClientEntity(securityServer, xRoadMember);
+            doReturn(securityServerId).when(securityServer).getServerId();
+            doReturn(Set.of(serverClient)).when(xRoadMember).getServerClients();
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findOneBy(memberId);
+
+            memberService.unregisterMember(memberId, securityServerId);
+
+            verify(serverClientRepository).delete(serverClient);
+
+            ArgumentCaptor<ServerClientRemovedEvent> captor = ArgumentCaptor.forClass(ServerClientRemovedEvent.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            assertThat(captor.getValue().securityServerId()).isEqualTo(securityServerId);
+            assertThat(captor.getValue().memberId()).isEqualTo(memberId.getMemberId());
+            assertThat(captor.getValue().removedAt()).isPositive();
+        }
+
+        @Test
+        @DisplayName("Should throw and publish nothing when the member does not exist")
+        void shouldThrowExceptionWhenMemberNotFound() {
+            doReturn(Optional.empty()).when(xRoadMemberRepository).findOneBy(memberId);
+
+            var actualThrown = assertThrows(NotFoundException.class,
+                    () -> memberService.unregisterMember(memberId, securityServerId));
+
+            assertEquals(ErrorMessage.MEMBER_NOT_FOUND.code(), actualThrown.getErrorDeviation().code());
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        @DisplayName("Should throw and publish nothing when the member is not registered on the given server")
+        void shouldThrowExceptionWhenNotRegisteredOnServer() {
+            doReturn(Set.<ServerClientEntity>of()).when(xRoadMember).getServerClients();
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findOneBy(memberId);
+
+            var actualThrown = assertThrows(NotFoundException.class,
+                    () -> memberService.unregisterMember(memberId, securityServerId));
+
+            assertEquals(ErrorMessage.SUBSYSTEM_NOT_REGISTERED_TO_SECURITY_SERVER.code(), actualThrown.getErrorDeviation().code());
+            verifyNoInteractions(eventPublisher);
         }
     }
 
@@ -234,11 +361,11 @@ class MemberServiceImplTest {
         @Test
         @DisplayName("Should set new name")
         void shouldUpdateName() {
-            doReturn(Option.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
 
             var result = memberService.updateMemberName(clientId, "new name");
 
-            assertTrue(result.isDefined());
+            assertTrue(result.isPresent());
             verify(xRoadMember).setName("new name");
 
             verify(auditData).put(MEMBER_NAME, "new name");
@@ -255,7 +382,8 @@ class MemberServiceImplTest {
 
         @Test
         void shouldReturnMemberGlobalGroups() {
-            final GlobalGroupMemberEntity memberGroup = new GlobalGroupMemberEntity(new GlobalGroupEntity("groupCode"), clientId);
+            final GlobalGroupMemberEntity memberGroup = new GlobalGroupMemberEntity(new GlobalGroupEntity("groupCode"),
+                    clientId);
             doReturn(List.of(memberGroup)).when(globalGroupMemberRepository).findMemberGroups(clientId);
 
             final List<GlobalGroupMember> result = memberService.getMemberGlobalGroups(clientId);
@@ -282,11 +410,10 @@ class MemberServiceImplTest {
             when(securityServerMapper.toTarget(ss0)).thenReturn(new SecurityServer(null, "SS0"));
             when(securityServerMapper.toTarget(ss1)).thenReturn(new SecurityServer(null, "SS1"));
 
-            doReturn(Option.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findMember(clientId);
             doReturn(securityServersMock).when(xRoadMember).getOwnedServers();
 
             final List<SecurityServer> result = memberService.getMemberOwnedServers(clientId);
-
 
             verify(xRoadMemberRepository).findMember(clientId);
             verify(xRoadMember).getOwnedServers();
@@ -294,18 +421,63 @@ class MemberServiceImplTest {
             assertEquals(securityServersMock.size(), result.size());
 
             Assertions.assertThat(result.stream()
-                            .map(SecurityServer::getServerCode).collect(toList()))
+                    .map(SecurityServer::getServerCode).collect(toList()))
                     .hasSameElementsAs(List.of("SS0", "SS1"));
         }
 
         @Test
         void shouldReturnEmptySetWhenMemberNotFound() {
-            doReturn(Option.none()).when(xRoadMemberRepository).findMember(clientId);
+            doReturn(Optional.empty()).when(xRoadMemberRepository).findMember(clientId);
 
             final List<SecurityServer> result = memberService.getMemberOwnedServers(clientId);
 
             verify(xRoadMemberRepository).findMember(clientId);
             assertTrue(CollectionUtils.isEmpty(result));
+        }
+    }
+
+    @Nested
+    @DisplayName("getMemberClientOfServers(ClientId memberId)")
+    class GetMemberClientOfServers {
+        private final ClientId clientId = ClientId.Conf.create("TEST", MEMBER_CLASS, "MEMBER");
+
+        @Mock
+        private XRoadMemberEntity xRoadMember;
+
+        @Test
+        void shouldReturnMemberAndSubsystemUsedServers() {
+            // Setup servers
+            var ss1 = new SecurityServerEntity(mock(XRoadMemberEntity.class), "SS1");
+            var ss2 = new SecurityServerEntity(mock(XRoadMemberEntity.class), "SS2");
+            var ss3 = new SecurityServerEntity(mock(XRoadMemberEntity.class), "SS3"); // Shared server
+            var ss4 = new SecurityServerEntity(mock(XRoadMemberEntity.class), "SS4");
+
+            // Setup member clients
+            var memberClient1 = new ServerClientEntity(ss1, xRoadMember);
+            var memberClient2 = new ServerClientEntity(ss3, xRoadMember);
+            doReturn(Set.of(memberClient1, memberClient2)).when(xRoadMember).getServerClients();
+
+            // Setup subsystem clients
+            var subsystem = mock(SubsystemEntity.class);
+            var subClient1 = new ServerClientEntity(ss3, subsystem); // Duplicate (ss3)
+            var subClient2 = new ServerClientEntity(ss4, subsystem);
+            doReturn(Set.of(subClient1, subClient2)).when(subsystem).getServerClients();
+            doReturn(Set.of(subsystem)).when(xRoadMember).getSubsystems();
+
+            // Repository mock
+            doReturn(Optional.of(xRoadMember)).when(xRoadMemberRepository).findOneBy(clientId);
+
+            // Mapper mocks
+            when(securityServerMapper.toTarget(ss1)).thenReturn(new SecurityServer(null, "SS1"));
+            when(securityServerMapper.toTarget(ss3)).thenReturn(new SecurityServer(null, "SS3"));
+            when(securityServerMapper.toTarget(ss4)).thenReturn(new SecurityServer(null, "SS4"));
+
+            final List<SecurityServer> result = memberService.getMemberClientOfServers(clientId);
+
+            assertEquals(3, result.size());
+            Assertions.assertThat(result.stream()
+                    .map(SecurityServer::getServerCode).collect(toList()))
+                    .containsExactlyInAnyOrder("SS1", "SS3", "SS4");
         }
     }
 }

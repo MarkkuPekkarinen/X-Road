@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,115 +26,17 @@
  -->
 
 <template>
-  <div class="xrd-view-common" data-test="404-view">
-    <TabsBase />
-    <AlertsContainer />
-    <v-container>
-      <div class="xrd-view-title pt-6">{{ $t('404.pageNotFound') }}</div>
-      <v-card flat class="xrd-card custom-card">
-        <v-card-text>
-          <div class="content-wrap">
-            <v-img
-              :src="require('../assets/404.png')"
-              width="100%"
-              height="auto"
-              max-height="259"
-              max-width="665"
-            ></v-img>
-
-            <div class="unicorn-text">
-              {{ $t('404.text') }}
-              <span class="unicorn-gradient">{{ $t('404.textUnicorn') }}</span>
-            </div>
-            <xrd-button
-              test-data="error-404-button"
-              color="primary"
-              gradient
-              large
-              :min_width="401"
-              :width="401"
-              class="button"
-              rounded
-              @click="home"
-              >{{ $t('action.goToFront') }}</xrd-button
-            >
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-container>
-  </div>
+  <XrdNotFoundError @go-home="goHome" />
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import TabsBase from '@/components/layout/TabsBase.vue';
-import AlertsContainer from '@/components/ui/AlertsContainer.vue';
-import { mapState } from 'pinia';
-import { useUser } from '@/store/modules/user';
+<script lang="ts" setup>
+import { XrdNotFoundError } from '@niis/shared-ui';
+import { useRouter } from 'vue-router';
+import { useMainTabs } from '@/store/modules/main-tabs';
 
-export default Vue.extend({
-  components: {
-    TabsBase,
-    AlertsContainer,
-  },
-  computed: {
-    ...mapState(useUser, ['firstAllowedTab']),
-  },
-  methods: {
-    home(): void {
-      this.$router.replace({
-        name: this.firstAllowedTab.to.name,
-      });
-    },
-  },
-});
+const { push } = useRouter();
+
+function goHome() {
+  push(useMainTabs().firstAllowedTab.to);
+}
 </script>
-
-<style lang="scss" scoped>
-@import '~styles/colors';
-
-.xrd-view-common {
-  width: 100%;
-}
-
-.unicorn-text {
-  text-transform: uppercase;
-  color: $XRoad-Purple100;
-  width: 450px;
-  font-style: normal;
-  font-weight: 800;
-  font-size: 34.6667px;
-  line-height: 150%;
-  text-align: center;
-  letter-spacing: 0.02em;
-  margin-top: 60px;
-}
-
-.custom-card {
-  width: 100%;
-  margin-top: 40px;
-  margin-bottom: 30px;
-}
-
-.content-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.button {
-  width: 200px;
-  margin: 70px;
-}
-
-.unicorn-gradient {
-  background-color: #f3ec78;
-  background-image: linear-gradient(108deg, #e29ae6 5.28%, #663bdb 94.72%);
-  background-size: 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -moz-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -moz-text-fill-color: transparent;
-}
-</style>

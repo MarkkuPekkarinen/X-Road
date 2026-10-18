@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -69,9 +69,9 @@ public class TestCertificateProfileInfoProvider
         @Override
         public ClientId.Conf getSubjectIdentifier(X509Certificate certificate) {
             return ClientId.Conf.create(
-                params.getClientId().getXRoadInstance(),
-                "BUSINESS",
-                CertUtils.getSubjectCommonName(certificate)
+                    params.getClientId().getXRoadInstance(),
+                    "BUSINESS",
+                    CertUtils.getSubjectCommonName(certificate)
             );
         }
     }

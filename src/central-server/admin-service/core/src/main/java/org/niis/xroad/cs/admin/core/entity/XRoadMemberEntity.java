@@ -1,21 +1,21 @@
-/**
+/*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,26 +28,27 @@ package org.niis.xroad.cs.admin.core.entity;
 
 import ee.ria.xroad.common.identifier.ClientId;
 
+import jakarta.persistence.Access;
+import jakarta.persistence.AccessType;
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.niis.xroad.common.identifiers.jpa.entity.MemberIdEntity;
 import org.niis.xroad.cs.admin.core.entity.validation.EntityIdentifier;
-
-import javax.persistence.Access;
-import javax.persistence.AccessType;
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import static jakarta.persistence.FetchType.EAGER;
+import static jakarta.persistence.FetchType.LAZY;
 import static org.niis.xroad.cs.admin.core.entity.XRoadMemberEntity.DISCRIMINATOR_VALUE;
 
 /**
@@ -60,7 +61,7 @@ public class XRoadMemberEntity extends SecurityServerClientEntity {
 
     public static final String DISCRIMINATOR_VALUE = "XRoadMember";
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = LAZY)
     @JoinColumn(name = "member_class_id")
     @Access(AccessType.FIELD)
     @Getter
@@ -83,12 +84,12 @@ public class XRoadMemberEntity extends SecurityServerClientEntity {
     @Setter
     private String administrativeContact;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "owner")
+    @OneToMany(fetch = LAZY, mappedBy = "owner")
     @Access(AccessType.FIELD)
     @Getter
     private Set<SecurityServerEntity> ownedServers = new HashSet<>(0);
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "xroadMember")
+    @OneToMany(fetch = EAGER, mappedBy = "xroadMember", orphanRemoval = true)
     @Access(AccessType.FIELD)
     @Getter
     private Set<SubsystemEntity> subsystems = new HashSet<>(0);

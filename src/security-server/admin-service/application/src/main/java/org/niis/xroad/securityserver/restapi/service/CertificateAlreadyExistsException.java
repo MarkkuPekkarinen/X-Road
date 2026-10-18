@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,20 +25,19 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
+import org.niis.xroad.common.exception.ConflictException;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_CERTIFICATE_ALREADY_EXISTS;
+import static org.niis.xroad.common.core.exception.ErrorCode.CERTIFICATE_ALREADY_EXISTS;
 
 /**
  * If trying to add certificate which already exists
  */
-public class CertificateAlreadyExistsException extends ServiceException {
+public class CertificateAlreadyExistsException extends ConflictException {
     public CertificateAlreadyExistsException(String s) {
-        super(s, new ErrorDeviation(ERROR_CERTIFICATE_ALREADY_EXISTS));
+        super(s, CERTIFICATE_ALREADY_EXISTS.build());
     }
 
     public CertificateAlreadyExistsException(Throwable t) {
-        super(t, new ErrorDeviation(ERROR_CERTIFICATE_ALREADY_EXISTS));
+        super(t, CERTIFICATE_ALREADY_EXISTS.build());
     }
 }

@@ -27,13 +27,13 @@
 import axios from 'axios';
 import { Backup, BackupRestorationStatus } from '@/openapi-types';
 import { defineStore } from 'pinia';
-import { saveResponseAsFile } from '@/util/helpers';
+import { saveResponseAsFile, buildFileFormData, multipartFormDataConfig } from '@niis/shared-ui';
 
 export interface State {
   backups: Backup[];
 }
 
-export const useBackupsStore = defineStore('backup', {
+export const useBackups = defineStore('backup', {
   state: (): State => ({
     backups: [],
   }),
@@ -58,11 +58,9 @@ export const useBackupsStore = defineStore('backup', {
       });
     },
     restoreFromBackup(filename: string) {
-      return axios
-        .put<BackupRestorationStatus>(`/backups/${filename}/restore`)
-        .catch((error) => {
-          throw error;
-        });
+      return axios.put<BackupRestorationStatus>(`/backups/${filename}/restore`).catch((error) => {
+        throw error;
+      });
     },
     downloadBackup(filename: string) {
       return axios
@@ -77,17 +75,13 @@ export const useBackupsStore = defineStore('backup', {
         });
     },
     uploadBackup(file: File, ignoreWarnings: boolean) {
-      const formData = new FormData();
-      formData.append('file', file, file.name);
       const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        ...multipartFormDataConfig(),
         params: {
           ignore_warnings: ignoreWarnings,
         },
       };
-      return axios.post<Backup>(`/backups/upload`, formData, config);
+      return axios.post<Backup>(`/backups/upload`, buildFileFormData('backup', file), config);
     },
   },
 });

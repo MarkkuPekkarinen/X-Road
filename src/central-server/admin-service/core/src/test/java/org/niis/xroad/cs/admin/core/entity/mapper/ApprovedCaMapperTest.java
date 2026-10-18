@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,23 +26,28 @@
  */
 package org.niis.xroad.cs.admin.core.entity.mapper;
 
+import ee.ria.xroad.common.util.TimeUtils;
+
 import org.junit.jupiter.api.Test;
 import org.niis.xroad.cs.admin.core.entity.ApprovedCaEntity;
 import org.niis.xroad.cs.admin.core.entity.CaInfoEntity;
 import org.niis.xroad.cs.admin.core.entity.OcspInfoEntity;
+import org.niis.xroad.globalconf.model.CsrFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ActiveProfiles("test")
 @SpringBootTest(classes = {ApprovedCaMapperImpl.class})
 class ApprovedCaMapperTest {
     private static final String URL = "https://github.com";
-    private static final Instant DATE_FROM = Instant.now().minusSeconds(60);
-    private static final Instant DATE_TO = Instant.now();
+    private static final Instant DATE_FROM = TimeUtils.now().minusSeconds(60);
+    private static final Instant DATE_TO = TimeUtils.now();
 
     @Autowired
     private ApprovedCaMapper approvedCaMapper;
@@ -57,6 +62,11 @@ class ApprovedCaMapperTest {
         source.setIdentifierDecoderMethodName("DecoderMethodName");
         source.setCertProfileInfo("certProfileInfo");
         source.getIntermediateCaInfos().add(getCaInfoEntity());
+        source.setDefaultCsrFormat(CsrFormat.DER.name());
+        source.setAcmeServerDirectoryUrl("http://test-acme-server");
+        source.setAcmeServerIpAddress("12.34.56.78");
+        source.setAuthCertProfileId("5");
+        source.setSignCertProfileId("6");
 
         var result = approvedCaMapper.toTarget(source);
 
@@ -67,6 +77,11 @@ class ApprovedCaMapperTest {
         assertThat(result.getIdentifierDecoderMethodName()).isEqualTo(source.getIdentifierDecoderMethodName());
         assertThat(result.getCertProfileInfo()).isEqualTo(source.getCertProfileInfo());
         assertThat(result.getIntermediateCaInfos()).hasSize(1);
+        assertThat(result.getDefaultCsrFormat()).isEqualTo(CsrFormat.DER);
+        assertThat(result.getAcmeServerDirectoryUrl()).isEqualTo(source.getAcmeServerDirectoryUrl());
+        assertThat(result.getAcmeServerIpAddress()).isEqualTo(source.getAcmeServerIpAddress());
+        assertThat(result.getAuthenticationCertificateProfileId()).isEqualTo(source.getAuthCertProfileId());
+        assertThat(result.getSigningCertificateProfileId()).isEqualTo(source.getSignCertProfileId());
 
         assertThat(result.getCaInfo().getCert()).isEmpty();
         assertThat(result.getCaInfo().getValidFrom()).isEqualTo(DATE_FROM);

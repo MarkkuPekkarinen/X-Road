@@ -30,7 +30,7 @@ import { deepClone } from '@/util/helpers';
 import axios from 'axios';
 import { Token, TokenPassword } from '@/openapi-types';
 
-export const tokenStore = defineStore('tokenStore', {
+export const useToken = defineStore('token', {
   state: () => {
     return {
       expandedTokens: [] as string[],
@@ -101,11 +101,9 @@ export const tokenStore = defineStore('tokenStore', {
         });
     },
     loginToken(id: string, tokenPassword: TokenPassword) {
-      return axios
-        .put<Token>(`/tokens/${id}/login`, tokenPassword)
-        .catch((error) => {
-          throw error;
-        });
+      return axios.put<Token>(`/tokens/${id}/login`, tokenPassword).catch((error) => {
+        throw error;
+      });
     },
     logoutToken(id: string) {
       return axios.put<Token>(`/tokens/${id}/logout`).catch((error) => {

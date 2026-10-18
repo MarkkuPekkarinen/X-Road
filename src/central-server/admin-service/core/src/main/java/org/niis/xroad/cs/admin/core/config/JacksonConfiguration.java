@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,9 +24,9 @@
  */
 package org.niis.xroad.cs.admin.core.config;
 
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import tools.jackson.databind.module.SimpleModule;
 
 /**
  * Jackson related configurations

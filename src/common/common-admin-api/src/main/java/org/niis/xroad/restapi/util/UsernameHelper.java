@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -38,15 +38,7 @@ import java.util.Optional;
 @Slf4j
 public class UsernameHelper {
 
-    public static final String UNKNOWN_USERNAME = null;
-
-    /**
-     * String that represents value for unknown username
-     * @return
-     */
-    public String getUnknownUsername() {
-        return UNKNOWN_USERNAME;
-    }
+    private static final String UNKNOWN_USERNAME = null;
 
     /**
      * Returns optional that holds currently logged in user's username, if it could be determined.

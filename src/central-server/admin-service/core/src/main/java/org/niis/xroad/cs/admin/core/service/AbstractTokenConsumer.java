@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -27,35 +27,30 @@
 
 package org.niis.xroad.cs.admin.core.service;
 
-import ee.ria.xroad.common.CodedException;
-
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
 import org.niis.xroad.common.exception.NotFoundException;
+import org.niis.xroad.common.exception.SignerProxyException;
 import org.niis.xroad.cs.admin.api.facade.SignerProxyFacade;
-import org.niis.xroad.cs.admin.core.exception.SignerProxyException;
+import org.niis.xroad.signer.api.dto.TokenInfo;
 
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_NOT_FOUND;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.SIGNER_PROXY_ERROR;
-import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.TOKEN_NOT_FOUND;
 
 
 public abstract class AbstractTokenConsumer {
-    private static final String TOKEN_NOT_FOUND_FAULT_CODE = "Signer.TokenNotFound";
 
     protected abstract SignerProxyFacade getSignerProxyFacade();
 
-    protected ee.ria.xroad.signer.protocol.dto.TokenInfo getToken(String tokenId) {
+    protected TokenInfo getToken(String tokenId) {
         try {
             return getSignerProxyFacade().getToken(tokenId);
-        } catch (CodedException codedException) {
-            if (causedByNotFound(codedException)) {
-                throw new NotFoundException(TOKEN_NOT_FOUND);
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(TOKEN_NOT_FOUND)) {
+                throw new NotFoundException(TOKEN_NOT_FOUND.build());
             }
-            throw new SignerProxyException(SIGNER_PROXY_ERROR, codedException, codedException.getFaultCode());
+            throw new SignerProxyException(e, SIGNER_PROXY_ERROR.build(e.getCode()));
         } catch (Exception exception) {
-            throw new SignerProxyException(SIGNER_PROXY_ERROR, exception);
+            throw new SignerProxyException(exception, SIGNER_PROXY_ERROR.build());
         }
-    }
-
-    private boolean causedByNotFound(CodedException codedException) {
-        return TOKEN_NOT_FOUND_FAULT_CODE.equals(codedException.getFaultCode());
     }
 }

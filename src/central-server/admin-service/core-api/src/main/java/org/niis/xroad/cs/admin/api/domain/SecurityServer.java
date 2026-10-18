@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,11 +26,10 @@
  */
 package org.niis.xroad.cs.admin.api.domain;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-
-import javax.validation.constraints.NotNull;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -48,6 +47,8 @@ public class SecurityServer extends Auditable {
 
     @NotNull
     private String address;
+    private boolean inMaintenanceMode;
+    private String maintenanceModeMessage;
 
     private Set<AuthCert> authCerts = new HashSet<>(0);
 

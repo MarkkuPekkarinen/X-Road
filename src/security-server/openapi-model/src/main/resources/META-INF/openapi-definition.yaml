@@ -21,6 +21,8 @@ tags:
     description: CA endpoints
   - name: clients
     description: clients endpoints
+  - name: dataspace
+    description: data space provisioning endpoints
   - name: diagnostics
     description: diagnostics endpoints
   - name: endpoints
@@ -51,8 +53,8 @@ tags:
     description: token certificates endpoints
   - name: tokens
     description: tokens endpoints
-  - name: xroad-instances
-    description: xroad-instances endpoints
+  - name: x-road-instances
+    description: x-road-instances endpoints
 paths:
   /backups:
     get:
@@ -174,10 +176,10 @@ paths:
       description:
         <h3>Uploads new security server backup to the system.</h3>
         <p>Note that it is possible to overwrite an existing backup file with the same name.
-          <ul>
-            <li>Attempt to upload a new backup file having the same name with an existing backup and with query parameter <code>ignore_warnings</code> = false causes the operation to fail with a warning in response's ErrorInfo object.</li>
-            <li>Attempt to upload a new backup file having the same name with an existing backup and with query parameter <code>ignore_warnings</code> = true will overwrite the existing backup.</li>
-          </ul>
+        <ul>
+        <li>Attempt to upload a new backup file having the same name with an existing backup and with query parameter <code>ignore_warnings</code> = false causes the operation to fail with a warning in response's ErrorInfo object.</li>
+        <li>Attempt to upload a new backup file having the same name with an existing backup and with query parameter <code>ignore_warnings</code> = true will overwrite the existing backup.</li>
+        </ul>
         </p>
         <p>The warning response has a warning code <code>warning_file_already_exists</code> and the metadata field contains the name of the existing backup</p>
       parameters:
@@ -354,11 +356,9 @@ paths:
       requestBody:
         description: certificate to import
         content:
-          application/octet-stream:
+          multipart/form-data:
             schema:
-              type: string
-              format: binary
-              description: certificate file
+              $ref: '#/components/schemas/CertificateFile'
       responses:
         '201':
           description: certificate created
@@ -399,13 +399,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '200':
           description: token certificate
@@ -436,13 +437,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '204':
           description: deletion was successful
@@ -475,13 +477,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '204':
           description: request was successful
@@ -507,13 +510,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '204':
           description: certificate was deactivated
@@ -541,13 +545,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '201':
           description: the imported certificate
@@ -588,13 +593,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '200':
           description: possible actions that can be done on the certificate
@@ -624,13 +630,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       requestBody:
         content:
           application/json:
@@ -663,13 +670,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '204':
           description: request was successful
@@ -713,13 +721,14 @@ paths:
       parameters:
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '204':
           description: request was successful
@@ -834,6 +843,13 @@ paths:
           schema:
             type: boolean
             default: false
+        - in: query
+          name: include_management_service_check
+          description: add info, is this subsystem management service provider or not
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: list of clients
@@ -865,10 +881,10 @@ paths:
       description:
         <h3>Adds new client to the system.</h3>
         <p>The client id will be validated and if the validation fails a validation error is returned. Note that with this endpoint it is possible to add an unregistered member as a client.
-          <ul>
-            <li>Attempt to add an unregistered member with <code>ClientAdd.ignore_warnings</code> = false causes the operation to fail with a warning in response's ErrorInfo object.</li>
-            <li>Attempt to add an unregistered member with <code>ClientAdd.ignore_warnings</code> = true succeeds.</li>
-          </ul>
+        <ul>
+        <li>Attempt to add an unregistered member with <code>ClientAdd.ignore_warnings</code> = false causes the operation to fail with a warning in response's ErrorInfo object.</li>
+        <li>Attempt to add an unregistered member with <code>ClientAdd.ignore_warnings</code> = true succeeds.</li>
+        </ul>
         </p>
         <p>When trying to add an unregister client, the error response has an error code <code>unregistered_member</code> and the metadata field contains the identifier of the unregistered client</p>
       requestBody:
@@ -1227,6 +1243,46 @@ paths:
               examples:
                 error_metadata_response:
                   $ref: '#/components/examples/ErrorWithMetadataExample'
+  /clients/{id}/security-servers:
+    get:
+      tags:
+        - clients
+      summary: get all clients security servers
+      operationId: getClientSecurityServers
+      description: <h3>Administrator views the details of clients security servers.</h3>
+      parameters:
+        - in: path
+          name: id
+          description: id of the client
+          required: true
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 1023
+      responses:
+        '200':
+          description: list of SecurityServer objects
+          content:
+            application/json:
+              schema:
+                type: array
+                uniqueItems: true
+                description: array of SecurityServer objects
+                items:
+                  $ref: '#/components/schemas/SecurityServer'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
   /clients/{id}/service-clients:
     get:
       tags:
@@ -1564,11 +1620,9 @@ paths:
       requestBody:
         description: certificate to add
         content:
-          application/octet-stream:
+          multipart/form-data:
             schema:
-              type: string
-              format: binary
-              description: certificate file
+              $ref: '#/components/schemas/CertificateFile'
       responses:
         '201':
           description: certificate added
@@ -1609,13 +1663,14 @@ paths:
             maxLength: 1023
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
+            pattern: ^[a-fA-F0-9]+
       responses:
         '200':
           description: certificate details
@@ -1653,13 +1708,13 @@ paths:
             maxLength: 1023
         - in: path
           name: hash
-          description: SHA-1 hash of the certificate
+          description: SHA-256 hash of the certificate
           required: true
           schema:
             type: string
             format: text
             minLength: 1
-            maxLength: 40
+            maxLength: 64
       responses:
         '204':
           description: certificate deletion was successful
@@ -1780,15 +1835,15 @@ paths:
       description:
         <h3>Administrator adds a new service description for the client.</h3>
         <p>
-          This endpoint can also return metadata in the error response if adding the service description fails due to invalid URLs, already existing service description or already existing services.
-          If adding the service description fails due to an invalid service URL, the error response will have the error code <code>invalid_service_url</code> and the metadata will contain a list of invalid URLs.
-          If adding the service description fails due to an already existing service description, the error response will have the error code <code>url_already_exists</code> and the metadata will contain the existing URL.
-          If adding the service description fails due to already existing services, the metadata array will have a more complex format. See the description of the '409' response in this endpoint.
+        This endpoint can also return metadata in the error response if adding the service description fails due to invalid URLs, already existing service description or already existing services.
+        If adding the service description fails due to an invalid service URL, the error response will have the error code <code>invalid_service_url</code> and the metadata will contain a list of invalid URLs.
+        If adding the service description fails due to an already existing service description, the error response will have the error code <code>url_already_exists</code> and the metadata will contain the existing URL.
+        If adding the service description fails due to already existing services, the metadata array will have a more complex format. See the description of the '409' response in this endpoint.
         </p>
         <p>
-          This endpoint can return a warnings response which can be ignored by setting <code>ServiceDescriptionAdd.ignore_warnings</code> = true.
-          If <code>ServiceDescriptionAdd.ignore_warnings</code> = false, a warnings response will be returned if WSDL or OpenAPI3 validation fails and validation warnings are returned.
-          The warnings will have the warning code <code>wsdl_validation_warnings</code> or <code>openapi_validation_warnings</code> depending on which type the service description is. The metadata of the warning contains the output of the validator itself.
+        This endpoint can return a warnings response which can be ignored by setting <code>ServiceDescriptionAdd.ignore_warnings</code> = true.
+        If <code>ServiceDescriptionAdd.ignore_warnings</code> = false, a warnings response will be returned if WSDL or OpenAPI3 validation fails and validation warnings are returned.
+        The warnings will have the warning code <code>wsdl_validation_warnings</code> or <code>openapi_validation_warnings</code> depending on which type the service description is. The metadata of the warning contains the output of the validator itself.
         </p>
       parameters:
         - in: path
@@ -1840,15 +1895,15 @@ paths:
           description:
             <h3>An existing item already exists</h3>
             <p>
-              If there are existing WSDL services with the same name, the error response will include the existing services' names and the containing WSDL's URL in the metadata array.
+            If there are existing WSDL services with the same name, the error response will include the existing services' names and the containing WSDL's URL in the metadata array.
             </p>
             <p>
-              In this case the error code <code>service_already_exists</code> (WSDL) or <code>service_code_already_exists</code> (OPENAPI3) is used and the entries in the metadata array are ordered in following way
-              <ul>
-                <li>metadata has a list of strings [C1,U1,C2,U2....Cn,Un] where</li>
-                <li>C1 = duplicate service full code</li>
-                <li>U1 = URL of the existing WSDL that has the duplicate</li>
-              </ul>
+            In this case the error code <code>service_already_exists</code> (WSDL) or <code>service_code_already_exists</code> (OPENAPI3) is used and the entries in the metadata array are ordered in following way
+            <ul>
+            <li>metadata has a list of strings [C1,U1,C2,U2....Cn,Un] where</li>
+            <li>C1 = duplicate service full code</li>
+            <li>U1 = URL of the existing WSDL that has the duplicate</li>
+            </ul>
             </p>
             <strong>See the example</strong>
           content:
@@ -2007,6 +2062,189 @@ paths:
               examples:
                 error_metadata_response:
                   $ref: '#/components/examples/ErrorWithMetadataExample'
+  /clients/{id}/disable:
+    put:
+      tags:
+        - clients
+      summary: disable security server client
+      operationId: disableClient
+      description:
+        <h3>Administrator disables client.</h3>
+        <p>This endpoint can also return metadata in the error response if sending the management request fails. The metadata array contains the error details that were generated in core. The message is in plain English.</p>
+      parameters:
+        - in: path
+          name: id
+          description: id of the client
+          required: true
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 1023
+      responses:
+        '204':
+          description: disabling was successful
+        '400':
+          description: request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+  /clients/{id}/enable:
+    put:
+      tags:
+        - clients
+      summary: enable security server client
+      operationId: enableClient
+      description:
+        <h3>Administrator enables client.</h3>
+        <p>This endpoint can also return metadata in the error response if sending the management request fails. The metadata array contains the error details that were generated in core. The message is in plain English.</p>
+      parameters:
+        - in: path
+          name: id
+          description: id of the client
+          required: true
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 1023
+      responses:
+        '204':
+          description: enabling was successful
+        '400':
+          description: request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+  /clients/{id}/rename:
+    put:
+      tags:
+        - clients
+      summary: rename security server client
+      operationId: renameClient
+      description:
+        <h3>Administrator renames client.</h3>
+        <p>This endpoint can also return metadata in the error response if sending the management request fails. The metadata array contains the error details that were generated in core. The message is in plain English.</p>
+      parameters:
+        - in: path
+          name: id
+          description: id of the client
+          required: true
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 1023
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientName'
+      responses:
+        '204':
+          description: renaming was successful
+        '400':
+          description: request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+  /diagnostics/info/download:
+    get:
+      tags:
+        - diagnostics
+      summary: download diagnostics report
+      operationId: downloadDiagnosticsReport
+      description: <h3>Administrator downloads diagnostics report.</h3>
+      responses:
+        '200':
+          description: system information
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+                description: system information file
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
   /diagnostics/globalconf:
     get:
       tags:
@@ -2050,7 +2288,7 @@ paths:
                 description: array of ocsp responder diagnostics objects
                 uniqueItems: true
                 items:
-                  $ref: '#/components/schemas/OcspResponderDiagnostics'
+                  $ref: '#/components/schemas/CaOcspDiagnostics'
         '400':
           description: request was invalid
         '401':
@@ -2171,6 +2409,250 @@ paths:
           description: request specified an invalid format
         '500':
           description: internal server error
+  /diagnostics/proxy-memory-usage-status:
+    get:
+      tags:
+        - diagnostics
+      summary: view proxy memory usage information
+      operationId: getProxyMemoryUsage
+      description: <h3>Administrator views the proxy memory usage information.</h3>
+      responses:
+        '200':
+          description: proxy memory usage information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProxyMemoryUsageStatus'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+  /diagnostics/auth-cert-req-status:
+    get:
+      tags:
+        - diagnostics
+      summary: view authentication certificate registration request status
+      operationId: getAuthCertReqStatus
+      description: <h3>Administrator views the authentication certificate registration request status.</h3>
+      responses:
+        '200':
+          description: authentication certificate registration request status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionStatus'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+  /diagnostics/global-conf-status:
+    get:
+      tags:
+        - diagnostics
+      summary: view global configuration download connection status
+      operationId: getGlobalConfStatus
+      description: <h3>Administrator views global configuration download connection status.</h3>
+      responses:
+        '200':
+          description: global configuration download connection status
+          content:
+            application/json:
+              schema:
+                type: array
+                description: array of statuses for the global configuration download connection
+                items:
+                  $ref: '#/components/schemas/GlobalConfConnectionStatus'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+  /diagnostics/other-security-server-status:
+    get:
+      tags:
+        - diagnostics
+      summary: view other security server connection status
+      operationId: getOtherSecurityServerStatus
+      description: <h3>Administrator views the other security server connection status.</h3>
+      parameters:
+        - in: query
+          name: protocol_type
+          description: service protocol type, must be REST or SOAP
+          required: true
+          schema:
+            type: string
+            enum:
+              - REST
+              - SOAP
+            example: REST
+        - in: query
+          name: client_id
+          description: clientId of the current security server. <instance_id>:<member_class>:<member_code>:<subsystem_code>. Subsystem code is optional.
+          example: FI:GOV:123:Subsystem
+          required: true
+          schema:
+            type: string
+            format: text
+        - in: query
+          name: target_client_id
+          description: targetClientId of the other security server. <instance_id>:<member_class>:<member_code>:<subsystem_code>.
+          example: FI:GOV:123:Subsystem
+          required: true
+          schema:
+            type: string
+            format: text
+        - in: query
+          name: security_server_id
+          description: securityServerId of the other security server. <instance_id>:<member_class>:<member_code>:<server_code>.
+          example: FI:GOV:123:DEV
+          required: true
+          schema:
+            type: string
+            format: text
+      responses:
+        '200':
+          description: other security server connection status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionStatus'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+  /dataspace/provisioning-status:
+    get:
+      tags:
+        - dataspace
+      summary: view data space provisioning status
+      operationId: getDataspaceProvisioningStatus
+      description: <h3>Administrator views the data space participant context provisioning status.</h3>
+      responses:
+        '200':
+          description: data space provisioning status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataspaceProvisioningStatus'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+  /diagnostics/operational-monitoring:
+    get:
+      tags:
+        - diagnostics
+      summary: view operational information
+      operationId: getOperationalDataIntervals
+      description: <h3>Administrator views the Security Server's operational information on diagnostics page</h3>
+      parameters:
+        - in: query
+          name: records_from
+          description: the earliest time for the queried requests being made
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: '2025-05-15T00:00:00.001Z'
+        - in: query
+          name: records_to
+          description: the latest time for the queried requests being made
+          required: true
+          schema:
+            type: string
+            format: date-time
+            example: '2025-05-15T00:00:00.001Z'
+        - in: query
+          name: interval
+          description: interval in minutes the requests are divided into
+          required: true
+          schema:
+            type: integer
+            format: int32
+            example: '15'
+        - in: query
+          name: security_server_type
+          description: whether this Security Server was a 'Client' or a 'Producer'
+          example: 'Client'
+          required: false
+          schema:
+            type: string
+            format: text
+        - in: query
+          name: member_id
+          description: clientId of the Member who made or received the request. <instance_id>:<member_class>:<member_code>:<subsystem_code>. Subsystem code is optional.
+          example: FI:GOV:123:Subsystem
+          required: false
+          schema:
+            type: string
+            format: text
+        - in: query
+          name: service_id
+          description: serviceId of the Service that received the request. <instance_id>:<member_class>:<member_code>:<subsystem_code>:<service_code>.<version_number>. Version number is optional.
+          example: FI:GOV:123:Subsystem:MyService.V1
+          required: false
+          schema:
+            type: string
+            format: text
+      responses:
+        '200':
+          description: operational information to be visualized
+          content:
+            application/json:
+              schema:
+                type: array
+                description: array of operational info objects
+                items:
+                  $ref: '#/components/schemas/OperationalDataInterval'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
   /initialization:
     post:
       tags:
@@ -2180,35 +2662,35 @@ paths:
       description:
         <h3>Administrator initializes a new Security Server with the provided initial configuration.</h3>
         <p>
-          This endpoint can also return metadata in the error response. The metadata array can contain error messages about why the init did not succeed.
-          If the pin code is too weak, the error code <code>weak_pin</code> is used and the entries in the metadata array are always ordered in following way
-          <ul>
-            <li>metadata has a list of strings ["pin_min_length", x, "pin_min_char_classes_count", y] where</li>
-            <li>x = the minimum length of the pin code</li>
-            <li>y = the minimum amount of character classes (e.g. uppercase, number, special characters) to be used in the pin code</li>
-          </ul>
-          Other possible error code is <code>invalid_init_params</code> which can have any one or more of the following strings in the metadata field
-          <ul>
-            <li>server_code_not_provided</li>
-            <li>member_class_not_provided</li>
-            <li>member_code_not_provided</li>
-            <li>pin_code_not_provided</li>
-            <li>server_code_exists</li>
-            <li>member_class_exists</li>
-            <li>member_code_exists</li>
-            <li>pin_code_exists</li>
-          </ul>
+        This endpoint can also return metadata in the error response. The metadata array can contain error messages about why the init did not succeed.
+        If the pin code is too weak, the error code <code>weak_pin</code> is used and the entries in the metadata array are always ordered in following way
+        <ul>
+        <li>metadata has a list of strings ["pin_min_length", x, "pin_min_char_classes_count", y] where</li>
+        <li>x = the minimum length of the pin code</li>
+        <li>y = the minimum amount of character classes (e.g. uppercase, number, special characters) to be used in the pin code</li>
+        </ul>
+        Other possible error code is <code>invalid_init_params</code> which can have any one or more of the following strings in the metadata field
+        <ul>
+        <li>server_code_not_provided</li>
+        <li>member_class_not_provided</li>
+        <li>member_code_not_provided</li>
+        <li>pin_code_not_provided</li>
+        <li>server_code_exists</li>
+        <li>member_class_exists</li>
+        <li>member_code_exists</li>
+        <li>pin_code_exists</li>
+        </ul>
         </p>
         <p>
-          This endpoint can return a warnings response which can be ignored by setting <code>InitialServerConf.ignore_warnings</code> = true.
-          If <code>InitialServerConf.ignore_warnings</code> = false, a warnings response will be returned if any one of the following conditions is true
-          <ul>
-            <li>server code has already been set for this Security Server (warning code <code>init_servercode_exists</code>)</li>
-            <li>server owner has already been set for this Security Server(warning code <code>init_server_owner_exists</code>)</li>
-            <li>software token has already been initialized in this Security Server(warning code <code>init_software_token_initialized</code>)</li>
-            <li>the provided owner member is unregistered(warning code <code>init_unregistered_member</code>)</li>
-            <li>the provided server id is already in use by another Security Server(warning code <code>init_server_id_exists</code>)</li>
-          </ul>
+        This endpoint can return a warnings response which can be ignored by setting <code>InitialServerConf.ignore_warnings</code> = true.
+        If <code>InitialServerConf.ignore_warnings</code> = false, a warnings response will be returned if any one of the following conditions is true
+        <ul>
+        <li>server code has already been set for this Security Server (warning code <code>init_servercode_exists</code>)</li>
+        <li>server owner has already been set for this Security Server(warning code <code>init_server_owner_exists</code>)</li>
+        <li>software token has already been initialized in this Security Server(warning code <code>init_software_token_initialized</code>)</li>
+        <li>the provided owner member is unregistered(warning code <code>init_unregistered_member</code>)</li>
+        <li>the provided server id is already in use by another Security Server(warning code <code>init_server_id_exists</code>)</li>
+        </ul>
         </p>
         <strong>See the '400' response examples</strong>
       requestBody:
@@ -2275,6 +2757,59 @@ paths:
           description: request specified an invalid format
         '409':
           description: an existing item already exists
+        '500':
+          description: internal server error
+  /initialization/admin-user:
+    post:
+      tags:
+        - initialization
+      summary: Create the initial admin user during Security Server initialization
+      operationId: createInitialAdminUser
+      description:
+        <h3>Creates the initial admin user when database-based authentication is enabled and the
+        Security Server has not yet been initialized. This endpoint is unauthenticated and only
+        usable while no admin user exists. Roles are assigned server-side to mirror the default PAM
+        admin set.</h3>
+      requestBody:
+        description: initial admin user credentials
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitialAdminUser'
+      responses:
+        '201':
+          description: initial admin user created
+        '400':
+          description: request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+        '409':
+          description: initial admin user creation is not allowed in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+        '500':
+          description: internal server error
+  /initialization/admin-user/status:
+    get:
+      tags:
+        - initialization
+      summary: Check whether the initial admin user needs to be created
+      operationId: getInitialAdminUserStatus
+      description:
+        <h3>Returns whether the unauthenticated initial admin user creation flow should be offered.
+        True only when database-based authentication is enabled, no admin user exists, and the
+        Security Server has not yet been fully initialized.</h3>
+      responses:
+        '200':
+          description: initial admin user creation status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitialAdminUserStatus'
         '500':
           description: internal server error
   /local-groups/{group_id}:
@@ -2544,11 +3079,11 @@ paths:
         <h3>Administrator deletes the key.</h3>
         <p>This endpoint can also return metadata in the error response if sending an auth cert deletion management request fails. The metadata array contains the error details that were generated in core. The message is in plain English.</p>
         <p>
-          Note that with this endpoint it's possible to delete an authentication key with a registered authentication certificate.
-          <ul>
-            <li>Attempt to delete an authentication key with a registered authentication certificate and with <code>ignore_warnings</code> = false causes the operation to fail with a warning in response's ErrorInfo object.</li>
-            <li>Attempt to delete an authentication key with a registered authentication certificate and with <code>ignore_warnings</code> = true succeeds. The authentication certificate is first unregistered, and the key and certificate are deleted after that.</li>
-          </ul>
+        Note that with this endpoint it's possible to delete an authentication key with a registered authentication certificate.
+        <ul>
+        <li>Attempt to delete an authentication key with a registered authentication certificate and with <code>ignore_warnings</code> = false causes the operation to fail with a warning in response's ErrorInfo object.</li>
+        <li>Attempt to delete an authentication key with a registered authentication certificate and with <code>ignore_warnings</code> = true succeeds. The authentication certificate is first unregistered, and the key and certificate are deleted after that.</li>
+        </ul>
         <p>When trying to delete an authentication key with a registered authentication certificate, the warning response has a warning code <code>auth_key_with_registered_cert_warning</code> and the metadata field contains the key id of the key</p>
         </p>
       parameters:
@@ -2563,7 +3098,7 @@ paths:
         - in: query
           name: ignore_warnings
           description: if true, any ignorable warnings are ignored. if false (or missing),
-                    any warnings cause request to fail
+            any warnings cause request to fail
           required: false
           schema:
             type: boolean
@@ -3131,12 +3666,12 @@ paths:
       description:
         <h3>Administrator updates the service.</h3>
         <p>
-          This endpoint can return a warnings response which can be ignored by setting <code>ServiceUpdate.ignore_warnings</code> = true.
-          If <code>ServiceUpdate.ignore_warnings</code> = false, it is possible to receive a warnings response from this endpoint if any one of the following conditions is true
-          <ul>
-            <li>SSL authentication is set to true, but https connection to the service URL fails because SSL handshake fails</li>
-            <li>SSL authentication is set to true, but https connection to the service URL fails because of other errors (e.g. host unreachable)</li>
-          </ul>
+        This endpoint can return a warnings response which can be ignored by setting <code>ServiceUpdate.ignore_warnings</code> = true.
+        If <code>ServiceUpdate.ignore_warnings</code> = false, it is possible to receive a warnings response from this endpoint if any one of the following conditions is true
+        <ul>
+        <li>SSL authentication is set to true, but https connection to the service URL fails because SSL handshake fails</li>
+        <li>SSL authentication is set to true, but https connection to the service URL fails because of other errors (e.g. host unreachable)</li>
+        </ul>
         </p>
       parameters:
         - in: path
@@ -3741,19 +4276,19 @@ paths:
       description:
         <h3>Administrator updates the selected service description.</h3>
         <p>
-          This endpoint can also return metadata in the error response if updating the service description fails due to invalid URLs, already existing service description or already existing services.
-          If updating the service description fails due to an invalid service URL, the error response will have the error code <code>invalid_service_url</code> and the metadata will contain a list of invalid URLs.
-          If updating the service description fails due to an already existing service description, the error response will have the error code <code>url_already_exists</code> and the metadata will contain the existing URL.
-          If updating the service description fails due to already existing services, the metadata array will have a more complex format. See the description of the '409' response in this endpoint.
+        This endpoint can also return metadata in the error response if updating the service description fails due to invalid URLs, already existing service description or already existing services.
+        If updating the service description fails due to an invalid service URL, the error response will have the error code <code>invalid_service_url</code> and the metadata will contain a list of invalid URLs.
+        If updating the service description fails due to an already existing service description, the error response will have the error code <code>url_already_exists</code> and the metadata will contain the existing URL.
+        If updating the service description fails due to already existing services, the metadata array will have a more complex format. See the description of the '409' response in this endpoint.
         </p>
         <p>
-          This endpoint can return a warnings response which can be ignored by setting <code>ServiceDescriptionUpdate.ignore_warnings</code> = true.
-          If <code>ServiceDescriptionUpdate.ignore_warnings</code> = false, a warnings response will be returned if any one of the following conditions is true
-          <ul>
-            <li>WSDL or OpenAPI3 validation fails and validation warnings are returned (warning code will be either <code>wsdl_validation_warnings</code> or <code>openapi_validation_warnings</code>)</li>
-            <li>existing services will be removed (warning code <code>deleting_services</code> and the warning metadata contains a list of service codes that will be removed)</li>
-            <li>new services will be added (warning code <code>adding_services</code> and the warning metadata contains a list of service codes that will be added)</li>
-          </ul>
+        This endpoint can return a warnings response which can be ignored by setting <code>ServiceDescriptionUpdate.ignore_warnings</code> = true.
+        If <code>ServiceDescriptionUpdate.ignore_warnings</code> = false, a warnings response will be returned if any one of the following conditions is true
+        <ul>
+        <li>WSDL or OpenAPI3 validation fails and validation warnings are returned (warning code will be either <code>wsdl_validation_warnings</code> or <code>openapi_validation_warnings</code>)</li>
+        <li>existing services will be removed (warning code <code>deleting_services</code> and the warning metadata contains a list of service codes that will be removed)</li>
+        <li>new services will be added (warning code <code>adding_services</code> and the warning metadata contains a list of service codes that will be added)</li>
+        </ul>
         </p>
       parameters:
         - in: path
@@ -3803,15 +4338,15 @@ paths:
           description:
             <h3>An existing item already exists</h3>
             <p>
-              If there are existing WSDL services with the same name, the error response will include the existing services' names and the containing WSDL's URL in the metadata array.
+            If there are existing WSDL services with the same name, the error response will include the existing services' names and the containing WSDL's URL in the metadata array.
             </p>
             <p>
-              In this case the error code <code>service_already_exists</code> (WSDL) or <code>service_code_already_exists</code> (OPENAPI3) is used and the entries in the metadata array are ordered in following way
-              <ul>
-                <li>metadata has a list of strings [C1,U1,C2,U2....Cn,Un] where</li>
-                <li>C1 = duplicate service full code</li>
-                <li>U1 = URL of the existing WSDL that has the duplicate</li>
-              </ul>
+            In this case the error code <code>service_already_exists</code> (WSDL) or <code>service_code_already_exists</code> (OPENAPI3) is used and the entries in the metadata array are ordered in following way
+            <ul>
+            <li>metadata has a list of strings [C1,U1,C2,U2....Cn,Un] where</li>
+            <li>C1 = duplicate service full code</li>
+            <li>U1 = URL of the existing WSDL that has the duplicate</li>
+            </ul>
             </p>
             <strong>See the example</strong>
           content:
@@ -3928,19 +4463,19 @@ paths:
       description:
         <h3>Administrator refreshes service description.</h3>
         <p>
-          This endpoint can also return metadata in the error response if refreshing the service description fails due to invalid URLs, already existing service description or already existing services.
-          If refreshing the service description fails due to an invalid service URL, the error response will have the error code <code>invalid_service_url</code> and the metadata will contain a list of invalid URLs.
-          If refreshing the service description fails due to an already existing service description, the error response will have the error code <code>url_already_exists</code> and the metadata will contain the existing URL.
-          If refreshing the service description fails due to already existing services, the metadata array will have a more complex format. See the description of the '409' response in this endpoint.
+        This endpoint can also return metadata in the error response if refreshing the service description fails due to invalid URLs, already existing service description or already existing services.
+        If refreshing the service description fails due to an invalid service URL, the error response will have the error code <code>invalid_service_url</code> and the metadata will contain a list of invalid URLs.
+        If refreshing the service description fails due to an already existing service description, the error response will have the error code <code>url_already_exists</code> and the metadata will contain the existing URL.
+        If refreshing the service description fails due to already existing services, the metadata array will have a more complex format. See the description of the '409' response in this endpoint.
         </p>
         <p>
-          This endpoint can return a warnings response which can be ignored by setting <code>IgnoreWarnings.ignore_warnings</code> = true.
-          If <code>IgnoreWarnings.ignore_warnings</code> = false, a warnings response will be returned if any one of the following conditions is true
+        This endpoint can return a warnings response which can be ignored by setting <code>IgnoreWarnings.ignore_warnings</code> = true.
+        If <code>IgnoreWarnings.ignore_warnings</code> = false, a warnings response will be returned if any one of the following conditions is true
         <ul>
-          <li>WSDL or OpenAPI3 validation fails and validation warnings are returned (warning code will be either <code>wsdl_validation_warnings</code> or <code>openapi_validation_warnings</code>)</li>
-          <li>existing services will be removed (warning code <code>deleting_services</code> and the warning metadata contains a list of service codes that will be removed)</li>
-          <li>new services will be added (warning code <code>adding_services</code> and the warning metadata contains a list of service codes that will be added)</li>
-          </ul>
+        <li>WSDL or OpenAPI3 validation fails and validation warnings are returned (warning code will be either <code>wsdl_validation_warnings</code> or <code>openapi_validation_warnings</code>)</li>
+        <li>existing services will be removed (warning code <code>deleting_services</code> and the warning metadata contains a list of service codes that will be removed)</li>
+        <li>new services will be added (warning code <code>adding_services</code> and the warning metadata contains a list of service codes that will be added)</li>
+        </ul>
         </p>
       parameters:
         - in: path
@@ -3988,15 +4523,15 @@ paths:
           description:
             <h3>An existing item already exists</h3>
             <p>
-              If there are existing WSDL services with the same name, the error response will include the existing services' names and the containing WSDL's URL in the metadata array.
+            If there are existing WSDL services with the same name, the error response will include the existing services' names and the containing WSDL's URL in the metadata array.
             </p>
             <p>
-              In this case the error code <code>service_already_exists</code> (WSDL) or <code>service_code_already_exists</code> (OPENAPI3) is used and the entries in the metadata array are ordered in following way
-              <ul>
-                <li>metadata has a list of strings [C1,U1,C2,U2....Cn,Un] where</li>
-                <li>C1 = duplicate service full code</li>
-                <li>U1 = URL of the existing WSDL that has the duplicate</li>
-              </ul>
+            In this case the error code <code>service_already_exists</code> (WSDL) or <code>service_code_already_exists</code> (OPENAPI3) is used and the entries in the metadata array are ordered in following way
+            <ul>
+            <li>metadata has a list of strings [C1,U1,C2,U2....Cn,Un] where</li>
+            <li>C1 = duplicate service full code</li>
+            <li>U1 = URL of the existing WSDL that has the duplicate</li>
+            </ul>
             </p>
             <strong>See the example</strong>
           content:
@@ -4081,17 +4616,15 @@ paths:
       description:
         <h3>Administrator uploads a new configuration anchor file in the security server's initialization phase.</h3>
         <p>
-          Calls to this endpoint only succeed if a configuration anchor is not already found – meaning that <b>this endpoint can only be used when initializing a new security server</b>.
-          For updating the anchor for an already initialized security server use the <code>PUT /system/anchor</code> endpoint instead.
+        Calls to this endpoint only succeed if a configuration anchor is not already found – meaning that <b>this endpoint can only be used when initializing a new security server</b>.
+        For updating the anchor for an already initialized security server use the <code>PUT /system/anchor</code> endpoint instead.
         </p>
       requestBody:
         description: configuration anchor
         content:
-          application/octet-stream:
+          multipart/form-data:
             schema:
-              type: string
-              format: binary
-              description: configuration anchor file
+              $ref: '#/components/schemas/AnchorFile'
       responses:
         '201':
           description: configuration anchor uploaded
@@ -4117,17 +4650,15 @@ paths:
       description:
         <h3>Administrator uploads a configuration anchor file anytime after the Security Server has been initialized.</h3>
         <p>
-          <b>Note that this only works if there already exists an anchor that can be replaced.</b>
-          When initalizing a new Security Server, use the endpoint <code>POST /system/anchor</code> instead.
+        <b>Note that this only works if there already exists an anchor that can be replaced.</b>
+        When initalizing a new Security Server, use the endpoint <code>POST /system/anchor</code> instead.
         </p>
       requestBody:
         description: configuration anchor
         content:
-          application/octet-stream:
+          multipart/form-data:
             schema:
-              type: string
-              format: binary
-              description: configuration anchor file
+              $ref: '#/components/schemas/AnchorFile'
       responses:
         '201':
           description: configuration anchor uploaded
@@ -4167,11 +4698,9 @@ paths:
       requestBody:
         description: configuration anchor
         content:
-          application/octet-stream:
+          multipart/form-data:
             schema:
-              type: string
-              format: binary
-              description: configuration anchor file
+              $ref: '#/components/schemas/AnchorFile'
       responses:
         '201':
           description: configuration anchor uploaded
@@ -4349,11 +4878,9 @@ paths:
       requestBody:
         description: certificate to add
         content:
-          application/octet-stream:
+          multipart/form-data:
             schema:
-              type: string
-              format: binary
-              description: certificate file
+              $ref: '#/components/schemas/CertificateFile'
       responses:
         '200':
           description: tls certificate imported
@@ -4373,6 +4900,510 @@ paths:
           description: request specified an invalid format
         '409':
           description: an existing item already exists
+        '500':
+          description: internal server error
+  /system/external-rpc-ca:
+    get:
+      tags:
+        - system
+      summary: view the Security Server external RPC CA details
+      operationId: getExternalRpcCa
+      description: <h3>Administrator views the details of the Security Server RPC CA, the certificate authority that signs the
+        Security Server's external RPC certificates.</h3>
+      responses:
+        '200':
+          description: Security Server RPC CA details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateDetails'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: the Security Server RPC CA is not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+        '500':
+          description: the Security Server RPC CA could not be read from the secret store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+  /system/external-rpc-ca/download:
+    get:
+      tags:
+        - system
+      summary: download the Security Server external RPC CA as a PEM file
+      operationId: downloadExternalRpcCa
+      description: <h3>Administrator downloads the Security Server external RPC CA as one PEM encoded certificate.</h3>
+      responses:
+        '200':
+          description: Security Server RPC CA certificate in PEM format
+          content:
+            application/x-pem-file:
+              schema:
+                type: string
+                format: binary
+                description: PEM file with exactly one certificate
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: the Security Server RPC CA is not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+        '500':
+          description: the Security Server RPC CA could not be read from the secret store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+  /system/op-monitor-ca:
+    get:
+      tags:
+        - system
+      summary: view the op-monitor CA details
+      operationId: getOpMonitorCa
+      description: <h3>Administrator views the details of the stored op-monitor CA, the certificate authority of an
+        operational monitoring daemon running on another host. The response is empty when no op-monitor CA is stored.</h3>
+      responses:
+        '200':
+          description: op-monitor CA details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateDetails'
+        '204':
+          description: no op-monitor CA is stored
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '500':
+          description: the op-monitor CA could not be read from the secret store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+    post:
+      tags:
+        - system
+      summary: upload or replace the op-monitor CA
+      operationId: uploadOpMonitorCa
+      description: <h3>Administrator uploads the CA certificate of an operational monitoring daemon running on another
+        host, as one PEM or DER encoded file. The uploaded certificate replaces the stored one.</h3>
+      requestBody:
+        description: CA certificate file
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CertificateFile'
+      responses:
+        '200':
+          description: op-monitor CA stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateDetails'
+        '400':
+          description: the file is not exactly one valid CA certificate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '500':
+          description: the op-monitor CA could not be stored in the secret store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+    delete:
+      tags:
+        - system
+      summary: delete the op-monitor CA
+      operationId: deleteOpMonitorCa
+      description: <h3>Administrator deletes the stored op-monitor CA. Deleting when no op-monitor CA is stored succeeds
+        and changes nothing.</h3>
+      responses:
+        '204':
+          description: no op-monitor CA is stored any more
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '500':
+          description: the op-monitor CA could not be deleted from the secret store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+  /system/server-address:
+    get:
+      tags:
+        - system
+      operationId: getServerAddress
+      summary: Get current Security Server address
+      description: <h3>Administrator views Security Server address and status</h3>
+      responses:
+        '200':
+          description: Security Server address status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityServerAddressStatus'
+        '400':
+          description: request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+
+    put:
+      tags:
+        - system
+      operationId: addressChange
+      summary: Change Security Server address
+      description: <h3>Administrator changes Security Server address</h3>
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecurityServerAddress'
+      responses:
+        '202':
+          description: address change request submitted
+        '400':
+          description: request was invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_response:
+                  $ref: '#/components/examples/ErrorExample'
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorInfo'
+              examples:
+                error_metadata_response:
+                  $ref: '#/components/examples/ErrorWithMetadataExample'
+  /system/timestamping-services:
+    get:
+      tags:
+        - system
+      summary: view the configured timestamping services
+      operationId: getConfiguredTimestampingServices
+      description: <h3>Administrator views the configured timestamping services.</h3>
+      responses:
+        '200':
+          description: list of configured timestamping services
+          content:
+            application/json:
+              schema:
+                type: array
+                uniqueItems: true
+                description: array of timestamping service objects
+                items:
+                  $ref: '#/components/schemas/TimestampingService'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+    post:
+      tags:
+        - system
+      summary: add a configured timestamping service
+      operationId: addConfiguredTimestampingService
+      description: <h3>Administrator selects a new timestamping service.</h3>
+      requestBody:
+        description: Timestamping service to add
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimestampingService'
+      responses:
+        '201':
+          description: timestamping service created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimestampingService'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '409':
+          description: an existing item already exists
+        '500':
+          description: internal server error
+  /system/timestamping-services/delete:
+    post:
+      tags:
+        - system
+      summary: delete configured timestamping service
+      operationId: deleteConfiguredTimestampingService
+      description: <h3>Administrator removes a configured timestamping service.</h3>
+      requestBody:
+        description: Timestamping service to delete
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimestampingService'
+      responses:
+        '204':
+          description: timestamping service deletion was successful
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '500':
+          description: internal server error
+  /system/timestamping-services/prioritization-strategy:
+    get:
+      tags:
+        - system
+      summary: get timestamping services prioritization strategy
+      operationId: getTimestampingPrioritizationStrategy
+      description: <h3>Administrator views the timestamping prioritization strategy.</h3>
+      responses:
+        '200':
+          description: Timestamping prioritization strategy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePrioritizationStrategy'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '500':
+          description: internal server error
+  /system/node-type:
+    get:
+      tags:
+        - system
+      summary: get the node type
+      operationId: getNodeType
+      description: <h3>Administrator views the node type</h3>
+      responses:
+        '200':
+          description: node type information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeTypeResponse'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '500':
+          description: internal server error
+  /system/auth-provider-type:
+    get:
+      tags:
+        - system
+      summary: get the authentication provider type
+      operationId: getAuthProviderType
+      description: <h3>Administrator views the authentication provider type</h3>
+      responses:
+        '200':
+          description: authentication provider type information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthProviderTypeResponse'
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '500':
+          description: internal server error
+  /system/version:
+    get:
+      tags:
+        - system
+      summary: get information for the system version
+      operationId: systemVersion
+      description: <h3>Administrator views the system version details.</h3>
+      responses:
+        '200':
+          description: system version information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionInfo'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+  /system/maintenance-mode:
+    get:
+      tags:
+        - system
+      summary: get information for the maintenance mode
+      operationId:  maintenanceMode
+      description: <h3>Administrator views the maintenance mode details.</h3>
+      responses:
+        '200':
+          description: maintenance mode information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceMode'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '500':
+          description: internal server error
+  /system/maintenance-mode/enable:
+    put:
+      tags:
+        - system
+      summary: enable maintenance mode of the security server
+      operationId: enableMaintenanceMode
+      description: <h3>Administrator enables maintenance mode of the security server.</h3>
+      requestBody:
+        description: Optional message about maintenance mode
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceModeMessage'
+      responses:
+        '204':
+          description: enable maintenance mode request was successful
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '500':
+          description: internal server error
+  /system/maintenance-mode/disable:
+    put:
+      tags:
+        - system
+      summary: disable maintenance mode of the security server
+      operationId: disableMaintenanceMode
+      description: <h3>Administrator disables maintenance mode of the security server.</h3>
+      responses:
+        '204':
+          description: disable maintenance mode request was successful
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
         '500':
           description: internal server error
   /certificate-authorities:
@@ -4489,141 +5520,154 @@ paths:
           description: request specified an invalid format
         '500':
           description: internal server error
-  /system/timestamping-services:
+  /certificate-authorities/{ca_name}/has-acme-eab-credentials:
     get:
       tags:
-        - system
-      summary: view the configured timestamping services
-      operationId: getConfiguredTimestampingServices
-      description: <h3>Administrator views the configured timestamping services.</h3>
+        - certificate-authorities
+      summary: Does the member have external CA account credentials for its ACME server in the configurations.
+      operationId: hasAcmeExternalAccountBindingCredentials
+      description: <h3>Check whether given member has external CA account credentials for its ACME server.</h3>
+        <p>Determines whether the administrator can order the certificate from ACME server with the generated CSR. The credentials are stored in the acme.yml configuration file</p>
+      parameters:
+        - in: path
+          name: ca_name
+          description: common name of the CA
+          example: X-Road Test CA CN
+          required: true
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 255
+        - in: query
+          name: key_usage_type
+          description: which usage type this CSR is for
+          example: SIGNING
+          required: true
+          schema:
+            $ref: '#/components/schemas/KeyUsageType'
+        - in: query
+          name: member_id
+          description: <instance_id>:<member_class>:<member_code>
+          example: FI:GOV:123
+          required: false
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 255
       responses:
         '200':
-          description: list of configured timestamping services
+          description: acme eab credentials status
           content:
             application/json:
               schema:
-                type: array
-                uniqueItems: true
-                description: array of timestamping service objects
-                items:
-                  $ref: '#/components/schemas/TimestampingService'
+                $ref: '#/components/schemas/AcmeEabCredentialsStatus'
         '400':
           description: request was invalid
         '401':
           description: authentication credentials are missing
         '403':
           description: request has been refused
-        '404':
-          description: resource requested does not exists
         '406':
           description: request specified an invalid format
         '500':
           description: internal server error
+  /certificate-authorities/{ca_name}/acme-order:
     post:
       tags:
-        - system
-      summary: add a configured timestamping service
-      operationId: addConfiguredTimestampingService
-      description: <h3>Administrator selects a new timestamping service.</h3>
+        - certificate-authorities
+      summary: order certificate from CA hosted ACME server with the given CSR
+      operationId: orderAcmeCertificate
+      description: <h3>Administrator orders the certificate with previously generated CSR whose certificate profile matches chosen CA-s configured profile.</h3>
+      parameters:
+        - in: path
+          name: ca_name
+          description: common name of the CA
+          example: X-Road Test CA CN
+          required: true
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 255
       requestBody:
-        description: Timestamping service to add
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TimestampingService'
+              $ref: '#/components/schemas/AcmeOrder'
       responses:
-        '201':
-          description: timestamping service created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TimestampingService'
+        '200':
+          description: acme certificate order was successful
         '400':
           description: request was invalid
-        '401':
-          description: authentication credentials are missing
         '403':
           description: request has been refused
-        '404':
-          description: resource requested does not exists
-        '406':
-          description: request specified an invalid format
         '409':
-          description: an existing item already exists
+          description: an existing item already exists, outdated global conf or token not logged in
         '500':
           description: internal server error
-  /system/timestamping-services/delete:
-    post:
+  /certificate-authorities/ocsp-prioritization-strategy:
+    get:
       tags:
-        - system
-      summary: delete configured timestamping service
-      operationId: deleteConfiguredTimestampingService
-      description: <h3>Administrator removes a configured timestamping service.</h3>
+        - certificate-authorities
+      summary: get OCSP responders prioritization strategy
+      operationId: getOcspPrioritizationStrategy
+      description: <h3>Administrator views the OCSP prioritization strategy.</h3>
+      responses:
+        '200':
+          description: OCSP prioritization strategy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePrioritizationStrategy'
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '500':
+          description: internal server error
+  /mail/mail-notification-status:
+    get:
+      tags:
+        - mail
+      summary: view status of automatic e-mail notifications
+      operationId: getMailNotificationStatus
+      description: <h3>Administrator views the status of sending automatic e-mail notifications sent by automatic certificate renewal job.</h3>
+      responses:
+        '200':
+          description: e-mail notifications status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailNotificationStatus'
+        '500':
+          description: internal server error
+  /mail/send-test-mail:
+    put:
+      tags:
+        - mail
+      summary: send test mail to the given recipient
+      operationId: sendTestMail
+      description: <h3>Administrator send a test e-mail to the given recipient to verify the e-mail configuration</h3>
       requestBody:
-        description: Timestamping service to delete
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TimestampingService'
-      responses:
-        '204':
-          description: timestamping service deletion was successful
-        '400':
-          description: request was invalid
-        '401':
-          description: authentication credentials are missing
-        '403':
-          description: request has been refused
-        '404':
-          description: resource requested does not exists
-        '500':
-          description: internal server error
-  /system/node-type:
-    get:
-      tags:
-        - system
-      summary: get the node type
-      operationId: getNodeType
-      description: <h3>Administrator views the node type</h3>
+              $ref: '#/components/schemas/MailRecipient'
       responses:
         '200':
-          description: node type information
+          description: test mail sent
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NodeTypeResponse'
-        '401':
-          description: authentication credentials are missing
-        '403':
-          description: request has been refused
-        '500':
-          description: internal server error
-  /system/version:
-    get:
-      tags:
-        - system
-      summary: get information for the system version
-      operationId: systemVersion
-      description: <h3>Administrator views the system version details.</h3>
-      responses:
-        '200':
-          description: system version information
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VersionInfo'
+                $ref: '#/components/schemas/TestMailResponse'
         '400':
           description: request was invalid
-        '401':
-          description: authentication credentials are missing
-        '403':
-          description: request has been refused
-        '404':
-          description: resource requested does not exists
-        '406':
-          description: request specified an invalid format
         '500':
-          description: internal server error
+          description: internal server error, that is not mail related
   /timestamping-services:
     get:
       tags:
@@ -4654,7 +5698,6 @@ paths:
           description: request specified an invalid format
         '500':
           description: internal server error
-
   /tokens:
     get:
       tags:
@@ -4701,6 +5744,7 @@ paths:
             type: string
             format: text
             minLength: 1
+            maxLength: 1023
       responses:
         '200':
           description: token object
@@ -4718,6 +5762,39 @@ paths:
           description: resource requested does not exists
         '406':
           description: request specified an invalid format
+        '500':
+          description: internal server error
+    delete:
+      tags:
+        - tokens
+      summary: delete security server token
+      operationId: deleteToken
+      description: <h3>Administrator delete inactive token of the security server.</h3>
+      parameters:
+        - in: path
+          name: id
+          description: id of the token
+          required: true
+          schema:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 1023
+      responses:
+        '204':
+          description: deletion was successful
+        '400':
+          description: request was invalid
+        '401':
+          description: authentication credentials are missing
+        '403':
+          description: request has been refused
+        '404':
+          description: resource requested does not exists
+        '406':
+          description: request specified an invalid format
+        '409':
+          description: request action not possible
         '500':
           description: internal server error
     patch:
@@ -4769,13 +5846,13 @@ paths:
         <h3>Administrator updates the software token pin code.</h3>
         <p>This operation supports updating the pin code of a software token only.</p>
         <p>
-          This endpoint can also return metadata in the error response. The metadata array can contain error messages about why the init did not succeed.
-          If the pin code is too weak, the error code <code>weak_pin</code> is used and the entries in the metadata array are always ordered in following way
-          <ul>
-            <li>metadata has a list of strings ["pin_min_length", x, "pin_min_char_classes_count", y] where</li>
-            <li>x = the minimum length of the pin code</li>
-            <li>y = the minimum amount of character classes (e.g. uppercase, number, special characters) to be used in the pin code</li>
-          </ul>
+        This endpoint can also return metadata in the error response. The metadata array can contain error messages about why the init did not succeed.
+        If the pin code is too weak, the error code <code>weak_pin</code> is used and the entries in the metadata array are always ordered in following way
+        <ul>
+        <li>metadata has a list of strings ["pin_min_length", x, "pin_min_char_classes_count", y] where</li>
+        <li>x = the minimum length of the pin code</li>
+        <li>y = the minimum amount of character classes (e.g. uppercase, number, special characters) to be used in the pin code</li>
+        </ul>
         </p>
       parameters:
         - in: path
@@ -4992,24 +6069,21 @@ paths:
   /xroad-instances:
     get:
       tags:
-        - xroad-instances
-      summary: get list of known xroad instance identifiers
-      operationId: getXroadInstances
-      description: <h3>Administrator lists xroad instance identifiers</h3>
+        - x-road-instances
+      summary: get list of known x-road instance identifiers
+      operationId: getXRoadInstances
+      description: <h3>Administrator lists x-road instance identifiers</h3>
       responses:
         '200':
-          description: xroad instance identifiers
+          description: x-road instance identifiers
           content:
             application/json:
               schema:
-                type: array
-                description: array of xroad instance identifiers
-                uniqueItems: true
-                items:
-                  type: string
-                  format: text
-                  minLength: 1
-                  maxLength: 255
+               type: array
+               uniqueItems: true
+               description: array of x-road instance identifiers
+               items:
+                 $ref: '#/components/schemas/XRoadInstance'
         '400':
           description: request was invalid
         '401':
@@ -5264,10 +6338,16 @@ components:
       description: addon module statuses
       required:
         - messagelog_enabled
+        - opmonitoring_enabled
       properties:
         messagelog_enabled:
           type: boolean
           readOnly: true
+          description: MessageLog status
+        opmonitoring_enabled:
+          type: boolean
+          readOnly: true
+          description: OpMonitoring status
     BackupEncryptionStatus:
       type: object
       description: backup encryption statuses
@@ -5277,11 +6357,14 @@ components:
         backup_encryption_status:
           type: boolean
           readOnly: true
+          description: backup encryption status
         backup_encryption_keys:
           type: array
+          description: backup encryption keys
           items:
             type: string
             format: text
+            description: backup encryption key
     MessageLogEncryptionStatus:
       type: object
       description: message log encryption statuses
@@ -5293,14 +6376,18 @@ components:
         message_log_archive_encryption_status:
           type: boolean
           readOnly: true
+          description: message log archive encryption status
         message_log_database_encryption_status:
           type: boolean
           readOnly: true
+          description: message log database encryption status
         message_log_grouping_rule:
           type: string
           readOnly: true
+          description: message log grouping rule
         members:
           type: array
+          description: message log encryption members
           items:
             $ref: '#/components/schemas/MessageLogArchiveEncryptionMember'
     MessageLogArchiveEncryptionMember:
@@ -5312,9 +6399,11 @@ components:
         member_id:
           type: string
           readOnly: true
+          description: member id
         keys:
           type: array
           uniqueItems: true
+          description: array of keys
           items:
             type: string
             format: text
@@ -5322,6 +6411,169 @@ components:
         default_key_used:
           type: boolean
           readOnly: true
+          description: default key used
+    ProxyMemoryUsageStatus:
+      type: object
+      description: proxy memory usage status
+      required:
+        - max_memory
+        - total_memory
+        - used_memory
+        - usage_percent
+        - is_used_over_threshold
+      properties:
+        max_memory:
+          type: number
+          readOnly: true
+          description: Proxy's maximum memory
+        total_memory:
+          type: number
+          readOnly: true
+          description: Proxy's total allocated memory
+        used_memory:
+          type: number
+          readOnly: true
+          description: Proxy's used memory
+        threshold:
+          type: number
+          readOnly: true
+          description: Proxy memory usage alert threshold
+        usage_percent:
+          type: number
+          readOnly: true
+          description: Proxy's used memory percentage
+        is_used_over_threshold:
+          type: boolean
+          readOnly: true
+          description: Is usage over threshold
+    ConnectionStatus:
+      type: object
+      description: connection status
+      required:
+        - status_class
+        - error
+      properties:
+        status_class:
+          readOnly: true
+          description: connection status class
+          allOf:
+            - $ref: '#/components/schemas/DiagnosticStatusClass'
+        error:
+          $ref: '#/components/schemas/CodeWithDetails'
+    GlobalConfConnectionStatus:
+      type: object
+      description: global configuration download connection status
+      required:
+        - download_url
+        - connection_status
+      properties:
+        download_url:
+          type: string
+          format: text
+          minLength: 1
+          maxLength: 255
+          description: download url of the global configuration
+        connection_status:
+          $ref: '#/components/schemas/ConnectionStatus'
+    XRoadInstance:
+      type: object
+      description: x-road instance
+      required:
+        - identifier
+        - local
+      properties:
+        identifier:
+          type: string
+          readOnly: true
+          format: text
+          minLength: 1
+          maxLength: 255
+          description: x-road instance identifier
+        local:
+          type: boolean
+          readOnly: true
+          description: is this the local x-road instance
+    MailNotificationStatus:
+      type: object
+      description: automatic e-mail notification status
+      properties:
+        enabled_notifications:
+          type: array
+          uniqueItems: true
+          description: array containing the mail notification types that are enabled
+          items:
+            $ref: '#/components/schemas/MailNotificationType'
+        configuration_present:
+          type: boolean
+          description: whether automatic e-mail has been configured
+        recipients_emails:
+          type: array
+          description: configured recipients e-mail addresses
+          items:
+            type: string
+            format: text
+            minLength: 1
+            maxLength: 255
+    MailNotificationType:
+      type: string
+      format: enum
+      description: types of mail notifications that can be turned on or off via configuration
+      example: ACME_FAILURE
+      enum:
+        - ACME_FAILURE
+        - ACME_SUCCESS
+        - AUTH_CERT_REGISTERED
+        - ACME_CERT_AUTOMATICALLY_ACTIVATED
+        - ACME_CERT_AUTOMATIC_ACTIVATION_FAILURE
+    MailRecipient:
+      type: object
+      required:
+        - mail_address
+      properties:
+        mail_address:
+          type: string
+          description: recipient e-mail address
+          format: text
+          minLength: 1
+          maxLength: 255
+      example:
+        name: member1@example.org
+    TestMailResponse:
+      type: object
+      required:
+        - status
+        - text
+      properties:
+        status:
+          $ref: '#/components/schemas/MailStatus'
+        text:
+          type: string
+          description: A success or an error message
+          format: text
+    MailStatus:
+      type: string
+      format: enum
+      description: Whether the sending was a success or an error
+      example: success
+      enum:
+        - success # Sending mail was a success
+        - error # Sending mail failed
+    OperationalDataInterval:
+      type: object
+      description: Operational information to be visualized
+      properties:
+        interval_start_time:
+          type: string
+          format: date-time
+          description: The beginning of this time window
+        success_count:
+          description: number of successful requests in this time window
+          type: integer
+          format: int64
+        failure_count:
+          description: number of failed requests in this time window
+          type: integer
+          format: int64
     Anchor:
       type: object
       description: security server anchor
@@ -5349,6 +6601,7 @@ components:
       required:
         - filename
         - created_at
+        - compatible
       properties:
         filename:
           type: string
@@ -5364,6 +6617,9 @@ components:
           example: '2018-12-15T00:00:00.001Z'
           minLength: 24
           maxLength: 24
+        compatible:
+          type: boolean
+          description: whether this backup is compatible with this server's backup format
     BackupExt:
       allOf:
         - $ref: '#/components/schemas/Backup'
@@ -5374,13 +6630,35 @@ components:
       properties:
         local_conf_present:
           type: boolean
+          description: if local configuration is present in the backup
     BackupArchive:
       type: object
       description: security server backup archive file
       properties:
-        file:
+        backup:
           type: string
           format: binary
+          description: backup archive file
+    CertificateFile:
+      type: object
+      description: certificate file
+      properties:
+        certificate:
+          description: the certificate file
+          format: binary
+          type: string
+      required:
+        - certificate
+    AnchorFile:
+      type: object
+      description: Anchor File
+      properties:
+        anchor:
+          description: the anchor file
+          format: binary
+          type: string
+      required:
+        - anchor
     TokenCertificateSigningRequest:
       type: object
       description: CSR for certificate that is stored in a Token. Also includes the possible actions that can be
@@ -5403,6 +6681,12 @@ components:
           example: FI:GOV:123
           minLength: 1
           maxLength: 767
+          readOnly: true
+        certificate_profile:
+          type: string
+          format: text
+          description: Fully qualified class name that was used to create the CSR. Implements the ee.ria.xroad.common.certificateprofile.CertificateProfileInfoProvider interface.
+          example: org.example.TestCertificateInfoProvider
           readOnly: true
         possible_actions:
           $ref: '#/components/schemas/PossibleActions'
@@ -5437,13 +6721,33 @@ components:
           type: boolean
           description: if the certificate is saved to configuration
           example: true
+        renewed_cert_hash:
+          type: string
+          format: text
+          description: hash of the newer version of the certificate that is in the process of registration
+          readOnly: true
+        renewal_error:
+          type: string
+          format: text
+          description: error message thrown during the certificate automatic renewal process
+          readOnly: true
+        ocsp_verify_before_activation_error:
+          type: string
+          format: text
+          description: error message thrown when verifying ocsp responses before the certificate activation
+          readOnly: true
+        next_automatic_renewal_time:
+          type: string
+          format: date-time
+          description: next planned automatic renewal time
+          readOnly: true
         certificate_details:
           $ref: '#/components/schemas/CertificateDetails'
         status:
           $ref: '#/components/schemas/CertificateStatus'
         possible_actions:
           $ref: '#/components/schemas/PossibleActions'
-    OcspResponderDiagnostics:
+    CaOcspDiagnostics:
       type: object
       description: Ocsp responder diagnostics
       required:
@@ -5462,7 +6766,7 @@ components:
           type: array
           readOnly: true
           items:
-            $ref: '#/components/schemas/OcspResponder'
+            $ref: '#/components/schemas/OcspResponderDiagnostics'
     CertificateDetails:
       type: object
       description: certificate details for any kind of certificate (TLS, auth, sign)
@@ -5571,13 +6875,27 @@ components:
           format: int32
           description: RSA public key exponent (if RSA key) as an integer
           example: 65537
+        ec_public_parameters:
+          description: EC public key curve (if EC key)
+          example: 'secp256r1(1.2.840.10045.3.1.7)'
+          format: text
+          maxLength: 255
+          minLength: 1
+          type: string
+        ec_public_key_point:
+          description: hex encoded EC public key point (if EC key)
+          example: c44421d601...
+          format: hex
+          maxLength: 1000
+          minLength: 1
+          type: string
         hash:
           type: string
           format: text
-          description: certificate SHA-1 hash
+          description: certificate SHA-256 hash
           example: 1234567890ABCDEF
           minLength: 1
-          maxLength: 40
+          maxLength: 64
         key_usages:
           type: array
           description: certificate key usage array
@@ -5647,6 +6965,30 @@ components:
         authentication_only:
           type: boolean
           description: if certificate authority is limited for authentication use only
+        certificate_profile_info:
+          type: string
+          format: text
+          description: Fully qualified class name that was used to create the CSR. Implements the ee.ria.xroad.common.certificateprofile.CertificateProfileInfoProvider interface.
+          example: org.example.TestCertificateInfoProvider
+          minLength: 1
+          maxLength: 1024
+        default_csr_format:
+          $ref: '#/components/schemas/CsrFormat'
+        acme_capable:
+          type: boolean
+          description: if certificate authority supports ACME
+        acme_server_ip_addresses:
+          type: array
+          description: ACME server IP address(es) that can be helpful in configuring the firewall rules.
+          example: [ "12.34.5.6", "AB:cd:67::89" ]
+          items:
+            type: string
+            format: text
+        ocsp_responders:
+          type: array
+          description: list of ocsp responders for this CA
+          items:
+            $ref: '#/components/schemas/OcspResponder'
     CertificateStatus:
       type: string
       format: enum
@@ -5715,6 +7057,7 @@ components:
         - GENERATE_AUTH_CSR
         - GENERATE_SIGN_CSR
         - TOKEN_CHANGE_PIN
+        - TOKEN_DELETE
     Client:
       type: object
       description: x-road client
@@ -5768,6 +7111,14 @@ components:
           example: ABC
           minLength: 1
           maxLength: 255
+        subsystem_name:
+          type: string
+          format: text
+          description: Subsystem name. Cannot contain colons, semicolons, slashes, backslashes, percent signs or control characters
+          example: FI
+          readOnly: true
+          minLength: 0
+          maxLength: 255
         owner:
           type: boolean
           description: if this client is the owner member of this security server
@@ -5778,10 +7129,26 @@ components:
           description: if this client has a valid (registered and with good OCSP response) sign cert stored on this security server
           example: false
           readOnly: true
+        is_management_services_provider:
+          type: boolean
+          description: if this client is management services provider
+          example: false
+          readOnly: true
+        rename_status:
+          $ref: '#/components/schemas/RenameStatus'
         connection_type:
           $ref: '#/components/schemas/ConnectionType'
         status:
           $ref: '#/components/schemas/ClientStatus'
+    RenameStatus:
+      type: string
+      format: enum
+      description: rename status
+      example: NAME_SET
+      readOnly: true
+      enum:
+        - NAME_SET
+        - NAME_SUBMITTED
     ClientAdd:
       type: object
       description: Request to add client. Carries a Client and ignore warnings parameter
@@ -5807,22 +7174,11 @@ components:
         - GLOBAL_ERROR
         - REGISTRATION_IN_PROGRESS
         - DELETION_IN_PROGRESS
+        - DISABLED
+        - DISABLING_IN_PROGRESS
+        - ENABLING_IN_PROGRESS
     CodeWithDetails:
       $ref: '../../../../../../common/common-admin-api/src/main/resources/common-openapi-definition.yaml#/components/schemas/CodeWithDetails'
-    ConfigurationStatus:
-      type: string
-      format: enum
-      description: configuration status
-      example: SUCCESS
-      enum:
-        - SUCCESS # Everything ok
-        - ERROR_CODE_INTERNAL # Internal error occurred.
-        - ERROR_CODE_INVALID_SIGNATURE_VALUE # Invalid signature value.
-        - ERROR_CODE_EXPIRED_CONF # The downloaded global configuration has expired.
-        - ERROR_CODE_CANNOT_DOWNLOAD_CONF # Unable to download global configuration. Check network connection to global configuration provider.
-        - ERROR_CODE_MISSING_PRIVATE_PARAMS # The downloaded global configuration did not contain private parameters
-        - ERROR_CODE_UNINITIALIZED # The configuration client is initializing.
-        - UNKNOWN
     ConnectionType:
       type: string
       format: enum
@@ -5880,6 +7236,40 @@ components:
           description: user-provided values for subject DN parameters
           additionalProperties:
             type: string
+        acme_order:
+          type: boolean
+          default: false
+          description: whether or not order certificate from acme server with the generated csr
+    AcmeOrder:
+      type: object
+      description: request to order certificate with the given CSR for the given usage type
+      required:
+        - csr_id
+        - key_usage_type
+      properties:
+        csr_id:
+          type: string
+          format: text
+          description: id of the CSR
+          minLength: 1
+          maxLength: 40
+        key_usage_type:
+          $ref: '#/components/schemas/KeyUsageType'
+    AcmeEabCredentialsStatus:
+      type: object
+      description: Whether there are credentials in the configuration for the given Member and CA. Used for binding the CA external account with the ACME server's account.
+      required:
+        - has_acme_external_account_credentials
+        - acme_eab_required
+      properties:
+        acme_eab_required:
+          type: boolean
+          description: if certificate authority required external account binding for ACME
+        has_acme_external_account_credentials:
+          type: boolean
+          description: whether there are credentials present in the configuration.
+          example: true
+          readOnly: true
     CsrSubjectFieldDescription:
       type: object
       description: object describing input fields for CSR subject DN info
@@ -5980,6 +7370,10 @@ components:
           default: false
           description: if true, any ignorable warnings are ignored. if false (or missing),
             any warnings cause request to fail
+        enable_software_token_autologin:
+          type: boolean
+          description: if true, enables software token autologin; if false, disables it.
+            If omitted, the autologin setting is left unchanged.
     LocalGroup:
       type: object
       description: group
@@ -6005,6 +7399,14 @@ components:
           format: text
           description: group description
           example: description
+          minLength: 1
+          maxLength: 255
+        client_id:
+          type: string
+          format: text
+          description: <instance_id>:<member_class>:<member_code>:<subsystem>(optional)
+          example: FI:GOV:123:ABC
+          readOnly: true
           minLength: 1
           maxLength: 255
         member_count:
@@ -6048,6 +7450,7 @@ components:
           example: description
           minLength: 1
           maxLength: 255
+          pattern: '^[a-zA-Z0-9-_,.;:!? ]*$'
     LocalGroupDescription:
       type: object
       required:
@@ -6059,6 +7462,7 @@ components:
           format: text
           minLength: 1
           maxLength: 255
+          pattern: '^[a-zA-Z0-9-_,.;:!? ]*$'
       example:
         name: This is an awesome local group!
     GlobalConfDiagnostics:
@@ -6066,18 +7470,14 @@ components:
       description: global configuration diagnostics
       required:
         - status_class
-        - status_code
         - prev_update_at
         - next_update_at
       properties:
         status_class:
           readOnly: true
+          description: diagnostics status class
           allOf:
             - $ref: '#/components/schemas/DiagnosticStatusClass'
-        status_code:
-          readOnly: true
-          allOf:
-            - $ref: '#/components/schemas/ConfigurationStatus'
         prev_update_at:
           type: string
           format: date-time
@@ -6094,27 +7494,44 @@ components:
           minLength: 24
           maxLength: 24
           readOnly: true
+        last_successful_url:
+          type: string
+          format: uri
+          description: last successful configuration source URL
+          example: https://example.org/configuration
+          minLength: 1
+          maxLength: 255
+          readOnly: true
+        error:
+          $ref: '#/components/schemas/CodeWithDetails'
     GroupMember:
       type: object
       description: group member
       required:
         - id
-        - name
+        - member_name
         - created_at
       properties:
         id:
           type: string
           format: text
           description: group member id
-          example: FI:GOV:123:SS1
+          example: FI:GOV:123
           minLength: 1
           maxLength: 1023
-        name:
+        member_name:
           type: string
           format: text
           description: group member name
           example: Member123
           minLength: 1
+          maxLength: 255
+        subsystem_name:
+          type: string
+          format: text
+          description: group subsystem name
+          example: Subsystem123
+          minLength: 0
           maxLength: 255
         created_at:
           type: string
@@ -6139,6 +7556,7 @@ components:
         - is_server_code_initialized
         - is_server_owner_initialized
         - software_token_init_status
+        - enforce_token_pin_policy
       properties:
         is_anchor_imported:
           type: boolean
@@ -6151,6 +7569,40 @@ components:
           description: whether the server owner of the security server has been initialized or not
         software_token_init_status:
           $ref: '#/components/schemas/TokenInitStatus'
+        enforce_token_pin_policy:
+          type: boolean
+          description: whether the token pin policy is enforced or not
+        software_token_autologin_enabled:
+          type: boolean
+          description: whether software token autologin is currently enabled
+    InitialAdminUser:
+      type: object
+      description: Credentials for the initial admin user created during Security Server initialization
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Admin user name
+          minLength: 3
+          maxLength: 30
+        password:
+          type: string
+          description: Admin user password
+          minLength: 6
+          maxLength: 255
+    InitialAdminUserStatus:
+      type: object
+      description: Whether the initial admin user creation flow should be offered
+      required:
+        - admin_user_creation_required
+      properties:
+        admin_user_creation_required:
+          type: boolean
+          description:
+            true when database-based authentication is enabled, no admin user exists yet, and the
+            Security Server has not been fully initialized
     KeyWithCertificateSigningRequestId:
       type: object
       description: Key and TokenCertificateSigningRequest id
@@ -6175,6 +7627,7 @@ components:
         - label
         - certificates
         - certificate_signing_requests
+        - key_algorithm
       properties:
         id:
           type: string
@@ -6219,6 +7672,16 @@ components:
           example: true
         possible_actions:
           $ref: '#/components/schemas/PossibleActions'
+        key_algorithm:
+          $ref: '#/components/schemas/KeyAlgorithm'
+    KeyAlgorithm:
+      description: Key type
+      enum:
+        - RSA
+        - EC
+      example: RSA
+      format: enum
+      type: string
     KeyName:
       type: object
       required:
@@ -6315,6 +7778,7 @@ components:
         member_name:
           type: string
           format: text
+          description: member's name
     Members:
       type: object
       description: Request object containing an array of member ids. The id must be an X-Road member id or subsystem id
@@ -6334,9 +7798,9 @@ components:
       description:
         <p>The enum can have three different values</p>
         <ul>
-          <li>PRIMARY, which is the primary node in a high availability setup</li>
-          <li>SECONDARY, which is a secondary node in a high availability setup – a read-only server</li>
-          <li>STANDALONE,when there are no load balancer or high availability configured</li>
+        <li>PRIMARY, which is the primary node in a high availability setup</li>
+        <li>SECONDARY, which is a secondary node in a high availability setup – a read-only server</li>
+        <li>STANDALONE,when there are no load balancer or high availability configured</li>
         </ul>
       example: PRIMARY
       enum:
@@ -6351,13 +7815,50 @@ components:
       properties:
         node_type:
           $ref: '#/components/schemas/NodeType'
+    AuthProviderType:
+      type: string
+      format: enum
+      description:
+        <p>The enum can have three different values</p>
+        <ul>
+        <li>PAM</li>
+        <li>DATABASE</li>
+        </ul>
+      example: PAM
+      enum:
+        - PAM
+        - DATABASE
+    AuthProviderTypeResponse:
+      type: object
+      description: Response object containing the authentication provider type of the Security Server
+      required:
+        - auth_provider_type
+      properties:
+        auth_provider_type:
+          $ref: '#/components/schemas/AuthProviderType'
     OcspResponder:
+      type: object
+      description: OCSP responder
+      required:
+        - url
+        - cost_type
+      properties:
+        url:
+          type: string
+          format: url
+          description: url of the OCSP responder
+          example: http://dev.xroad.rocks:123
+          minLength: 1
+          maxLength: 255
+          readOnly: true
+        cost_type:
+          $ref: '#/components/schemas/CostType'
+    OcspResponderDiagnostics:
       type: object
       description: OCSP responder diagnostics
       required:
         - url
         - status_class
-        - status_code
         - next_update_at
       properties:
         url:
@@ -6368,10 +7869,10 @@ components:
           minLength: 1
           maxLength: 255
           readOnly: true
+        cost_type:
+          $ref: '#/components/schemas/CostType'
         status_class:
           $ref: '#/components/schemas/DiagnosticStatusClass'
-        status_code:
-          $ref: '#/components/schemas/OcspStatus'
         prev_update_at:
           type: string
           format: date-time
@@ -6388,25 +7889,15 @@ components:
           minLength: 24
           maxLength: 24
           readOnly: true
-    OcspStatus:
-      type: string
-      format: enum
-      description: OCSP responder status
-      example: SUCCESS
-      enum:
-        - SUCCESS # Everything ok
-        - ERROR_CODE_OCSP_CONNECTION_ERROR # Unable to connect to the OCSP responder.
-        - ERROR_CODE_OCSP_FAILED # Unable to fetch response from the OCSP responder.
-        - ERROR_CODE_OCSP_RESPONSE_INVALID # Unable to parse the OCSP response.
-        - ERROR_CODE_OCSP_UNINITIALIZED # Status request not sent yet.
-        - ERROR_CODE_OCSP_RESPONSE_UNVERIFIED # Unable to verify OCSP response.
-        - UNKNOWN
+        error:
+          $ref: '#/components/schemas/CodeWithDetails'
     OrphanInformation:
       type: object
       properties:
         orphans_exist:
           type: boolean
           default: false
+          description: whether or not orphans exist in the database
     SecurityServer:
       type: object
       description: security server information
@@ -6452,6 +7943,46 @@ components:
           description: security server address (ip or name)
           example: 192.168.1.100
           maxLength: 255
+    MaintenanceModeMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          description: optional message describing maintenance mode
+          format: text
+          maxLength: 255
+          pattern: '^[a-zA-Z0-9-_,.;:!? ]*$'
+      example:
+        message: End on 14. May
+    MaintenanceMode:
+      allOf:
+        - $ref: '#/components/schemas/MaintenanceModeMessage'
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/MaintenanceModeStatus'
+        is_management_services_provider:
+          type: boolean
+          description: is this Security server provider of management services
+          example: false
+          readOnly: true
+      required:
+        - status
+        - is_management_services_provider
+      example:
+        status: ENABLED_MAINTENANCE_MODE
+        message: End on 14. May
+        is_management_services_provider: false
+    MaintenanceModeStatus:
+      type: string
+      format: enum
+      description: Maintenance Mode status
+      example: ENABLED_MAINTENANCE_MODE
+      enum:
+        - PENDING_ENABLE_MAINTENANCE_MODE # Successful enable maintenance mode request was made and waiting for global configuration refresh
+        - ENABLED_MAINTENANCE_MODE # Maintenance mode enabled
+        - PENDING_DISABLE_MAINTENANCE_MODE # Successful disable maintenance mode request was made and waiting for global configuration refresh
+        - DISABLED_MAINTENANCE_MODE # Maintenance mode disabled
     SecurityServerAddress:
       type: object
       required:
@@ -6465,6 +7996,27 @@ components:
           maxLength: 255
       example:
         address: 127.0.0.1
+    ClientName:
+      type: object
+      required:
+        - client_name
+      properties:
+        client_name:
+          type: string
+          description: Client name. Cannot contain colons, semicolons, slashes, backslashes, percent signs or control characters
+          format: text
+          minLength: 1
+          maxLength: 255
+      example:
+        client_name: Subsystem Name
+    SecurityServerAddressStatus:
+      type: object
+      description: Security Server address with status
+      properties:
+        current_address:
+          $ref: '#/components/schemas/SecurityServerAddress'
+        requested_change:
+          $ref: '#/components/schemas/SecurityServerAddress'
     Service:
       type: object
       description: service for the service description
@@ -6473,6 +8025,8 @@ components:
         - service_code
         - url
         - timeout
+        - service_description_id
+        - client_id
       properties:
         id:
           type: string
@@ -6481,6 +8035,17 @@ components:
           example: CS:ORG:Client:myService.v1
           minLength: 1
           maxLength: 1279
+        service_description_id:
+          type: string
+          description: unique identifier
+          example: 123
+        client_id:
+          type: string
+          format: text
+          description: <instance_id>:<member_class>:<member_code>:<subsystem>(optional)
+          example: FI:GOV:123:ABC
+          minLength: 1
+          maxLength: 255
         full_service_code:
           type: string
           format: text
@@ -6594,6 +8159,15 @@ components:
         service_code:
           type: string
           example: example_service_code
+          description: service code
+        client_id:
+          type: string
+          format: text
+          description: <instance_id>:<member_class>:<member_code>:<subsystem>(optional)
+          example: FI:GOV:123:ABC
+          readOnly: true
+          minLength: 1
+          maxLength: 255
         method:
           type: string
           description: http method mapped to this endpoint
@@ -6800,6 +8374,17 @@ components:
           default: false
         type:
           $ref: '#/components/schemas/ServiceType'
+    ServicePrioritizationStrategy:
+      type: string
+      format: enum
+      description: service prioritization strategy
+      example: FREE_FIRST
+      enum:
+        - ONLY_FREE
+        - ONLY_PAID
+        - FREE_FIRST
+        - PAID_FIRST
+        - NONE
     ServiceType:
       type: string
       format: text
@@ -6825,6 +8410,7 @@ components:
       required:
         - name
         - url
+        - cost_type
       properties:
         name:
           type: string
@@ -6840,13 +8426,14 @@ components:
           example: http://dev.xroad.rocks:123
           minLength: 1
           maxLength: 255
+        cost_type:
+          $ref: '#/components/schemas/CostType'
     TimestampingServiceDiagnostics:
       type: object
       description: timestamping service diagnostics
       required:
         - url
         - status_class
-        - status_code
         - prev_update_at
       properties:
         url:
@@ -6857,10 +8444,10 @@ components:
           minLength: 1
           maxLength: 255
           readOnly: true
+        cost_type:
+          $ref: '#/components/schemas/CostType'
         status_class:
           $ref: '#/components/schemas/DiagnosticStatusClass'
-        status_code:
-          $ref: '#/components/schemas/TimestampingStatus'
         prev_update_at:
           type: string
           format: date-time
@@ -6869,18 +8456,17 @@ components:
           minLength: 24
           maxLength: 24
           readOnly: true
-    TimestampingStatus:
-      type: string
-      format: enum
-      description: timestamping status
-      example: SUCCESS
+        error:
+          $ref: '#/components/schemas/CodeWithDetails'
+    CostType:
+      description: cost type for services like TSP-s and OCSP responders
       enum:
-        - SUCCESS # Everything ok
-        - ERROR_CODE_TIMESTAMP_REQUEST_TIMED_OUT # Connection to the timestamp server timed out. Check the network connection to the timestamp server.
-        - ERROR_CODE_MALFORMED_TIMESTAMP_SERVER_URL # Malformed timestamp server URL. Check the URL.
-        - ERROR_CODE_TIMESTAMP_UNINITIALIZED # Connection ok, no timestamp request made yet.
-        - ERROR_CODE_INTERNAL # Internal error occurred.
-        - UNKNOWN
+        - FREE
+        - PAID
+        - UNDEFINED
+      example: FREE
+      format: enum
+      type: string
     Token:
       type: object
       description: Token. Also includes the possible actions that can be done to this object,
@@ -7071,5 +8657,75 @@ components:
         java_runtime_version:
           type: string
           description: java runtime version string from java.runtime.version system property
+        global_configuration_version:
+          type: integer
+          description: global configuration version
+    DataspaceProvisioningStatus:
+      type: object
+      description: aggregate status of data space membership credential provisioning
+      required:
+        - enabled
+        - auth_cert_registered
+        - participant_contexts
+      properties:
+        enabled:
+          type: boolean
+          readOnly: true
+          description: whether data space provisioning is enabled on this security server
+        auth_cert_registered:
+          type: boolean
+          readOnly: true
+          description: whether the authentication certificate is in REGISTERED state
+        participant_contexts:
+          type: array
+          readOnly: true
+          description: provisioning status per participant context
+          items:
+            $ref: '#/components/schemas/DataspaceParticipantContextStatus'
+    DataspaceParticipantContextStatus:
+      type: object
+      description: provisioning status for one data space participant context
+      required:
+        - participant_id
+        - kind
+        - context_created
+        - credential_status
+      properties:
+        participant_id:
+          type: string
+          readOnly: true
+          description: participant context id
+        kind:
+          type: string
+          readOnly: true
+          description: participant context kind
+          enum:
+            - SYSTEM
+            - MEMBER
+        context_created:
+          type: boolean
+          readOnly: true
+          description: whether the participant context has been created in IdentityHub
+        credential_status:
+          type: string
+          readOnly: true
+          description: status of the X-Road membership credential
+          enum:
+            - ISSUED
+            - PENDING
+            - ABSENT
+            - ERROR
+            - UNKNOWN
+        identity_status:
+          type: string
+          readOnly: true
+          description: bound-identity verification state, present only for MEMBER contexts
+          enum:
+            - OK
+            - MISMATCH
+            - VERSION_UNSUPPORTED
+            - UNBOUND
+            - DRIFTED
+            - UNKNOWN
 security:
   - ApiKeyAuth: []

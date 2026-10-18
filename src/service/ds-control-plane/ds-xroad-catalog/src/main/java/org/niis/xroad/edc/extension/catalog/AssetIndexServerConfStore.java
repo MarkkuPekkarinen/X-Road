@@ -1,0 +1,256 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.edc.extension.catalog;
+
+import ee.ria.xroad.common.identifier.ServiceId;
+
+import jakarta.annotation.Nullable;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.edc.connector.controlplane.asset.spi.domain.Asset;
+import org.eclipse.edc.connector.controlplane.asset.spi.index.AssetIndex;
+import org.eclipse.edc.spi.query.Criterion;
+import org.eclipse.edc.spi.query.QuerySpec;
+import org.eclipse.edc.spi.result.StoreResult;
+import org.eclipse.edc.spi.types.domain.DataAddress;
+import org.niis.xroad.ds.identity.ParticipantIdentifierScheme;
+import org.niis.xroad.serverconf.ServerConfProvider;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
+
+import static org.eclipse.edc.spi.constants.CoreConstants.EDC_NAMESPACE;
+
+/**
+ * Read-only {@link AssetIndex} backed by live {@link ServerConfProvider} reads. Also serves
+ * as {@code DataAddressResolver}, which the {@code AssetIndex} contract folds in. Lookups and deletes
+ * are scoped to the participant context EDC passes; a null context resolves nothing.
+ */
+@Slf4j
+@RequiredArgsConstructor
+class AssetIndexServerConfStore implements AssetIndex {
+
+    private static final String READ_ONLY_MESSAGE = "Read-only: managed by ServerConf";
+    private static final String HTTP_DATA_TYPE = "HttpData";
+    private static final String BASE_URL_PROPERTY = EDC_NAMESPACE + "baseUrl";
+
+    private final ServerConfProvider serverConfProvider;
+    private final BuiltinServiceCatalog builtinServiceCatalog;
+    private final StoreEnumerationCache<Asset> cache;
+    private final ServiceContextResolver serviceContextResolver;
+    private final QueryEvaluator<Asset> queryEvaluator = new QueryEvaluator<>(Asset::getId, Asset::getParticipantContextId);
+
+    @Override
+    public Stream<Asset> queryAssets(QuerySpec querySpec) {
+        if (log.isTraceEnabled()) {
+            log.trace("queryAssets criteria={} offset={} limit={}",
+                    querySpec.getFilterExpression(), querySpec.getOffset(), querySpec.getLimit());
+        }
+        var snapshot = cache.getEnumeration(this::buildAssetList);
+        if (log.isTraceEnabled()) {
+            log.trace("queryAssets collected={} assets before filtering", snapshot.size());
+        }
+        return queryEvaluator.evaluate(snapshot.stream(), querySpec);
+    }
+
+    private List<Asset> buildAssetList() {
+        var assets = new ArrayList<Asset>();
+        var provisionedMemberContextIds = serviceContextResolver.provisionedMemberContextIds();
+        for (var member : serverConfProvider.getMembers()) {
+            for (var serviceId : serverConfProvider.getAllServices(member)) {
+                var contexts = serviceContextResolver.resolveContexts(serviceId, provisionedMemberContextIds);
+                for (var ctxId : contexts) {
+                    assets.add(AssetMapper.toAsset(serviceId, ctxId));
+                }
+                if (shouldPublishSystemAsset(serviceId)) {
+                    assets.add(AssetMapper.toAsset(serviceId, ParticipantIdentifierScheme.SYSTEM_SEGMENT));
+                }
+            }
+        }
+        for (var serviceId : builtinServiceCatalog.activeServiceIds()) {
+            assets.add(AssetMapper.toAsset(serviceId, ParticipantIdentifierScheme.SYSTEM_SEGMENT));
+        }
+        serviceContextResolver.resolveSyntheticServices()
+                .forEach(serviceId -> assets.add(AssetMapper.toAsset(serviceId, ParticipantIdentifierScheme.SYSTEM_SEGMENT)));
+        return assets;
+    }
+
+    /**
+     * Whether an enumerated, system-eligible service should get a SYSTEM-context Asset: any
+     * enabled service, or a disabled one that still has admin-configured access rights — matching
+     * {@code ContractDefinitionServerConfStore}/{@code PolicyDefinitionServerConfStore}, which keep
+     * publishing a per-subject Contract/Policy under SYSTEM for an ACL-authorized subject
+     * regardless of disabled state. The services this is called for come from
+     * {@link ServerConfProvider#getAllServices}, so existence is already guaranteed and is not
+     * re-checked here.
+     */
+    private boolean shouldPublishSystemAsset(ServiceId serviceId) {
+        if (!serviceContextResolver.isSystemEligible(serviceId)) {
+            return false;
+        }
+        if (serverConfProvider.getDisabledNotice(serviceId) == null) {
+            return true;
+        }
+        return !serverConfProvider.getServiceAccessRights(serviceId).isEmpty();
+    }
+
+    @Override
+    @Nullable
+    public Asset findById(@Nullable String participantContextId, String assetId) {
+        if (participantContextId == null) {
+            log.trace("findById assetId={} has no participant context, returning null", assetId);
+            return null;
+        }
+        return cache.findById(participantContextId, assetId,
+                serviceContextResolver.isCacheableRequestedContext(participantContextId),
+                () -> findByIdInternal(participantContextId, assetId));
+    }
+
+    @Nullable
+    private Asset findByIdInternal(String participantContextId, String assetId) {
+        log.trace("findById assetId={}", assetId);
+        var builtinServiceId = builtinServiceCatalog.findServiceId(assetId);
+        if (builtinServiceId != null) {
+            log.trace("findById assetId={} matched builtin", assetId);
+            return AssetMapper.toAsset(builtinServiceId, ParticipantIdentifierScheme.SYSTEM_SEGMENT);
+        }
+        if (serviceContextResolver.isSystemAddressed(participantContextId)) {
+            var systemServiceId = serviceContextResolver.resolveSystemService(assetId);
+            if (systemServiceId == null || !serviceContextResolver.isSystemPublished(systemServiceId)) {
+                return null;
+            }
+            return AssetMapper.toAsset(systemServiceId, ParticipantIdentifierScheme.SYSTEM_SEGMENT);
+        }
+        var serviceId = AssetMapper.decodeAssetId(assetId);
+        if (serviceId == null) {
+            log.trace("findById assetId={} decode failed, returning null", assetId);
+            return null;
+        }
+        if (log.isTraceEnabled()) {
+            log.trace("findById decoded serviceId={}", serviceId.asEncodedId());
+        }
+        if (!serverConfProvider.serviceExists(serviceId)) {
+            log.trace("findById assetId={} service does not exist, returning null", assetId);
+            return null;
+        }
+        var resolvedContexts = serviceContextResolver.resolveContextsByIdWithSystem(serviceId);
+        var ctxId = ServiceContextResolver.select(resolvedContexts, participantContextId);
+        if (ctxId == null) {
+            log.trace("findById assetId={} has no provisioned context, returning null", assetId);
+            return null;
+        }
+        return AssetMapper.toAsset(serviceId, ctxId);
+    }
+
+    @Override
+    @Nullable
+    public DataAddress resolveForAsset(@Nullable String participantContextId, String assetId) {
+        if (participantContextId == null) {
+            log.trace("resolveForAsset assetId={} has no participant context, returning null", assetId);
+            return null;
+        }
+        log.trace("resolveForAsset assetId={}", assetId);
+        var builtinServiceId = builtinServiceCatalog.findServiceId(assetId);
+        if (builtinServiceId != null) {
+            log.trace("resolveForAsset assetId={} matched builtin, baseUrl={}", assetId, builtinServiceCatalog.serverProxyUrl());
+            return buildHttpDataTypeAddress(builtinServiceCatalog.serverProxyUrl());
+        }
+        var cached = cache.getDataAddress(participantContextId, assetId);
+        if (cached != null) {
+            return cached;
+        }
+        var result = resolveForAssetInternal(assetId);
+        cache.cacheDataAddress(participantContextId, assetId, result);
+        return result;
+    }
+
+    @Nullable
+    private DataAddress resolveForAssetInternal(String assetId) {
+        var serviceId = AssetMapper.decodeAssetId(assetId);
+        if (serviceId == null) {
+            log.trace("resolveForAsset assetId={} decode failed, returning null", assetId);
+            return null;
+        }
+        String serviceAddress;
+        try {
+            serviceAddress = serverConfProvider.getServiceAddress(serviceId);
+        } catch (Exception e) {
+            log.warn("Failed to resolve service address for asset '{}': {}", assetId, e.getMessage());
+            return null;
+        }
+        if (serviceAddress == null) {
+            log.trace("resolveForAsset assetId={} no address found, returning null", assetId);
+            return null;
+        }
+        log.trace("resolveForAsset assetId={} resolved baseUrl={}", assetId, serviceAddress);
+        return buildHttpDataTypeAddress(serviceAddress);
+    }
+
+    private static DataAddress buildHttpDataTypeAddress(String baseUrl) {
+        return DataAddress.Builder.newInstance()
+                .type(HTTP_DATA_TYPE)
+                .property(BASE_URL_PROPERTY, baseUrl)
+                .property("proxyPath", "true")
+                .property("proxyMethod", "true")
+                .property("proxyBody", "true")
+                .property("proxyQueryParams", "true")
+                .build();
+    }
+
+    @Override
+    public long countAssets(List<Criterion> criteria) {
+        if (log.isTraceEnabled()) {
+            log.trace("countAssets criteria count={}", criteria.size());
+        }
+        var spec = QuerySpec.Builder.newInstance()
+                .filter(criteria)
+                .limit(Integer.MAX_VALUE)
+                .build();
+        var count = queryAssets(spec).count();
+        log.trace("countAssets result={}", count);
+        return count;
+    }
+
+    @Override
+    public StoreResult<Void> create(Asset asset) {
+        log.trace("create assetId={} read-only, returning alreadyExists", asset.getId());
+        return StoreResult.alreadyExists(READ_ONLY_MESSAGE);
+    }
+
+    @Override
+    public StoreResult<Asset> deleteById(String participantContextId, String assetId) {
+        log.trace("deleteById assetId={} read-only, returning notFound", assetId);
+        return StoreResult.notFound(READ_ONLY_MESSAGE);
+    }
+
+    @Override
+    public StoreResult<Asset> updateAsset(Asset asset) {
+        log.trace("updateAsset assetId={} read-only, returning notFound", asset.getId());
+        return StoreResult.notFound(READ_ONLY_MESSAGE);
+    }
+}

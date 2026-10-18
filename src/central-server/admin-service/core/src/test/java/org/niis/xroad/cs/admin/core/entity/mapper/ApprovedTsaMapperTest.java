@@ -5,17 +5,17 @@
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,14 +28,17 @@
 package org.niis.xroad.cs.admin.core.entity.mapper;
 
 import ee.ria.xroad.common.TestCertUtil;
+import ee.ria.xroad.common.util.TimeUtils;
 
 import org.junit.jupiter.api.Test;
 import org.niis.xroad.cs.admin.api.domain.ApprovedTsa;
 import org.niis.xroad.cs.admin.core.converter.CertificateConverter;
 import org.niis.xroad.cs.admin.core.converter.KeyUsageConverter;
 import org.niis.xroad.cs.admin.core.entity.ApprovedTsaEntity;
+import org.niis.xroad.cs.admin.core.repository.ApprovedCaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigInteger;
@@ -45,17 +48,19 @@ import java.util.Set;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.niis.xroad.cs.admin.api.domain.ApprovedTsa.ApprovedTsaCost.UNDEFINED;
+import static org.niis.xroad.common.CostType.FREE;
+import static org.niis.xroad.common.CostType.UNDEFINED;
 import static org.niis.xroad.cs.admin.api.dto.KeyUsageEnum.NON_REPUDIATION;
 
-@SpringBootTest(classes = {ApprovedTsaMapperImpl.class, CertificateConverter.class, KeyUsageConverter.class})
+@ActiveProfiles("test")
+@SpringBootTest(classes = {ApprovedTsaMapperImpl.class, CertificateConverter.class, KeyUsageConverter.class, ApprovedCaRepository.class})
 class ApprovedTsaMapperTest {
 
     private static final int ID = 123;
     private static final String URL = "http://test.url";
     private static final String NAME = "name";
-    private static final Instant VALID_FROM = Instant.now().minus(1, DAYS);
-    private static final Instant VALID_TO = Instant.now().plus(2, DAYS);
+    private static final Instant VALID_FROM = TimeUtils.now().minus(1, DAYS);
+    private static final Instant VALID_TO = TimeUtils.now().plus(2, DAYS);
     private static final X509Certificate CERTIFICATE = TestCertUtil.getTspCert();
 
     private static final Instant TEST_TSA_CERT_VALID_FROM = Instant.ofEpochMilli(1354189986000L); //2012-11-29 11:53:06Z
@@ -74,7 +79,7 @@ class ApprovedTsaMapperTest {
         assertThat(result.getValidFrom()).isEqualTo(VALID_FROM);
         assertThat(result.getValidTo()).isEqualTo(VALID_TO);
 
-        assertThat(result.getCertificate().getHash()).isEqualTo("05A10EEBDB0CD9679E4C85A78848145EF1F00BEA");
+        assertThat(result.getCertificate().getHash()).isEqualTo("094D62D75ECC25D6BD9EA83C7B34678016BB72BB80118FF6EC7E4D383A678CD1");
         assertThat(result.getCertificate().getIssuerCommonName()).isEqualTo("AdminCA1");
         assertThat(result.getCertificate().getIssuerDistinguishedName()).isEqualTo("C=SE, O=EJBCA Sample, CN=AdminCA1");
         assertThat(result.getCertificate().getKeyUsages()).isEqualTo(Set.of(NON_REPUDIATION));
@@ -101,16 +106,17 @@ class ApprovedTsaMapperTest {
         assertThat(result.getCertificate().getVersion()).isEqualTo(3);
 
         // stub values. Will be implemented in separate story
-        assertThat(result.getCost()).isEqualTo(UNDEFINED);
+        assertThat(result.getCostType()).isEqualTo(UNDEFINED);
         assertThat(result.getTimestampingInterval()).isEqualTo(60);
     }
 
     @Test
     void toEntity() throws Exception {
-        final ApprovedTsaEntity result = approvedTsaMapper.toEntity(URL, CERTIFICATE.getEncoded());
+        final ApprovedTsaEntity result = approvedTsaMapper.toEntity(URL, CERTIFICATE.getEncoded(), FREE);
 
         assertThat(result.getName()).isEqualTo("timestamp1");
         assertThat(result.getUrl()).isEqualTo(URL);
+        assertThat(result.getCostType()).isEqualTo(FREE.name());
         assertThat(result.getCert()).isEqualTo(CERTIFICATE.getEncoded());
         assertThat(result.getValidFrom()).isEqualTo(TEST_TSA_CERT_VALID_FROM);
         assertThat(result.getValidTo()).isEqualTo(TEST_TSA_CERT_VALID_TO);
@@ -121,6 +127,7 @@ class ApprovedTsaMapperTest {
 
         ReflectionTestUtils.setField(entity, "id", ID);
         entity.setUrl(URL);
+        entity.setCostType(UNDEFINED.name());
         entity.setName(NAME);
         entity.setCert(CERTIFICATE.getEncoded());
         entity.setValidFrom(VALID_FROM);

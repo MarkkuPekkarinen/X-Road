@@ -25,64 +25,32 @@
    THE SOFTWARE.
  -->
 <template>
-  <v-app class="xrd-app">
-    <!-- Dont show toolbar or footer in login view -->
-    <app-toolbar v-if="loginView" />
-    <v-main app>
-      <transition name="fade" mode="out-in">
-        <router-view />
-      </transition>
-    </v-main>
-    <snackbar />
-    <app-footer v-if="loginView" />
-  </v-app>
+  <XrdApp :login-view="loginView" @logout="logout">
+    <router-view />
+  </XrdApp>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 // The root component of the Vue app
-import Vue from 'vue';
-import Snackbar from '@/components/ui/Snackbar.vue';
-import AppFooter from '@/components/layout/AppFooter.vue';
-import AppToolbar from '@/components/layout/AppToolbar.vue';
+import { computed } from 'vue';
+
+import { useRoute, useRouter } from 'vue-router';
+
+import { XrdApp } from '@niis/shared-ui';
+
 import { RouteName } from '@/global';
+import { useUser } from '@/store/modules/user';
 
-export default Vue.extend({
-  name: 'App',
+const route = useRoute();
+const router = useRouter();
+const userStore = useUser();
 
-  components: {
-    AppFooter,
-    AppToolbar,
-    Snackbar,
-  },
-  computed: {
-    loginView(): boolean {
-      return this.$route.name !== RouteName.Login;
-    },
-  },
+const loginView = computed(() => {
+  return route.name === RouteName.Login;
 });
+
+function logout() {
+  userStore.logout();
+  router.replace({ name: RouteName.Login });
+}
 </script>
-
-<style lang="scss">
-@import './assets/global-style';
-</style>
-
-<style lang="scss" scoped>
-@import '~styles/colors';
-
-.fade-enter-active,
-.fade-leave-active {
-  transition-duration: 0.2s;
-  transition-property: opacity;
-  transition-timing-function: ease;
-}
-
-.fade-enter,
-.fade-leave-active {
-  opacity: 0;
-}
-
-// Set the app background color
-.theme--light.v-application.xrd-app {
-  background: $XRoad-WarmGrey30;
-}
-</style>

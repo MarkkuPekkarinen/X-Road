@@ -1,13 +1,22 @@
 ---
-debug: true
+debug: false
 
 spring:
   cache:
     type: none
   jpa:
-    show-sql: true
+    show-sql: false
+  cloud:
+    vault:
+      host: mock-server
+      port: 1080
+      scheme: http
+
+signerProxyMockUri: http://mock-server:1080
 
 xroad:
+  common-rpc:
+    use-tls: false
   admin-service:
     cache-default-ttl: -1
     cache-api-key-ttl: -1

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -35,4 +35,5 @@ import org.niis.xroad.cs.admin.api.domain.SubsystemId;
 public class SubsystemCreationRequest {
     ClientId memberId;
     SubsystemId subsystemId;
+    String subsystemName;
 }

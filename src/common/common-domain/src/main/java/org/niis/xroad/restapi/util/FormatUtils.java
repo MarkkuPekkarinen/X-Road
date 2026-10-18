@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,7 +25,6 @@
  */
 package org.niis.xroad.restapi.util;
 
-import ee.ria.xroad.common.conf.serverconf.model.ServiceType;
 
 import org.apache.commons.lang3.StringUtils;
 import org.niis.xroad.common.exception.NotFoundException;
@@ -39,7 +38,7 @@ import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Date;
 
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.ERROR_ID_NOT_A_NUMBER;
+import static org.niis.xroad.common.core.exception.ErrorCode.ERROR_ID_NOT_A_NUMBER;
 
 /**
  * Format utils
@@ -56,7 +55,6 @@ public final class FormatUtils {
 
     /**
      * Converts Date to OffsetDateTime with ZoneOffset.UTC
-     *
      * @param date
      * @return OffsetDateTime with offset ZoneOffset.UTC
      * @see ZoneOffset#UTC
@@ -67,7 +65,6 @@ public final class FormatUtils {
 
     /**
      * Converts Instant to OffsetDateTime with ZoneOffset.UTC
-     *
      * @param instant
      * @return OffsetDateTime with offset ZoneOffset.UTC
      * @see ZoneOffset#UTC
@@ -95,7 +92,6 @@ public final class FormatUtils {
      * Validates a URL. A valid URL will start with either <i>http://</i> or <i>https://</i>. The host part of the URL
      * should also conform to <a href="http://www.ietf.org/rfc/rfc3490.txt">RFC 3490</a>
      * and {@link FormatUtils#URL_HOST_REGEX}
-     *
      * @param url
      * @return true or false depending on the validity of the provided url
      */
@@ -116,26 +112,11 @@ public final class FormatUtils {
         return StringUtils.startsWith(url, HTTPS_PROTOCOL);
     }
 
-    /**
-     * Get the full service name (e.g. myService.v1) from ServiceType object
-     *
-     * @param serviceType
-     * @return full service name as String
-     */
-    public static String getServiceFullName(ServiceType serviceType) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(serviceType.getServiceCode());
-        if (!StringUtils.isEmpty(serviceType.getServiceVersion())) {
-            sb.append(".").append(serviceType.getServiceVersion());
-        }
-        return sb.toString();
-    }
 
     /**
      * in case of NumberFormatException we throw ResourceNotFoundException. Client should not
      * know about id parameter details, such as "it should be numeric" -
      * the resource with given id just cant be found, and that's all there is to it
-     *
      * @param id as String
      * @return id as Long
      */
@@ -144,14 +125,13 @@ public final class FormatUtils {
         try {
             groupId = Long.valueOf(id);
         } catch (NumberFormatException nfe) {
-            throw new NotFoundException(ERROR_ID_NOT_A_NUMBER, nfe);
+            throw new NotFoundException(nfe, ERROR_ID_NOT_A_NUMBER.build());
         }
         return groupId;
     }
 
     /**
      * Count occurrences of searched char
-     *
      * @param from
      * @param searched
      * @return occurences, or zero if String was null
@@ -166,7 +146,6 @@ public final class FormatUtils {
 
     /**
      * Encode a string to a base64 string
-     *
      * @param toBeEncoded string to be encoded
      * @return
      */

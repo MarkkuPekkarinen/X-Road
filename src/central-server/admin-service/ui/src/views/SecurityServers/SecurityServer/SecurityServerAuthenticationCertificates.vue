@@ -25,75 +25,86 @@
    THE SOFTWARE.
  -->
 <template>
-  <main
-    data-test="security-server-authentication-certificates-view"
-    class="mt-8"
-  >
+  <XrdSubView data-test="security-server-authentication-certificates-view">
     <!-- Table -->
     <v-data-table
+      class="xrd bg-surface-container xrd-rounded-12 border"
+      item-key="id"
+      hide-default-footer
       :loading="loading"
       :headers="headers"
       :items="authenticationCertificates"
       :must-sort="true"
       :items-per-page="-1"
-      class="elevation-0 data-table"
-      item-key="id"
       :loader-height="2"
-      hide-default-footer
     >
       <template #[`item.issuer_common_name`]="{ item }">
-        <div class="icon-cell" @click="navigateToCertificateDetails(item.id)">
-          <xrd-icon-base icon-name="certificate" class="mr-4"
-            ><XrdIconCertificate
-          /></xrd-icon-base>
-          {{ item.issuer_common_name }}
-        </div>
+        <XrdLabelWithIcon
+          icon="assured_workload"
+          clickable
+          semi-bold
+          :label="item.issuer_common_name"
+          @navigate="navigateToCertificateDetails(item.id)"
+        />
       </template>
       <template #[`item.not_after`]="{ item }">
-        {{ item.not_after | formatDateTime }}
+        <XrdDateTime :value="item.not_after" />
       </template>
 
       <template #[`item.button`]="{ item }">
         <div class="cs-table-actions-wrap">
-          <xrd-button
+          <XrdBtn
             v-if="hasDeletePermission"
             data-test="delete-AC-button"
-            text
-            :outlined="false"
+            variant="text"
+            text="action.delete"
+            color="tertiary"
             @click="openDeleteConfirmationDialog(item.id)"
-          >
-            {{ $t('action.delete') }}
-          </xrd-button>
+          />
         </div>
-      </template>
-
-      <template #footer>
-        <div class="custom-footer"></div>
       </template>
     </v-data-table>
 
-    <DeleteAuthenticationCertificateDialog
-      v-if="showDeleteConfirmationDialog"
-      :authentication-certificate-id="authCertIdForDeletion"
+    <delete-authentication-certificate-dialog
+      v-if="securityServerId && authCertIdForDeletion && showDeleteConfirmationDialog"
+      :authentication-certificate-id="authCertIdForDeletion.toString()"
+      :security-server-id="securityServerId"
       @cancel="cancelDeletion"
       @delete="finishDeletion"
-    >
-    </DeleteAuthenticationCertificateDialog>
-  </main>
+    />
+  </XrdSubView>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { DataTableHeader } from 'vuetify';
-import DeleteAuthenticationCertificateDialog from '@/components/securityServers/DeleteAuthenticationCertificateDialog.vue';
-import { Permissions, RouteName } from '@/global';
-import { userStore } from '@/store/modules/user';
-import { mapState, mapStores } from 'pinia';
-import { SecurityServerAuthenticationCertificateDetails } from '@/openapi-types';
-import { securityServerAuthCertStore } from '@/store/modules/security-servers-authentication-certificates';
+import { defineComponent } from 'vue';
 
-export default Vue.extend({
-  components: { DeleteAuthenticationCertificateDialog },
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
+import { mapState, mapStores } from 'pinia';
+
+import { XrdBtn, XrdDateTime, XrdLabelWithIcon, XrdSubView } from '@niis/shared-ui';
+
+import { Permissions, RouteName } from '@/global';
+import { SecurityServerAuthenticationCertificateDetails, SecurityServerId } from '@/openapi-types';
+import { useSecurityServer } from '@/store/modules/security-servers';
+import { useSecurityServerAuthCert } from '@/store/modules/security-servers-authentication-certificates';
+import { useUser } from '@/store/modules/user';
+
+import DeleteAuthenticationCertificateDialog from './dialogs/DeleteAuthenticationCertificateDialog.vue';
+
+export default defineComponent({
+  components: {
+    XrdSubView,
+    XrdDateTime,
+    DeleteAuthenticationCertificateDialog,
+    XrdLabelWithIcon,
+    XrdBtn,
+  },
+  props: {
+    serverId: {
+      type: String,
+      required: true,
+    },
+  },
   data() {
     return {
       loading: false,
@@ -102,64 +113,62 @@ export default Vue.extend({
     };
   },
   computed: {
-    ...mapStores(securityServerAuthCertStore),
-    ...mapState(userStore, ['hasPermission']),
+    ...mapStores(useSecurityServerAuthCert),
+    ...mapStores(useSecurityServer),
+    ...mapState(useUser, ['hasPermission']),
     authenticationCertificates(): SecurityServerAuthenticationCertificateDetails[] {
       return this.securityServerAuthCertStore.authenticationCertificates;
     },
     headers(): DataTableHeader[] {
       return [
         {
-          text: this.$t(
-            'securityServers.securityServer.certificationAuthority',
-          ) as string,
+          title: this.$t('securityServers.securityServer.certificationAuthority') as string,
           align: 'start',
-          value: 'issuer_common_name',
-          class: 'xrd-table-header',
+          key: 'issuer_common_name',
         },
         {
-          text: this.$t(
-            'securityServers.securityServer.serialNumber',
-          ) as string,
+          title: this.$t('securityServers.securityServer.serialNumber') as string,
           align: 'start',
-          value: 'serial',
-          class: 'xrd-table-header',
+          key: 'serial',
         },
         {
-          text: this.$t('securityServers.securityServer.subject') as string,
+          title: this.$t('securityServers.securityServer.subject') as string,
           align: 'start',
-          value: 'subject_distinguished_name',
-          class: 'xrd-table-header',
+          key: 'subject_distinguished_name',
         },
         {
-          text: this.$t('securityServers.securityServer.expires') as string,
+          title: this.$t('securityServers.securityServer.expires') as string,
           align: 'start',
-          value: 'not_after',
-          class: 'xrd-table-header',
+          key: 'not_after',
         },
         {
-          text: '',
-          value: 'button',
+          title: '',
+          key: 'button',
           sortable: false,
-          class: 'xrd-table-header',
         },
       ];
     },
+    securityServerId(): SecurityServerId | undefined {
+      return this.securityServerStore.current?.server_id;
+    },
   },
-  created() {
-    this.fetchSecurityServerAuthenticationCertificates();
+  watch: {
+    serverId: {
+      immediate: true,
+      handler(serverId) {
+        this.fetchSecurityServerAuthenticationCertificates(serverId);
+      },
+    },
   },
   methods: {
-    fetchSecurityServerAuthenticationCertificates(): void {
+    fetchSecurityServerAuthenticationCertificates(serverId: string): void {
       this.loading = true;
-      this.securityServerAuthCertStore
-        .fetch(this.$route.params.serverId)
-        .finally(() => (this.loading = false));
+      this.securityServerAuthCertStore.fetch(serverId).finally(() => (this.loading = false));
     },
     hasDeletePermission(): boolean {
       return this.hasPermission(Permissions.DELETE_SECURITY_SERVER_AUTH_CERT);
     },
-    openDeleteConfirmationDialog(authCertId: number): void {
+    openDeleteConfirmationDialog(authCertId?: number): void {
       this.authCertIdForDeletion = authCertId;
       this.showDeleteConfirmationDialog = true;
     },
@@ -168,39 +177,20 @@ export default Vue.extend({
     },
     finishDeletion(): void {
       this.showDeleteConfirmationDialog = false;
-      this.fetchSecurityServerAuthenticationCertificates();
+      this.fetchSecurityServerAuthenticationCertificates(this.serverId);
     },
-    navigateToCertificateDetails(authCertId: number): void {
+    navigateToCertificateDetails(authCertId?: number): void {
+      if (!authCertId) {
+        return;
+      }
       this.$router.push({
         name: RouteName.SecurityServerAuthenticationCertificate,
         params: {
-          authenticationCertificateId: authCertId.toString(),
+          certificateId: authCertId.toString(),
         },
       });
     },
   },
 });
 </script>
-<style lang="scss" scoped>
-@import '~styles/tables';
-
-.icon-cell {
-  color: $XRoad-Purple100;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.align-fix {
-  align-items: center;
-}
-
-.margin-fix {
-  margin-top: -10px;
-}
-
-.custom-footer {
-  border-top: thin solid rgba(0, 0, 0, 0.12); /* Matches the color of the Vuetify table line */
-  height: 16px;
-}
-</style>
+<style lang="scss" scoped></style>

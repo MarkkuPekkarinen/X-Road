@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -28,6 +28,7 @@ package org.niis.xroad.cs.admin.api.dto;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
+import org.niis.xroad.globalconf.model.CsrFormat;
 
 import java.time.Instant;
 import java.util.List;
@@ -45,6 +46,11 @@ public class CertificationService {
     private Instant notBefore;
     private String certificateProfileInfo;
     private Boolean tlsAuth;
+    private CsrFormat defaultCsrFormat;
+    private String acmeServerDirectoryUrl;
+    private String acmeServerIpAddress;
+    private String authenticationCertificateProfileId;
+    private String signingCertificateProfileId;
 
     private byte[] certificate;
     private List<OcspResponder> ocspResponders;

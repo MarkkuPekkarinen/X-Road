@@ -26,13 +26,15 @@
  */
 package org.niis.xroad.cs.admin.globalconf.generator;
 
-import ee.ria.xroad.common.util.CryptoUtils;
-import ee.ria.xroad.common.util.HashCalculator;
+import ee.ria.xroad.common.crypto.identifier.DigestAlgorithm;
 
 import lombok.NonNull;
-import lombok.SneakyThrows;
 import lombok.Value;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.globalconf.util.HashCalculator;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -40,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static java.lang.String.valueOf;
 import static org.niis.xroad.cs.admin.globalconf.generator.MultipartMessage.header;
 import static org.niis.xroad.cs.admin.globalconf.generator.MultipartMessage.partBuilder;
 
@@ -51,37 +54,39 @@ public class DirectoryContentBuilder {
     private final String pathPrefix;
     private final String instanceIdentifier;
     private final HashCalculator hashCalculator;
+    private final int configurationVersion;
     private final List<ConfigurationPart> configurationParts = new ArrayList<>();
 
-    @SneakyThrows
     public DirectoryContentBuilder(
-            @NonNull String hashAlgorithmId,
+            @NonNull DigestAlgorithm hashAlgorithmId,
             @NonNull Instant expireDate,
             @NonNull String pathPrefix,
-            @NonNull String instanceIdentifier) {
+            @NonNull String instanceIdentifier,
+            int configurationVersion) {
         this.expireDate = expireDate;
         this.pathPrefix = pathPrefix;
         this.instanceIdentifier = instanceIdentifier;
+        this.configurationVersion = configurationVersion;
 
-        hashCalculator = new HashCalculator(CryptoUtils.getDigestAlgorithmURI(hashAlgorithmId));
+        hashCalculator = new HashCalculator(hashAlgorithmId);
     }
 
-    DirectoryContentBuilder contentPart(ConfigurationPart configurationPart) {
+    public DirectoryContentBuilder contentPart(ConfigurationPart configurationPart) {
         configurationParts.add(configurationPart);
         return this;
     }
 
-    DirectoryContentBuilder contentParts(Collection<ConfigurationPart> parts) {
+    public DirectoryContentBuilder contentParts(Collection<ConfigurationPart> parts) {
         this.configurationParts.addAll(parts);
         return this;
     }
 
 
-    DirectoryContentHolder build() {
+    public DirectoryContentHolder build() {
         var builder = MultipartMessage.builder();
         builder.part(partBuilder()
                 .header(header("Expire-date", EXPIRE_DATE_FORMATTER.format(expireDate)))
-                .header(header("Version", "2"))
+                .header(header("Version", valueOf(configurationVersion)))
                 .build());
         configurationParts.forEach(confPart -> builder.part(buildPart(confPart)));
         var multipartMessage = builder.build();
@@ -97,14 +102,17 @@ public class DirectoryContentBuilder {
                 .header(header("Content-identifier",
                         String.format("%s; instance='%s'", confPart.getContentIdentifier(), instanceIdentifier)))
                 .header(header("Content-location", String.format("%s/%s", pathPrefix, confPart.getFilename())))
-                .header(header("Hash-algorithm-id", hashCalculator.getAlgoURI()))
+                .header(header("Hash-algorithm-id", hashCalculator.getAlgoURI().uri()))
                 .content(calculateHash(confPart.getData()))
                 .build();
     }
 
-    @SneakyThrows
     private String calculateHash(byte[] data) {
-        return hashCalculator.calculateFromBytes(data);
+        try {
+            return hashCalculator.calculateFromBytes(data);
+        } catch (IOException | OperatorCreationException e) {
+            throw XrdRuntimeException.systemException(e);
+        }
     }
 
     @Value

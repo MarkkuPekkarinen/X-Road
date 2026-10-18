@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,15 +26,17 @@
  */
 package org.niis.xroad.securityserver.restapi.converter;
 
-import ee.ria.xroad.common.conf.serverconf.model.GroupMemberType;
-import ee.ria.xroad.common.conf.serverconf.model.LocalGroupType;
 import ee.ria.xroad.common.identifier.ClientId;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.globalconf.impl.GlobalConfImpl;
 import org.niis.xroad.restapi.converter.ClientIdConverter;
-import org.niis.xroad.securityserver.restapi.facade.GlobalConfFacade;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroup;
+import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupDto;
+import org.niis.xroad.serverconf.model.Client;
+import org.niis.xroad.serverconf.model.GroupMember;
+import org.niis.xroad.serverconf.model.LocalGroup;
 
 import java.util.Date;
 
@@ -45,16 +48,22 @@ import static org.junit.Assert.assertEquals;
 public class LocalGroupConverterTest extends AbstractConverterTestContext {
 
     public static final String MEMBER_NAME_PREFIX = "member-name-for-";
+    public static final String SUBSYSTEM_NAME_PREFIX = "subsystem-name-for-";
 
     private LocalGroupConverter localGroupConverter;
-    private ClientIdConverter clientIdConverter = new ClientIdConverter();
+    private final ClientIdConverter clientIdConverter = new ClientIdConverter();
 
     @Before
     public void setup() {
-        GlobalConfFacade globalConfFacade = new GlobalConfFacade() {
+        GlobalConfProvider globalConfFacade = new GlobalConfImpl(null, null) {
             @Override
             public String getMemberName(ClientId identifier) {
                 return MEMBER_NAME_PREFIX + identifier.getMemberCode();
+            }
+
+            @Override
+            public String getSubsystemName(ClientId identifier) {
+                return SUBSYSTEM_NAME_PREFIX + identifier.getSubsystemCode();
             }
         };
         localGroupConverter = new LocalGroupConverter(globalConfFacade);
@@ -63,36 +72,44 @@ public class LocalGroupConverterTest extends AbstractConverterTestContext {
     @Test
     public void convertWithMembers() {
         ClientId clientId = clientIdConverter.convertId("XRD2:GOV:M4:SS1");
-        LocalGroupType localGroupType = new LocalGroupType();
-        GroupMemberType groupMemberType = new GroupMemberType();
+        LocalGroup localGroup = new LocalGroup();
+        GroupMember groupMember = new GroupMember();
+        Client client = new Client();
 
-        groupMemberType.setId(1L);
-        groupMemberType.setAdded(new Date());
-        groupMemberType.setGroupMemberId(clientId);
+        groupMember.setId(1L);
+        groupMember.setAdded(new Date());
+        groupMember.setGroupMemberId(clientId);
 
-        localGroupType.setId(1L);
-        localGroupType.setDescription("Local Group 1");
-        localGroupType.setGroupCode("Local Group Code 1");
-        localGroupType.setUpdated(new Date());
-        localGroupType.getGroupMember().add(groupMemberType);
+        client.setIdentifier(ClientId.Conf.create("XRD2", "GOV", "M4", "SS1"));
 
-        LocalGroup group = localGroupConverter.convert(localGroupType);
+        localGroup.setId(1L);
+        localGroup.setDescription("Local Group 1");
+        localGroup.setGroupCode("Local Group Code 1");
+        localGroup.setUpdated(new Date());
+        localGroup.getGroupMembers().add(groupMember);
+        localGroup.setClient(client);
+
+        LocalGroupDto group = localGroupConverter.convert(localGroup);
 
         assertEquals(1, group.getMembers().size());
     }
 
     @Test
     public void convertWithoutMembers() {
-        LocalGroupType localGroupType = new LocalGroupType();
+        Client client = new Client();
+        LocalGroup localGroup = new LocalGroup();
 
-        localGroupType.setId(1L);
-        localGroupType.setDescription("Local Group 1");
-        localGroupType.setGroupCode("Local Group Code 1");
-        localGroupType.setUpdated(new Date());
+        client.setIdentifier(ClientId.Conf.create("XRD2", "GOV", "M4", "SS1"));
 
-        localGroupConverter.convert(localGroupType);
+        localGroup.setId(1L);
+        localGroup.setDescription("Local Group 1");
+        localGroup.setGroupCode("Local Group Code 1");
+        localGroup.setUpdated(new Date());
+        localGroup.setClient(client);
 
-        LocalGroup group = localGroupConverter.convert(localGroupType);
+        localGroupConverter.convert(localGroup);
+
+        LocalGroupDto group = localGroupConverter.convert(localGroup);
 
         assertEquals(0, group.getMembers().size());
     }

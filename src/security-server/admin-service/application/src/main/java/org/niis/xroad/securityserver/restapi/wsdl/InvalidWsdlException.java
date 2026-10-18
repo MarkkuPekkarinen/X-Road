@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,16 +25,20 @@
  */
 package org.niis.xroad.securityserver.restapi.wsdl;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
+import ee.ria.xroad.common.HttpStatus;
+
+import org.niis.xroad.common.core.exception.ErrorDeviation;
+import org.niis.xroad.common.core.exception.HttpStatusAware;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_INVALID_WSDL;
 
 /**
  * Thrown if WSDL was invalid
  */
-public class InvalidWsdlException extends WsdlValidationException {
+public class InvalidWsdlException extends WsdlValidationException implements HttpStatusAware {
     /**
      * @param metadata describes why wsdl was invalid
      */
@@ -48,5 +52,10 @@ public class InvalidWsdlException extends WsdlValidationException {
 
     public InvalidWsdlException(ErrorDeviation errorDeviation) {
         super(errorDeviation);
+    }
+
+    @Override
+    public Optional<ee.ria.xroad.common.HttpStatus> getHttpStatus() {
+        return Optional.of(HttpStatus.CONFLICT);
     }
 }

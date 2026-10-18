@@ -1,0 +1,701 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.securityserver.restapi.service;
+
+import ee.ria.xroad.common.identifier.ClientId;
+
+import com.apicatalog.did.Did;
+import jakarta.annotation.Nullable;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.EnumUtils;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.ds.identity.DspConventions;
+import org.niis.xroad.ds.identity.ParticipantIdentifierScheme;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.securityserver.restapi.config.AdminServiceProperties;
+import org.niis.xroad.securityserver.restapi.repository.ClientRepository;
+import org.niis.xroad.securityserver.restapi.repository.DsParticipantRepository;
+import org.niis.xroad.securityserver.restapi.service.IdentityHubProvisioningClient.CreateParticipantContextRequest;
+import org.niis.xroad.serverconf.impl.entity.DsParticipantEntity;
+import org.niis.xroad.serverconf.impl.participant.ParticipantBindingCheck;
+import org.niis.xroad.serverconf.model.Client;
+import org.niis.xroad.serverconf.model.ParticipantState;
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Supplier;
+
+import static org.niis.xroad.common.core.exception.ErrorCode.DSP_PARTICIPANT_DID_DRIFT;
+import static org.niis.xroad.common.core.exception.ErrorCode.DSP_PARTICIPANT_IDENTIFIER_MISMATCH;
+import static org.niis.xroad.common.core.exception.ErrorCode.DSP_PARTICIPANT_SCHEME_VERSION_UNSUPPORTED;
+import static org.niis.xroad.common.core.exception.ErrorCode.VALIDATION_ERROR;
+
+/**
+ * Provisions this security server's data space participant contexts (IdentityHub + Control Plane)
+ * and issues their X-Road membership credentials, over X-Road gRPC.
+ *
+ * <p>Exposes non-blocking, single-step primitives for use by
+ * {@link org.niis.xroad.securityserver.restapi.scheduling.DataspaceParticipantProvisioningWorker}:
+ * <ul>
+ *   <li>{@link #participantContexts()} — enumerates the per-server SYSTEM context and per-member
+ *       contexts to provision, member-level identity from the registered clients in
+ *       {@link ClientRepository#getAllLocalClients()}.</li>
+ *   <li>{@link #ensureParticipantContext(ParticipantContext)} — idempotent context
+ *       creation for one participant (IH + CP). For a {@link ParticipantKind#MEMBER} or
+ *       {@link ParticipantKind#SYSTEM} context with a bound {@code ds_participant} row, the row is
+ *       verified against a fresh derivation and its DID is used; without a row the DID is derived on
+ *       the fly. This service never writes rows — {@link DataspaceParticipantBindingService} is the
+ *       only writer. Reports whether it is safe to issue a membership credential for this context in
+ *       the same tick — see the method's own Javadoc for the SYSTEM re-anchor case.</li>
+ *   <li>{@link #ensureMembershipCredential(ParticipantContext)} — leaves an active
+ *       (PENDING or ISSUED) request alone or submits a new one into the next available slot, in a single
+ *       slot scan; advances past slots in terminal ERROR. While the hosting Security Server identity is not
+ *       known (for SYSTEM, no owner yet), returns {@code UNKNOWN} without scanning or submitting — see {@link #holderPidBase}.</li>
+ *   <li>{@link #readCredentialStatus(ParticipantContext)} — returns the current credential
+ *       status ({@code ISSUED}, {@code PENDING}, {@code ERROR}, or {@code null} when none is active)
+ *       without polling. Same unknown-identity short-circuit as {@link #ensureMembershipCredential}.</li>
+ *   <li>{@link #decommissionedParticipants()} — enumerates the bound rows awaiting teardown
+ *       convergence.</li>
+ *   <li>{@link #teardownParticipant(TombstonedParticipant)} — idempotently deletes one tombstoned
+ *       participant's CP context, then its IH context, then its binding row; row deletion is the
+ *       convergence marker.</li>
+ * </ul>
+ *
+ * <p>Slot semantics: each participant holds up to {@code maxHolderPidSlots} sequentially named holder-request
+ * ids. A slot in terminal ERROR is skipped and the next slot is used on the following submit; a slot in
+ * PENDING is reused; a slot in ISSUED is the terminal success state. All 20 slots exhausted in ERROR logs a
+ * warning and returns without submitting. When all queried slots are in ERROR, {@link #readCredentialStatus}
+ * returns {@link CredentialStatus#ERROR} so the status path can distinguish "failing" from "never requested".
+ * The slot namespace itself carries the hosting Security Server identity — see {@link #holderPidBase}.</p>
+ *
+ * <p>The identity hub reports raw EDC {@code HolderRequestState} names, which have no PENDING value:
+ * CREATED, REQUESTING and REQUESTED all denote a request in flight and map to {@link CredentialStatus#PENDING}.</p>
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class DataspaceProvisioningService {
+
+    /**
+     * Membership credential state of one participant context. {@code UNKNOWN} covers both an
+     * unreadable identity hub and a hub state outside this set.
+     */
+    public enum CredentialStatus { ISSUED, PENDING, ERROR, ABSENT, UNKNOWN }
+
+    /**
+     * Bound-identity state of one MEMBER participant context. {@code DRIFTED} means the identity
+     * hub serves a different DID than this server intends to publish.
+     */
+    public enum IdentityStatus { OK, MISMATCH, VERSION_UNSUPPORTED, UNBOUND, DRIFTED, UNKNOWN }
+
+    public enum ParticipantKind { SYSTEM, MEMBER }
+
+    /**
+     * One participant context to provision or report on.
+     *
+     * @param participantId the participant context id
+     * @param kind          SYSTEM or MEMBER
+     * @param memberId      the credential subject: the X-Road member this context's credential is issued
+     *                      to; {@code null} only when the SS owner is not yet known (SYSTEM — a MEMBER
+     *                      context always carries its member). For SYSTEM this is the current owner
+     *                      member, kept distinct from the SYSTEM identifier itself, which is owner-free.
+     */
+    public record ParticipantContext(String participantId, ParticipantKind kind, @Nullable ClientId memberId) {
+        public ParticipantContext {
+            if (kind == ParticipantKind.MEMBER && memberId == null) {
+                throw XrdRuntimeException.systemException(VALIDATION_ERROR,
+                        "MEMBER participant context %s requires a member id", participantId);
+            }
+        }
+    }
+
+    /**
+     * One bound participant row awaiting teardown convergence.
+     *
+     * @param id                   the {@code ds_participant} row id, the target of the convergence-marking delete
+     * @param participantContextId the participant context id to tear down in Control Plane and IdentityHub
+     */
+    public record TombstonedParticipant(Long id, String participantContextId) {
+    }
+
+    /**
+     * Read-only snapshot of one participant context's provisioning state.
+     *
+     * @param participantId    the participant context id
+     * @param kind             SYSTEM or MEMBER
+     * @param contextDid       the DID the identity hub serves for the participant context;
+     *                         {@code null} when the context does not exist there or could not be read
+     * @param contextDidUnreadable whether reading {@code contextDid} from the identity hub failed, so
+     *                         a {@code null} there says nothing about whether the context exists
+     * @param intendedDid      the DID this server derives for the participant context today;
+     *                         {@code null} when it cannot be derived (DID authority unknown, unreadable
+     *                         or broken member binding)
+     * @param credentialStatus the membership credential state
+     * @param identityStatus   the bound-identity state for a MEMBER context; {@code null} for SYSTEM
+     */
+    public record ParticipantContextStatus(
+            String participantId,
+            ParticipantKind kind,
+            @Nullable Did contextDid,
+            boolean contextDidUnreadable,
+            @Nullable Did intendedDid,
+            CredentialStatus credentialStatus,
+            @Nullable IdentityStatus identityStatus
+    ) {
+        public boolean contextCreated() {
+            return contextDid != null;
+        }
+
+        /**
+         * Whether the identity hub serves exactly the DID this server would provision today. False
+         * when the context is missing, when the DID could not be derived, and on DID drift.
+         */
+        public boolean contextDidMatchesIntended() {
+            return contextDid != null && contextDid.equals(intendedDid);
+        }
+    }
+
+    private static final String HOLDER_PID_BASE = "xroad-membership-credential-request";
+    private static final String CREDENTIAL_FORMAT = "VC1_0_JWT";
+    private static final String CREDENTIAL_TYPE = "XRoadMembershipCredential";
+    private static final Set<String> IN_FLIGHT_EDC_STATES = Set.of("CREATED", "REQUESTING", "REQUESTED");
+    private static final MemberIdentity UNREADABLE_IDENTITY = new MemberIdentity(IdentityStatus.UNKNOWN, null);
+
+    private final AdminServiceProperties adminServiceProperties;
+    private final IdentityHubProvisioningClient identityHubClient;
+    private final ControlPlaneProvisioningClient controlPlaneClient;
+    private final ClientRepository clientRepository;
+    private final OwnSecurityServerResolver ownSecurityServerResolver;
+    private final DsParticipantRepository dsParticipantRepository;
+    private final GlobalConfProvider globalConfProvider;
+    private final DataspaceDidAuthority didAuthority;
+
+    /**
+     * Creates (idempotently) the IdentityHub and Control Plane participant context for a single participant.
+     *
+     * <p>For a {@link ParticipantKind#MEMBER} or {@link ParticipantKind#SYSTEM} context with a bound
+     * {@code ds_participant} row, the row is verified against a fresh derivation and its DID is used —
+     * the bound row is never written or overwritten here. A MEMBER row that has been decommissioned
+     * is treated as no row at all. Without a usable row the DID is derived on the fly and not bound;
+     * binding is {@link DataspaceParticipantBindingService}'s job.
+     *
+     * @param context the participant context to create
+     * @return whether it is safe to issue a membership credential for this context in the same tick.
+     *         Trivially {@code true} for MEMBER. For SYSTEM, {@code false} means
+     *         an owner change is in progress and the hub has not yet confirmed the stored member id
+     *         was re-anchored to the new owner — issuing now would submit a credential into the new
+     *         owner's holder-pid slot while the hub still builds the membership claim from the old
+     *         member id, a mismatch that a later tick's slot scan can no longer detect or correct.
+     *         The caller must skip the credential pass for this context and retry on the next tick;
+     *         an older hub that never sets the re-anchor ack always reports {@code false} here, so
+     *         SYSTEM credential issuance stays deferred until the hub is upgraded.
+     */
+    public boolean ensureParticipantContext(ParticipantContext context) {
+        var identityHubHost = didAuthority.identityHubHost();
+        var participantId = context.participantId();
+
+        var did = didFor(context.kind(), context.memberId());
+        var existingDid = identityHubClient.contextDid(participantId);
+        requireNoHubDidDrift(participantId, existingDid, did);
+
+        var anchorConfirmed = createIdentityHubContext(context, did, identityHubHost);
+        ensureControlPlaneContext(participantId, did, identityHubHost);
+        if (existingDid.isEmpty()) {
+            log.info("Data space provisioning: participant context {} created", participantId);
+        }
+        return anchorConfirmed;
+    }
+
+    /**
+     * Re-applies only the Control Plane half of {@link #ensureParticipantContext}: the participant
+     * context and its STS-bound config. The Control Plane exposes no status to read, so a context
+     * whose identity hub state has already converged still gets its Control Plane records re-put
+     * each tick; that is what heals a lost Control Plane database or a changed identity hub address.
+     * Writes only — no DID derivation, no binding check.
+     *
+     * @param context the participant context whose Control Plane records to re-apply
+     * @param did     the DID the identity hub serves for it, as read by {@link #readContextStatus}
+     */
+    public void ensureControlPlaneContext(ParticipantContext context, Did did) {
+        ensureControlPlaneContext(context.participantId(), did, didAuthority.identityHubHost());
+    }
+
+    private void ensureControlPlaneContext(String participantId, Did did, String identityHubHost) {
+        controlPlaneClient.createParticipantContext(participantId, did);
+        controlPlaneClient.putParticipantContextConfig(participantId, did, stsTokenUrl(identityHubHost));
+    }
+
+    private void requireNoHubDidDrift(String participantId, Optional<Did> hubDid, Did intendedDid) {
+        hubDid.filter(existing -> !existing.equals(intendedDid))
+                .ifPresent(drifted -> {
+                    throw XrdRuntimeException.systemException(DSP_PARTICIPANT_DID_DRIFT)
+                            .metadataItems(drifted, intendedDid)
+                            .details(("identity hub serves DID '%s' for participant context '%s', but the DID to "
+                                    + "provision is '%s'; refusing to touch the context until the drift is resolved")
+                                    .formatted(drifted, participantId, intendedDid))
+                            .build();
+                });
+    }
+
+    /**
+     * Enumerates the bound participant rows awaiting teardown convergence: every {@code ds_participant}
+     * row currently marked {@link ParticipantState#DECOMMISSIONED}. A member with an entry here is
+     * excluded from {@link #participantContexts()} until its row is gone.
+     */
+    @Transactional(readOnly = true)
+    public List<TombstonedParticipant> decommissionedParticipants() {
+        return dsParticipantRepository.findDecommissioned().stream()
+                .map(row -> new TombstonedParticipant(row.getId(), row.getCtxId()))
+                .toList();
+    }
+
+    /**
+     * Converges one decommissioned binding toward absence: deletes the Control Plane participant
+     * context, then the IdentityHub participant context, then the binding row. Row deletion is the
+     * convergence marker; every step is idempotent, so a failure here simply leaves the row (and
+     * whichever steps did not complete) for the next tick to retry.
+     *
+     * @param participant the tombstoned participant row to tear down
+     */
+    public void teardownParticipant(TombstonedParticipant participant) {
+        controlPlaneClient.deleteParticipantContext(participant.participantContextId());
+        log.debug("Data space provisioning: control plane context deleted for participant {}", participant.participantContextId());
+        identityHubClient.deleteParticipantContext(participant.participantContextId());
+        log.debug("Data space provisioning: identity hub context deleted for participant {}", participant.participantContextId());
+        dsParticipantRepository.delete(participant.id());
+        log.info("Data space provisioning: teardown converged for participant {} (control plane, identity hub and binding row deleted)",
+                participant.participantContextId());
+    }
+
+    /**
+     * Ensures an active membership credential request exists for the given participant context,
+     * in a single holder-pid slot scan: a slot reporting any state other than terminal ERROR is
+     * left alone, a new request is submitted into the first free slot otherwise. Advances past
+     * slots in terminal ERROR state only. Returns immediately — does not poll for the outcome.
+     *
+     * <p>For a {@link ParticipantKind#SYSTEM} context the slot namespace carries the current
+     * owner ({@link #holderPidBase}): an owner change makes the scan land on an empty slot, so a fresh
+     * credential is issued on the new owner. The stale credential, parked under the previous owner's
+     * slot namespace, is left untouched and expires on its own — no revocation.
+     *
+     * @param context the participant context whose credential to ensure
+     * @return {@code ISSUED} for a terminally issued credential, {@code PENDING} when a request is
+     *         active or was just submitted, {@code UNKNOWN} for an unrecognized hub state,
+     *         {@code ERROR} when all slots are exhausted, {@code ABSENT} when the instance is not
+     *         dataspace-enabled (no distributed issuer trust anchor) — no request is submitted
+     */
+    public CredentialStatus ensureMembershipCredential(ParticipantContext context) {
+        var trustedIssuerDids = trustedIssuerDids();
+        if (trustedIssuerDids.isEmpty()) {
+            return CredentialStatus.ABSENT;
+        }
+        var holderPidBase = holderPidBase(context);
+        if (holderPidBase.isEmpty()) {
+            return CredentialStatus.UNKNOWN;
+        }
+        var participantId = context.participantId();
+        var ds = adminServiceProperties.getDataspace();
+        var base = holderPidBase.get();
+        for (int slot = 0; slot < ds.getMaxHolderPidSlots(); slot++) {
+            var holderPid = holderPid(base, slot);
+            var state = identityHubClient.getCredentialRequestState(participantId, holderPid);
+            if (state == null) {
+                log.info("Data space provisioning: submitting credential request for participant {}", participantId);
+                identityHubClient.requestMembershipCredential(participantId, trustedIssuerDids, holderPid,
+                        ds.getCredentialDefinitionId(), CREDENTIAL_TYPE, CREDENTIAL_FORMAT);
+                return CredentialStatus.PENDING;
+            }
+            var status = hubCredentialState(state);
+            if (status != CredentialStatus.ERROR) {
+                return status;
+            }
+            // ERROR — advance to next slot
+        }
+        log.warn("Data space credential for participant {} exhausted {} holder-pid slots (all in ERROR); no request submitted",
+                participantId, ds.getMaxHolderPidSlots());
+        return CredentialStatus.ERROR;
+    }
+
+    /**
+     * Returns the current credential status for the given participant context without polling.
+     *
+     * <p>Scans holder-pid slots in order; ERROR slots are skipped. Returns {@code ISSUED} or {@code PENDING}
+     * for the first active slot found, {@code ERROR} when all queried slots are in terminal ERROR, or
+     * {@code null} when no request has been submitted yet (all slots absent). Uses the same slot
+     * namespace as {@link #ensureMembershipCredential}, so a SYSTEM context's status reflects the
+     * credential anchored to the current owner even right after an owner change.
+     *
+     * @param context the participant context to report on
+     * @return {@code ISSUED}, {@code PENDING}, {@code ERROR}, {@code UNKNOWN}, or {@code null}
+     */
+    @Nullable
+    public CredentialStatus readCredentialStatus(ParticipantContext context) {
+        var holderPidBase = holderPidBase(context);
+        if (holderPidBase.isEmpty()) {
+            return CredentialStatus.UNKNOWN;
+        }
+        var ds = adminServiceProperties.getDataspace();
+        var base = holderPidBase.get();
+        boolean anyError = false;
+        for (int slot = 0; slot < ds.getMaxHolderPidSlots(); slot++) {
+            var holderPid = holderPid(base, slot);
+            var state = identityHubClient.getCredentialRequestState(context.participantId(), holderPid);
+            if (state == null) {
+                continue;
+            }
+            var status = hubCredentialState(state);
+            if (status == CredentialStatus.ERROR) {
+                anyError = true;
+                continue;
+            }
+            return status;
+        }
+        return anyError ? CredentialStatus.ERROR : null;
+    }
+
+    /**
+     * The holder-pid slot-base for a participant context, or empty while the hosting Security Server
+     * identity is not known yet:
+     * {@code {participantId}-{ownerCtxId}:{serverCode}-xroad-membership-credential-request}.
+     *
+     * <p>The Issuer Service rejects a request whose holder-pid it has already seen, and several Security
+     * Servers can host the same member, so the hosting Security Server identity is part of the base. The
+     * result is deterministic, so the slot scan finds earlier requests. The server code stays in front of the
+     * constant tail so a server code ending in {@code -N} cannot collide with a slot suffix.
+     *
+     * <p>The SYSTEM identifier is owner-free by design (XRDADR-41), but its credential is issued to the
+     * current owner. Since the identity hub exposes no surface to read a credential's subject directly,
+     * the subject is tracked implicitly: the SYSTEM base carries the owner from the context, so a slot found
+     * active there was necessarily requested for that owner. An owner change derives a different, still
+     * empty namespace — the scan lands on nothing and a fresh credential is issued there, while the one
+     * parked under the previous owner's namespace is left to expire on its own (no revocation). A MEMBER
+     * base carries the owner as the server identity knows it.
+     *
+     * <p>Empty for SYSTEM with no owner known yet: there is no namespace to scan or write to.
+     */
+    private Optional<String> holderPidBase(ParticipantContext context) {
+        var serverId = ownSecurityServerResolver.serverId();
+        var owner = context.kind() == ParticipantKind.SYSTEM
+                ? Optional.ofNullable(context.memberId())
+                : serverId.<ClientId>map(id -> id.getOwner());
+        if (serverId.isEmpty() || owner.isEmpty()) {
+            return Optional.empty();
+        }
+        var hostingServer = ParticipantIdentifierScheme.memberCtxId(owner.get()) + ":" + serverId.get().getServerCode();
+        return Optional.of(context.participantId() + "-" + hostingServer + "-" + HOLDER_PID_BASE);
+    }
+
+    private static CredentialStatus hubCredentialState(String state) {
+        if (IN_FLIGHT_EDC_STATES.contains(state)) {
+            return CredentialStatus.PENDING;
+        }
+        return EnumUtils.getEnum(CredentialStatus.class, state, CredentialStatus.UNKNOWN);
+    }
+
+    /**
+     * The dataspace issuer trust anchor: every Issuer DID published by any Central Server node of this
+     * X-Road instance's globalconf. Empty when the instance is not dataspace-enabled (no
+     * {@code credentialIssuer} in the distributed shared parameters).
+     */
+    private Set<String> trustedIssuerDids() {
+        var instanceIdentifier = globalConfProvider.getInstanceIdentifier();
+        var dids = Set.copyOf(globalConfProvider.getCredentialIssuerDids(instanceIdentifier));
+        if (dids.isEmpty()) {
+            log.info("Data space provisioning: instance '{}' has no distributed issuer DIDs (no credentialIssuer "
+                    + "in globalconf); dataspace issuance and trust are not enabled", instanceIdentifier);
+        }
+        return dids;
+    }
+
+    /**
+     * Enumerates the participant contexts to provision or report on: the per-server SYSTEM context,
+     * unconditional and gated on nothing, followed by one member context per distinct X-Road member
+     * (subsystems collapsed) hosted on this Security Server — a member appears once it has a
+     * registered local client, the SS owner included. Member ctx-ids follow the v1 scheme
+     * ({@link ParticipantIdentifierScheme}); they are derived, not read from {@code ds_participant}.
+     * A member with an unconverged {@link ParticipantState#DECOMMISSIONED} row is excluded — it is
+     * never provisioned until that tombstone is gone, which prevents provision/teardown flapping on
+     * a rapid remove-then-re-add.
+     *
+     * <p>The SYSTEM context carries the current SS owner as its credential subject (the member the
+     * credential is issued to), which is distinct from the SYSTEM identifier itself: the DID and ctx-id
+     * are owner-free, per {@link ParticipantIdentifierScheme#systemDid(String)}.
+     */
+    @Transactional(readOnly = true)
+    public List<ParticipantContext> participantContexts() {
+        var ownerId = ownSecurityServerResolver.owner();
+        var owner = ownerId.orElse(null);
+
+        List<ParticipantContext> contexts = new ArrayList<>();
+        contexts.add(new ParticipantContext(ParticipantIdentifierScheme.SYSTEM_SEGMENT, ParticipantKind.SYSTEM, owner));
+
+        if (ownerId.isEmpty()) {
+            // serverconf is not initialised: reading local clients would throw MALFORMED_SERVERCONF
+            return contexts;
+        }
+
+        hostedMembers().stream()
+                .filter(member -> !isTombstoned(member))
+                .forEach(member -> contexts.add(
+                        new ParticipantContext(ParticipantIdentifierScheme.memberCtxId(member), ParticipantKind.MEMBER, member)));
+
+        return contexts;
+    }
+
+    private Set<ClientId> hostedMembers() {
+        Set<ClientId> members = new LinkedHashSet<>();
+        for (var client : clientRepository.getAllLocalClients()) {
+            if (Client.STATUS_REGISTERED.equals(client.getClientStatus())) {
+                members.add(client.getIdentifier().getMemberId());
+            }
+        }
+        return members;
+    }
+
+    private boolean isTombstoned(ClientId member) {
+        boolean tombstoned = dsParticipantRepository.findByMemberIdentifier(member)
+                .map(row -> row.getState() == ParticipantState.DECOMMISSIONED)
+                .orElse(false);
+        if (tombstoned) {
+            log.debug("Data space provisioning: member {} blocked from provisioning by an unconverged tombstone", member);
+        }
+        return tombstoned;
+    }
+
+    /**
+     * Returns a read-only snapshot of one participant context's provisioning status. Does not
+     * trigger provisioning, poll, or sleep. The bound-identity assessment, the participant context
+     * DID and the credential status are read independently, so a dataspace-backend failure in one is
+     * reported as {@code UNKNOWN} in its own field and leaves the others as observed. An unreadable
+     * context DID additionally leaves the credential status {@code UNKNOWN}: without a context there
+     * is nothing to resolve a credential against. Database failures propagate.
+     *
+     * @param context the participant context to report on
+     */
+    public ParticipantContextStatus readContextStatus(ParticipantContext context) {
+        var participantId = context.participantId();
+
+        var assessment = context.kind() == ParticipantKind.MEMBER
+                ? readOrFallback(participantId, "bound identity",
+                        () -> assessMemberIdentity(context.memberId()), UNREADABLE_IDENTITY)
+                : null;
+        var intendedDid = assessment != null ? assessment.intendedDid() : derivedDidOrNull(context);
+
+        Optional<Did> hubDid;
+        try {
+            hubDid = identityHubClient.contextDid(participantId);
+        } catch (Exception e) {
+            log.warn("Data space: could not read the participant context DID of {}", participantId, e);
+            return new ParticipantContextStatus(participantId, context.kind(), null, true, intendedDid,
+                    CredentialStatus.UNKNOWN, identityStatusOf(assessment, Optional.empty()));
+        }
+        var credentialStatus = readOrFallback(participantId, "credential status",
+                () -> resolveCredentialStatus(context, hubDid.isPresent()), CredentialStatus.UNKNOWN);
+
+        return new ParticipantContextStatus(participantId, context.kind(), hubDid.orElse(null), false, intendedDid,
+                credentialStatus, identityStatusOf(assessment, hubDid));
+    }
+
+    @Nullable
+    private Did derivedDidOrNull(ParticipantContext context) {
+        if (!didAuthority.isKnown()) {
+            return null;
+        }
+        return readOrFallback(context.participantId(), "derived DID",
+                () -> didFor(context.kind(), context.memberId()), (Did) null);
+    }
+
+    private <T> T readOrFallback(String participantId, String what, Supplier<T> read, T fallback) {
+        try {
+            return read.get();
+        } catch (DataAccessException | TransactionException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Data space: could not read the {} of participant {}", what, participantId, e);
+            return fallback;
+        }
+    }
+
+    @Nullable
+    private static IdentityStatus identityStatusOf(@Nullable MemberIdentity assessment, Optional<Did> hubDid) {
+        if (assessment == null) {
+            return null;
+        }
+        if (assessment.intendedDid() != null && hubDid.isPresent() && !hubDid.get().equals(assessment.intendedDid())) {
+            return IdentityStatus.DRIFTED;
+        }
+        return assessment.status();
+    }
+
+    private CredentialStatus resolveCredentialStatus(ParticipantContext context, boolean contextCreated) {
+        if (!contextCreated) {
+            return CredentialStatus.ABSENT;
+        }
+        return Optional.ofNullable(readCredentialStatus(context)).orElse(CredentialStatus.ABSENT);
+    }
+
+    /**
+     * Whether the DID authority the participant DIDs derive from ({@link DataspaceDidAuthority}) is
+     * resolvable yet.
+     */
+    public boolean registeredAddressKnown() {
+        return didAuthority.isKnown();
+    }
+
+    private Did didFor(ParticipantKind kind, @Nullable ClientId memberId) {
+        return switch (kind) {
+            case SYSTEM -> boundOrDerivedSystemDid();
+            case MEMBER -> boundOrDerivedMemberDid(memberId);
+        };
+    }
+
+    private Did boundOrDerivedMemberDid(ClientId member) {
+        var bound = activeBinding(member);
+        if (bound.isPresent()) {
+            ParticipantBindingCheck.verify(bound.get(), didAuthority.current());
+            return ParticipantIdentifierScheme.parseDid(bound.get().getDid());
+        }
+        return didAuthority.memberDid(member);
+    }
+
+    /**
+     * Finds the member's bound participant row, ignored (treated as unbound) once it has been
+     * decommissioned: a tombstone is not a live binding.
+     */
+    private Optional<DsParticipantEntity> activeBinding(ClientId member) {
+        return dsParticipantRepository.findByMemberIdentifier(member)
+                .filter(bound -> bound.getState() == ParticipantState.ACTIVE);
+    }
+
+    /**
+     * Derive-then-bind for the per-server SYSTEM identifier, mirroring {@link #boundOrDerivedMemberDid(ClientId)}.
+     * The bound row, when present, carries no member reference — the SYSTEM identifier is owner-free even
+     * though the context's credential is issued to the current owner.
+     */
+    private Did boundOrDerivedSystemDid() {
+        var bound = dsParticipantRepository.findSystemParticipant();
+        if (bound.isPresent()) {
+            ParticipantBindingCheck.verify(bound.get(), didAuthority.current());
+            return ParticipantIdentifierScheme.parseDid(bound.get().getDid());
+        }
+        return didAuthority.systemDid();
+    }
+
+    /**
+     * Reports the identity-binding state of one member's participant context without provisioning
+     * anything. Tolerates dataspace-backend unavailability and a not-yet-known registered address —
+     * those are reported as {@link IdentityStatus#UNKNOWN} rather than thrown; database failures
+     * propagate.
+     *
+     * @param memberId the member whose bound identity to check
+     * @return {@code OK}, {@code MISMATCH}, {@code VERSION_UNSUPPORTED}, {@code UNBOUND} or {@code UNKNOWN}
+     */
+    public IdentityStatus readIdentityStatus(ClientId memberId) {
+        return assessMemberIdentity(memberId).status();
+    }
+
+    /**
+     * Bound-identity assessment for one member: the status plus the DID this server intends to
+     * publish (the bound DID, or the fresh derivation when nothing is bound; {@code null} when the
+     * bound row itself is in an error state and no intended DID can be stated).
+     */
+    private record MemberIdentity(IdentityStatus status, @Nullable Did intendedDid) {
+    }
+
+    private MemberIdentity assessMemberIdentity(ClientId memberId) {
+        var bound = activeBinding(memberId);
+        if (!didAuthority.isKnown()) {
+            if (bound.isEmpty()) {
+                return new MemberIdentity(IdentityStatus.UNBOUND, null);
+            }
+            log.debug("Data space: registered address not in GlobalConf yet, cannot verify bound identity of {}", memberId);
+            return new MemberIdentity(IdentityStatus.UNKNOWN, null);
+        }
+        try {
+            if (bound.isEmpty()) {
+                return new MemberIdentity(IdentityStatus.UNBOUND, didAuthority.memberDid(memberId));
+            }
+            ParticipantBindingCheck.verify(bound.get(), didAuthority.current());
+            return new MemberIdentity(IdentityStatus.OK, ParticipantIdentifierScheme.parseDid(bound.get().getDid()));
+        } catch (XrdRuntimeException e) {
+            if (DSP_PARTICIPANT_IDENTIFIER_MISMATCH.code().equals(e.getErrorCode())) {
+                return new MemberIdentity(IdentityStatus.MISMATCH, null);
+            }
+            if (DSP_PARTICIPANT_SCHEME_VERSION_UNSUPPORTED.code().equals(e.getErrorCode())) {
+                return new MemberIdentity(IdentityStatus.VERSION_UNSUPPORTED, null);
+            }
+            log.warn("Data space: could not read identity status for member {}", memberId, e);
+            return new MemberIdentity(IdentityStatus.UNKNOWN, null);
+        }
+    }
+
+    private boolean createIdentityHubContext(ParticipantContext context, Did did, String identityHubHost) {
+        var participantId = context.participantId();
+        var credentialServiceUrl = DspConventions.credentialServiceUrl(identityHubHost,
+                adminServiceProperties.getDataspace().getIdentityHubCredentialsPort(), participantId);
+        var keyId = did + "#key-1";
+        var privateKeyAlias = participantId + "-key";
+        var reanchor = context.kind() == ParticipantKind.SYSTEM;
+        var anchorConfirmed = identityHubClient.createParticipantContext(CreateParticipantContextRequest.builder()
+                .participantContextId(participantId)
+                .did(did)
+                .memberId(context.memberId() == null ? null : slashForm(context.memberId()))
+                .credentialServiceUrl(credentialServiceUrl)
+                .keyId(keyId)
+                .privateKeyAlias(privateKeyAlias)
+                .reanchorMemberIdOnConflict(reanchor)
+                .build());
+        if (reanchor && !anchorConfirmed) {
+            log.warn("Data space: identity hub could not confirm the SYSTEM credential re-anchor for participant '{}' "
+                    + "— older hub, or the re-anchor read/update failed; deferring SYSTEM credential issuance to next tick",
+                    participantId);
+        }
+        return anchorConfirmed;
+    }
+
+    private String stsTokenUrl(String identityHubHost) {
+        return "https://%s:%d/api/sts/token"
+                .formatted(identityHubHost, adminServiceProperties.getDataspace().getIdentityHubStsPort());
+    }
+
+    private String holderPid(String base, int slot) {
+        return slot == 0 ? base : base + "-" + slot;
+    }
+
+    private static String slashForm(ClientId id) {
+        return "%s/%s/%s".formatted(id.getXRoadInstance(), id.getMemberClass(), id.getMemberCode());
+    }
+
+}

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,23 +25,25 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
+import ee.ria.xroad.common.crypto.identifier.KeyAlgorithm;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.WarningDeviation;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.config.audit.AuditEventHelper;
 import org.niis.xroad.restapi.config.audit.RestApiAuditEvent;
 import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
-import org.niis.xroad.restapi.exceptions.WarningDeviation;
-import org.niis.xroad.restapi.service.SignerNotReachableException;
+import org.niis.xroad.restapi.exceptions.DeviationAwareRuntimeException;
 import org.niis.xroad.restapi.service.UnhandledWarningsException;
 import org.niis.xroad.restapi.util.SecurityHelper;
-import org.niis.xroad.securityserver.restapi.facade.SignerProxyFacade;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,10 +53,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import static ee.ria.xroad.common.ErrorCodes.SIGNER_X;
-import static ee.ria.xroad.common.ErrorCodes.X_KEY_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.INTERNAL_ERROR;
+import static org.niis.xroad.common.core.exception.ErrorCode.KEY_NOT_FOUND;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_AUTH_KEY_REGISTERED_CERT_DETECTED;
 
 /**
@@ -66,7 +67,7 @@ import static org.niis.xroad.restapi.exceptions.DeviationCodes.WARNING_AUTH_KEY_
 @PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class KeyService {
-    private final SignerProxyFacade signerProxyFacade;
+    private final SignerRpcClient signerRpcClient;
     private final TokenService tokenService;
     private final PossibleActionsRuleEngine possibleActionsRuleEngine;
     private final ManagementRequestSenderService managementRequestSenderService;
@@ -76,6 +77,7 @@ public class KeyService {
 
     /**
      * Return one key
+     *
      * @param keyId
      * @return
      * @throws KeyNotFoundException if key was not found
@@ -87,7 +89,7 @@ public class KeyService {
                 .flatMap(List::stream)
                 .filter(key -> keyId.equals(key.getId()))
                 .findFirst();
-        if (!keyInfo.isPresent()) {
+        if (keyInfo.isEmpty()) {
             throw new KeyNotFoundException("key with id " + keyId + " not found");
         }
 
@@ -96,8 +98,9 @@ public class KeyService {
 
     /**
      * Finds matching KeyInfo from this TokenInfo, or throws exception
+     *
      * @param tokenInfo token
-     * @param keyId id of a key inside the token
+     * @param keyId     id of a key inside the token
      * @throws NoSuchElementException if key with keyId was not found
      */
     public KeyInfo getKey(TokenInfo tokenInfo, String keyId) throws NoSuchElementException {
@@ -109,7 +112,8 @@ public class KeyService {
 
     /**
      * Updates key friendly name
-     * @throws KeyNotFoundException if key was not found
+     *
+     * @throws KeyNotFoundException       if key was not found
      * @throws ActionNotPossibleException if friendly name could not be updated for this key
      */
     public KeyInfo updateKeyFriendlyName(String id, String friendlyName) throws KeyNotFoundException,
@@ -125,18 +129,18 @@ public class KeyService {
                 tokenInfo, keyInfo);
 
         try {
-            signerProxyFacade.setKeyFriendlyName(id, friendlyName);
+            signerRpcClient.setKeyFriendlyName(id, friendlyName);
             keyInfo = getKey(id);
-        } catch (KeyNotFoundException e) {
-            throw e;
-        } catch (CodedException e) {
-            if (isCausedByKeyNotFound(e)) {
+        } catch (XrdRuntimeException e) {
+            if (e.isCausedBy(KEY_NOT_FOUND)) {
                 throw new KeyNotFoundException(e);
             } else {
                 throw e;
             }
+        } catch (InternalServerErrorException e) {
+            throw e;
         } catch (Exception e) {
-            throw new SignerNotReachableException("Update key friendly name failed", e);
+            throw new InternalServerErrorException("Update key friendly name failed", e, INTERNAL_ERROR.build());
         }
 
         return keyInfo;
@@ -144,13 +148,15 @@ public class KeyService {
 
     /**
      * Generate a new key for selected token
+     *
      * @param tokenId
      * @param keyLabel
+     * @param algorithm
      * @return {@link KeyInfo}
-     * @throws TokenNotFoundException if token was not found
+     * @throws TokenNotFoundException     if token was not found
      * @throws ActionNotPossibleException if generate key was not possible for this token
      */
-    public KeyInfo addKey(String tokenId, String keyLabel) throws TokenNotFoundException,
+    public KeyInfo addKey(String tokenId, String keyLabel, KeyAlgorithm algorithm) throws TokenNotFoundException,
             ActionNotPossibleException {
 
         // check that adding a key is possible
@@ -159,13 +165,13 @@ public class KeyService {
         possibleActionsRuleEngine.requirePossibleTokenAction(PossibleActionEnum.GENERATE_KEY,
                 tokenInfo);
 
-        KeyInfo keyInfo = null;
+        KeyInfo keyInfo;
         try {
-            keyInfo = signerProxyFacade.generateKey(tokenId, keyLabel);
-        } catch (CodedException e) {
+            keyInfo = signerRpcClient.generateKey(tokenId, keyLabel, algorithm);
+        } catch (XrdRuntimeException e) {
             throw e;
         } catch (Exception other) {
-            throw new SignerNotReachableException("adding a new key failed", other);
+            throw new InternalServerErrorException("Adding a new key failed", other, INTERNAL_ERROR.build());
         }
         auditDataHelper.put(RestApiAuditProperty.KEY_ID, keyInfo.getId());
         auditDataHelper.put(RestApiAuditProperty.KEY_LABEL, keyInfo.getLabel());
@@ -173,23 +179,14 @@ public class KeyService {
         return keyInfo;
     }
 
-    static boolean isCausedByKeyNotFound(CodedException e) {
-        return KEY_NOT_FOUND_FAULT_CODE.equals(e.getFaultCode());
-    }
-
-    private static String signerFaultCode(String detail) {
-        return SIGNER_X + "." + detail;
-    }
-
-    static final String KEY_NOT_FOUND_FAULT_CODE = signerFaultCode(X_KEY_NOT_FOUND);
-
     /**
      * Deletes one key, and related CSRs and certificates. If the key is an authentication key with a registered
      * certificate, warnings are ignored and certificate is first unregistered, and the key and certificate are
      * deleted after that.
+     *
      * @param keyId
-     * @throws ActionNotPossibleException if delete was not possible for the key
-     * @throws KeyNotFoundException if key with given id was not found
+     * @throws ActionNotPossibleException  if delete was not possible for the key
+     * @throws KeyNotFoundException        if key with given id was not found
      * @throws GlobalConfOutdatedException if global conf was outdated
      */
     public void deleteKeyAndIgnoreWarnings(String keyId) throws KeyNotFoundException, ActionNotPossibleException,
@@ -198,7 +195,7 @@ public class KeyService {
             deleteKey(keyId, true);
         } catch (UnhandledWarningsException e) {
             // Since "ignoreWarnings = true", the exception should never be thrown
-            throw new RuntimeException(e);
+            throw XrdRuntimeException.systemException(e);
         }
     }
 
@@ -207,13 +204,14 @@ public class KeyService {
      * certificate and ignoreWarnings = false, an UnhandledWarningsException is thrown and the key is not deleted. If
      * ignoreWarnings = true, the authentication certificate is first unregistered, and the key and certificate are
      * deleted after that.
+     *
      * @param keyId
      * @param ignoreWarnings
-     * @throws ActionNotPossibleException if delete was not possible for the key
-     * @throws KeyNotFoundException if key with given id was not found
+     * @throws ActionNotPossibleException  if delete was not possible for the key
+     * @throws KeyNotFoundException        if key with given id was not found
      * @throws GlobalConfOutdatedException if global conf was outdated
-     * @throws UnhandledWarningsException if the key is an authentication key, it has a registered certificate,
-     * and ignoreWarnings was false
+     * @throws UnhandledWarningsException  if the key is an authentication key, it has a registered certificate,
+     *                                     and ignoreWarnings was false
      */
     public void deleteKey(String keyId, Boolean ignoreWarnings) throws KeyNotFoundException, ActionNotPossibleException,
             GlobalConfOutdatedException, UnhandledWarningsException {
@@ -239,8 +237,9 @@ public class KeyService {
         // unregister possible auth certs
         if (keyInfo.getUsage() == KeyUsageInfo.AUTHENTICATION) {
             // get list of auth certs to be unregistered
-            List<CertificateInfo> unregister = keyInfo.getCerts().stream().filter(this::shouldUnregister)
-                    .collect(Collectors.toList());
+            List<CertificateInfo> unregister = keyInfo.getCerts().stream()
+                    .filter(this::shouldUnregister)
+                    .toList();
 
             if (!unregister.isEmpty() && !ignoreWarnings) {
                 throw new UnhandledWarningsException(
@@ -258,17 +257,18 @@ public class KeyService {
 
         // delete key needs to be done twice. First call deletes the certs & csrs
         try {
-            signerProxyFacade.deleteKey(keyId, false);
-            signerProxyFacade.deleteKey(keyId, true);
-        } catch (CodedException e) {
+            signerRpcClient.deleteKey(keyId, false);
+            signerRpcClient.deleteKey(keyId, true);
+        } catch (XrdRuntimeException e) {
             throw e;
         } catch (Exception other) {
-            throw new SignerNotReachableException("delete key failed", other);
+            throw new InternalServerErrorException("Delete key failed", other, INTERNAL_ERROR.build());
         }
     }
 
     /**
      * Check if the certificateInfo should be unregistered before it is deleted.
+     *
      * @param certificateInfo
      * @return if certificateInfo's status is "REGINPROG" or "REGISTERED" return true, otherwise false
      */
@@ -294,24 +294,24 @@ public class KeyService {
             managementRequestSenderService.sendAuthCertDeletionRequest(
                     certificateInfo.getCertificateBytes());
             // update status
-            signerProxyFacade.setCertStatus(certificateInfo.getId(), CertificateInfo.STATUS_DELINPROG);
-        } catch (GlobalConfOutdatedException | CodedException e) {
+            signerRpcClient.setCertStatus(certificateInfo.getId(), CertificateInfo.STATUS_DELINPROG);
+        } catch (DeviationAwareRuntimeException | XrdRuntimeException e) {
             throw e;
         } catch (Exception e) {
-            throw new SignerNotReachableException("Could not unregister auth cert", e);
+            throw new InternalServerErrorException("Could not unregister auth cert", e, INTERNAL_ERROR.build());
         }
     }
 
     /**
      * Return possible actions for one key
+     *
      * @throw KeyNotFoundException if key with given id was not found
      */
     public EnumSet<PossibleActionEnum> getPossibleActionsForKey(String keyId) throws KeyNotFoundException {
         TokenInfo tokenInfo = tokenService.getTokenForKeyId(keyId);
         KeyInfo keyInfo = getKey(tokenInfo, keyId);
-        EnumSet<PossibleActionEnum> possibleActions = possibleActionsRuleEngine
+        return possibleActionsRuleEngine
                 .getPossibleKeyActions(tokenInfo, keyInfo);
-        return possibleActions;
     }
 
 }

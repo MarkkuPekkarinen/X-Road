@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -27,83 +28,73 @@
   <thead>
     <tr class="target-row">
       <th
-        class="title-col"
+        class="title-col cursor-pointer"
         data-test="name-sort"
+        :class="{ selected: selectedSort === sortColumn.NAME }"
         @click="setSort(sortColumn.NAME)"
         @mouseover="hoverName = true"
         @mouseleave="hoverName = false"
       >
-        <div class="header-title">
+        <div class="header-title d-flex flex-row align-center">
           <div>{{ $t('general.name') }}</div>
-          <sort-button
-            :arrow-state="sortDirection"
-            :active="hoverName"
-            :selected="selectedSort === sortColumn.NAME"
-          />
+          <SortButton :arrow-state="sortDirection" :active="hoverName" :selected="selectedSort === sortColumn.NAME" />
         </div>
       </th>
       <th
-        class="id-col"
+        class="id-col cursor-pointer"
         data-test="id-sort"
+        :class="{ selected: selectedSort === sortColumn.ID }"
         @click="setSort(sortColumn.ID)"
         @mouseover="hoverId = true"
         @mouseleave="hoverId = false"
       >
-        <div class="header-title">
+        <div class="header-title d-flex flex-row align-center">
           {{ $t('keys.id') }}
-          <sort-button
-            :arrow-state="sortDirection"
-            :active="hoverId"
-            :selected="selectedSort === sortColumn.ID"
-          />
+          <SortButton :arrow-state="sortDirection" :active="hoverId" :selected="selectedSort === sortColumn.ID" />
         </div>
       </th>
       <th
-        class="ocsp-col"
+        class="ocsp-col cursor-pointer"
         data-test="ocsp-sort"
+        :class="{ selected: selectedSort === sortColumn.OCSP }"
         @click="setSort(sortColumn.OCSP)"
         @mouseover="hoverOcsp = true"
         @mouseleave="hoverOcsp = false"
       >
-        <div class="header-title">
+        <div class="header-title d-flex flex-row align-center">
           {{ $t('keys.ocsp') }}
-          <sort-button
-            :arrow-state="sortDirection"
-            :active="hoverOcsp"
-            :selected="selectedSort === sortColumn.OCSP"
-          />
+          <SortButton :arrow-state="sortDirection" :active="hoverOcsp" :selected="selectedSort === sortColumn.OCSP" />
         </div>
       </th>
       <th
-        class="expiration-col"
-        data-test="expiration-sort"
+        class="expiration-col cursor-pointer"
+        data-test="expiration-sort d-flex flex-row align-center"
+        :class="{ selected: selectedSort === sortColumn.EXPIRATION }"
         @click="setSort(sortColumn.EXPIRATION)"
         @mouseover="hoverExp = true"
         @mouseleave="hoverExp = false"
       >
-        <div class="header-title">
+        <div class="header-title d-flex flex-row align-center">
           {{ $t('keys.expires') }}
-          <sort-button
-            :arrow-state="sortDirection"
-            :active="hoverExp"
-            :selected="selectedSort === sortColumn.EXPIRATION"
-          />
+          <SortButton :arrow-state="sortDirection" :active="hoverExp" :selected="selectedSort === sortColumn.EXPIRATION" />
         </div>
       </th>
       <th
-        class="status-col"
+        class="status-col cursor-pointer"
         data-test="status-sort"
+        :class="{ selected: selectedSort === sortColumn.STATUS }"
         @click="setSort(sortColumn.STATUS)"
         @mouseover="hoverStatus = true"
         @mouseleave="hoverStatus = false"
       >
-        <div class="header-title">
+        <div class="header-title d-flex flex-row align-center">
           {{ $t('keys.status') }}
-          <sort-button
-            :arrow-state="sortDirection"
-            :active="hoverStatus"
-            :selected="selectedSort === sortColumn.STATUS"
-          />
+          <SortButton :arrow-state="sortDirection" :active="hoverStatus" :selected="selectedSort === sortColumn.STATUS" />
+        </div>
+      </th>
+      <th class="renewal-col">
+        <div class="header-title">
+          {{ $t('keys.renewal') }}
         </div>
       </th>
       <th class="action-col"></th>
@@ -115,12 +106,11 @@
 /**
  * Table component for an array of keys
  */
-import Vue from 'vue';
+import { defineComponent } from 'vue';
 import SortButton from './SortButton.vue';
-import { Colors } from '@/global';
 import { KeysSortColumn } from './keyColumnSorting';
 
-export default Vue.extend({
+export default defineComponent({
   components: {
     SortButton,
   },
@@ -134,9 +124,9 @@ export default Vue.extend({
       required: true,
     },
   },
+  emits: ['set-sort'],
   data() {
     return {
-      colors: Colors,
       titleSort: false,
       sortColumn: KeysSortColumn,
       hoverName: false,
@@ -155,40 +145,7 @@ export default Vue.extend({
 </script>
 
 <style lang="scss" scoped>
-@import '~styles/tables';
-
-/* Needs two classes to override xrd-table style */
-.target-row {
-  .title-col {
-    width: 30%;
-    cursor: pointer;
-    user-select: none;
-    padding-left: 38px;
-  }
-}
-
-.id-col {
-  cursor: pointer;
-  user-select: none;
-}
-
-.ocsp-col,
-.expiration-col,
-.status-col,
-.action-col {
-  width: 10%;
-  font-weight: 700;
-  color: $XRoad-Black100;
-  cursor: pointer;
-  user-select: none;
-}
-
-.header-title {
-  font-size: 12px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  font-weight: 700;
-  color: $XRoad-Black100;
+.selected div.header-title {
+  color: rgb(var(--v-theme-on-surface));
 }
 </style>

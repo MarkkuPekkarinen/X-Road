@@ -25,134 +25,123 @@
    THE SOFTWARE.
  -->
 <template>
-  <div>
-    <div class="header-row">
-      <div class="xrd-title-search">
-        <div class="xrd-view-title">{{ $t('members.header') }}</div>
-        <xrd-search v-model="search" />
+  <XrdView title="members.header">
+    <template #append-header>
+      <div class="ml-6">
+        <XrdSearchField
+          v-model="search"
+          data-test="search-query-field"
+          width="320"
+          :label="$t('action.search')"
+          @update:model-value="debouncedFetchClients"
+        />
       </div>
-      <xrd-button
+      <XrdBtn
         v-if="hasPermissionToAddMember"
         data-test="add-member-button"
+        class="ml-auto"
+        prepend-icon="create_new_folder"
+        text="members.addMember"
         @click="showAddMemberDialog = true"
-      >
-        <xrd-icon-base class="xrd-large-button-icon">
-          <xrd-icon-add></xrd-icon-add>
-        </xrd-icon-base>
-        {{ $t('members.addMember') }}
-      </xrd-button>
-    </div>
-
-    <!-- Table -->
-    <v-data-table
+      />
+    </template>
+    <v-data-table-server
+      data-test="members-table"
+      class="xrd bg-surface-container xrd-rounded-16 border"
+      item-key="client_id.encoded_id"
+      :page="page"
       :loading="loading"
       :headers="headers"
+      :header-props="{ class: 'font-weight-medium body-regular' }"
       :items="clientStore.clients"
-      :search="search"
-      :must-sort="true"
-      :items-per-page="10"
-      :options.sync="pagingSortingOptions"
-      :server-items-length="clientStore.pagingOptions.total_items"
-      class="elevation-0 data-table"
-      item-key="client_id.encoded_id"
+      :items-length="clientStore.pagingOptions.total_items"
       :loader-height="2"
-      :footer-props="{ itemsPerPageOptions: [10, 25] }"
-      data-test="members-table"
       @update:options="changeOptions"
     >
-      <template #[`item.member_name`]="{ item }">
-        <div
-          v-if="hasPermissionToMemberDetails"
-          class="members-table-cell-name-action"
-          @click="toDetails(item)"
-        >
-          <xrd-icon-base class="xrd-clickable mr-4"
-            ><xrd-icon-folder-outline
-          /></xrd-icon-base>
-
-          {{ item.member_name }}
-        </div>
-
-        <div v-else class="members-table-cell-name">
-          <xrd-icon-base class="mr-4"
-            ><xrd-icon-folder-outline
-          /></xrd-icon-base>
-
-          {{ item.member_name }}
-        </div>
+      <template #top></template>
+      <template #[`item.member_name`]="{ item, internalItem }">
+        <XrdLabelWithIcon
+          data-test="member-name"
+          icon="folder"
+          :label="internalItem.columns.member_name"
+          :clickable="hasPermissionToMemberDetails"
+          semi-bold
+          @navigate="toDetails(item)"
+        />
       </template>
-    </v-data-table>
-
-    <!-- Dialogs -->
-    <AddMemberDialog
-      v-if="showAddMemberDialog"
-      :show-dialog="showAddMemberDialog"
-      @cancel="hideAddMemberDialog"
-      @save="hideAddMemberDialogAndRefetch"
-    >
-    </AddMemberDialog>
-  </div>
+      <template #bottom>
+        <XrdPagination />
+      </template>
+    </v-data-table-server>
+    <add-member-dialog v-if="showAddMemberDialog" @cancel="hideAddMemberDialog" @save="hideAddMemberDialogAndRefetch" />
+  </XrdView>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { RouteName } from '@/global';
-import AddMemberDialog from '@/views/Members/Member/AddMemberDialog.vue';
-import { DataTableHeader } from 'vuetify';
-import { userStore } from '@/store/modules/user';
-import { clientStore } from '@/store/modules/clients';
-import { mapState } from 'pinia';
-import { Permissions } from '@/global';
-import { mapActions, mapStores } from 'pinia';
-import { DataOptions } from 'vuetify';
-import { debounce, toIdentifier } from '@/util/helpers';
-import { notificationsStore } from '@/store/modules/notifications';
+import { defineComponent } from 'vue';
+
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
+
+import { mapState, mapStores } from 'pinia';
+
+import { useNotifications, XrdBtn, XrdLabelWithIcon, XrdPagination, XrdView } from '@niis/shared-ui';
+
+import { Permissions, RouteName } from '@/global';
 import { Client } from '@/openapi-types';
+import { useClient } from '@/store/modules/clients';
+import { useUser } from '@/store/modules/user';
+import { DataQuery, PagingOptions } from '@/ui-types';
+import { defaultItemsPerPageOptions } from '@/util/defaults';
+import { debounce, toIdentifier } from '@/util/helpers';
+
+import AddMemberDialog from '@/views/Members/Member/AddMemberDialog.vue';
 
 // To provide the Vue instance to debounce
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let that: any;
 
-export default Vue.extend({
-  name: 'MemberList',
+export default defineComponent({
   components: {
+    XrdView,
     AddMemberDialog,
+    XrdBtn,
+    XrdPagination,
+    XrdLabelWithIcon,
+  },
+  setup() {
+    const { addError } = useNotifications();
+    return { addError };
   },
   data() {
     return {
+      page: 1,
+      dataQuery: { page: 1, itemsPerPage: 10 } as DataQuery,
+      itemsPerPageOptions: defaultItemsPerPageOptions(),
       search: '',
       loading: false,
       showOnlyPending: false,
-      pagingSortingOptions: {} as DataOptions,
       showAddMemberDialog: false,
     };
   },
   computed: {
-    ...mapStores(clientStore),
-    ...mapState(userStore, ['hasPermission']),
+    ...mapStores(useClient),
+    ...mapState(useUser, ['hasPermission']),
     headers(): DataTableHeader[] {
       return [
         {
-          text:
-            (this.$t('global.memberName') as string) +
-            ' (' +
-            this.clientStore.clients?.length +
-            ')',
+          title: `${this.$t('global.memberName')} (${this.clientStore.clients?.length})`,
           align: 'start',
-          value: 'member_name',
-          class: 'xrd-table-header members-table-header-name',
+          key: 'member_name',
         },
         {
-          text: this.$t('global.memberClass') as string,
+          title: this.$t('global.memberClass') as string,
           align: 'start',
-          value: 'client_id.member_class',
-          class: 'xrd-table-header members-table-header-class',
+          key: 'client_id.member_class',
         },
         {
-          text: this.$t('global.memberCode') as string,
+          title: this.$t('global.memberCode') as string,
           align: 'start',
-          value: 'client_id.member_code',
-          class: 'xrd-table-header members-table-header-code',
+          key: 'client_id.member_code',
         },
       ];
     },
@@ -163,46 +152,45 @@ export default Vue.extend({
       return this.hasPermission(Permissions.ADD_NEW_MEMBER);
     },
   },
-  watch: {
-    search: function (newSearch, oldSearch) {
-      this.debouncedFetchClients();
-    },
-  },
   created() {
+    //eslint-disable-next-line @typescript-eslint/no-this-alias
     that = this;
   },
   methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
     hideAddMemberDialog(): void {
       this.showAddMemberDialog = false;
     },
     hideAddMemberDialogAndRefetch(): void {
       this.hideAddMemberDialog();
-      this.fetchClients(this.pagingSortingOptions);
+      this.fetchClients();
     },
     debouncedFetchClients: debounce(() => {
       // Debounce is used to reduce unnecessary api calls
-      that.fetchClients(that.pagingSortingOptions);
+      that.fetchClients();
     }, 600),
     toDetails(member: Client): void {
       this.$router.push({
         name: RouteName.MemberDetails,
         params: {
-          memberid: toIdentifier(member.client_id),
-          backTo: this.$router.currentRoute.path,
+          memberId: toIdentifier(member.client_id),
         },
       });
     },
-    changeOptions: async function () {
-      this.fetchClients(this.pagingSortingOptions);
+    changeOptions: async function ({ itemsPerPage, page, sortBy }: PagingOptions) {
+      this.dataQuery.itemsPerPage = itemsPerPage;
+      this.dataQuery.page = page;
+      this.dataQuery.sortBy = sortBy[0]?.key;
+      const order = sortBy[0]?.order;
+      this.dataQuery.sortOrder = order === undefined ? undefined : order === true || order === 'asc' ? 'asc' : 'desc';
+      this.fetchClients();
     },
-    fetchClients: async function (options: DataOptions) {
+    fetchClients: async function () {
       this.loading = true;
-
+      this.dataQuery.search = this.search;
       try {
-        await this.clientStore.find(options, this.search);
+        await this.clientStore.find(this.dataQuery);
       } catch (error: unknown) {
-        this.showError(error);
+        this.addError(error);
       } finally {
         this.loading = false;
       }
@@ -210,20 +198,3 @@ export default Vue.extend({
   },
 });
 </script>
-
-<style lang="scss" scoped>
-@import '~styles/colors';
-@import '~styles/tables';
-
-.members-table-cell-name-action {
-  color: $XRoad-Purple100;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.members-table-cell-name {
-  font-weight: 600;
-  font-size: 14px;
-}
-</style>

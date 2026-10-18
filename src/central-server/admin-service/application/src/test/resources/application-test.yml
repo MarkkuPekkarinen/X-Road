@@ -1,4 +1,20 @@
 ---
-debug: true
+debug: false
+
+spring:
+  main:
+    banner-mode: off
+  cloud:
+    vault:
+      enabled: false
+
+xroad:
+  common-rpc:
+    use-tls: false
+
 logging:
   config: classpath:centralserver-admin-service-test-logback.xml
+
+server:
+  ssl:
+    enabled: false

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -47,7 +47,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-import static ee.ria.xroad.common.util.Fn.self;
+import static org.niis.xroad.common.core.exception.DeviationBuilder.trMetadata;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_CLASS_NOT_FOUND;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_NOT_FOUND;
 
@@ -70,8 +70,7 @@ public class ClientDtoConverter extends DtoConverter<SecurityServerClient, Clien
         ClientDto clientDto = new ClientDto();
         clientDto.setClientId(clientIdDto);
 
-        if (source instanceof XRoadMember) {
-            XRoadMember xRoadMember = (XRoadMember) source;
+        if (source instanceof XRoadMember xRoadMember) {
             clientDto.setMemberName(xRoadMember.getName());
         } else if (source instanceof Subsystem) {
             // do nothing
@@ -88,39 +87,35 @@ public class ClientDtoConverter extends DtoConverter<SecurityServerClient, Clien
         ClientId clientId = clientIdDtoConverter.fromDto(clientIdDto);
         XRoadIdDto.TypeEnum clientType = clientIdDto.getType();
 
-        if (clientType != null) {
-            switch (clientType) {
-                case MEMBER:
-                    String memberClassCode = clientIdDto.getMemberClass();
-                    MemberClass memberClass = memberClassService
-                            .findByCode(memberClassCode)
-                            .orElseThrow(() -> new NotFoundException(
-                                    MEMBER_CLASS_NOT_FOUND,
-                                    "code",
-                                    memberClassCode
-                            ));
-                    return new XRoadMember(
-                            source.getMemberName(),
-                            clientId,
-                            memberClass
-                    );
-                case SUBSYSTEM:
-                    XRoadMember xRoadMember = memberService
-                            .findMember(clientId.getMemberId())
-                            .getOrElseThrow(() -> new NotFoundException(
-                                    MEMBER_NOT_FOUND,
-                                    "code",
-                                    clientIdDto.getMemberCode()
-                            ));
-                    return new Subsystem(
-                            xRoadMember,
-                            clientId
-                    );
-                default://Ignore other cases
-            }
+        switch (clientType) {
+            case MEMBER:
+                String memberClassCode = clientIdDto.getMemberClass();
+                MemberClass memberClass = memberClassService
+                        .findByCode(memberClassCode)
+                        .orElseThrow(() -> new NotFoundException(
+                                MEMBER_CLASS_NOT_FOUND.build(
+                                        trMetadata("code", memberClassCode))
+                        ));
+                return new XRoadMember(
+                        source.getMemberName(),
+                        clientId,
+                        memberClass
+                );
+            case SUBSYSTEM:
+                XRoadMember xRoadMember = memberService
+                        .findMember(clientId.getMemberId())
+                        .orElseThrow(() -> new NotFoundException(
+                                MEMBER_NOT_FOUND.build(
+                                        trMetadata("code",
+                                                clientIdDto.getMemberCode()))
+                        ));
+                return new Subsystem(xRoadMember, clientId, null);
+            case null:
+            default:
+                throw new IllegalArgumentException("Invalid client type: " + clientType);
         }
 
-        throw new IllegalArgumentException("Invalid client type: " + clientType);
+
     }
 
     @Service
@@ -131,20 +126,19 @@ public class ClientDtoConverter extends DtoConverter<SecurityServerClient, Clien
 
         @Override
         public ClientDto toDto(FlattenedSecurityServerClientView source) {
-            return self(new ClientDto(), clientDto -> {
-                clientDto.setMemberName(source.getMemberName());
-                clientDto.setClientId(self(new ClientIdDto(), clientIdDto -> {
-                    clientIdDto.setInstanceId(source.getXroadInstance());
-                    MemberClass memberClass = source.getMemberClass();
-                    Optional.ofNullable(memberClass)
-                            .map(MemberClass::getCode)
-                            .ifPresent(clientIdDto::setMemberClass);
-                    clientIdDto.setMemberCode(source.getMemberCode());
-                    clientIdDto.setSubsystemCode(source.getSubsystemCode());
-                    clientIdDto.setType(xRoadObjectTypeDtoMapper.convert(source.getType()));
-                    clientIdDto.setEncodedId(toEncodedId(clientIdDto));
-                }));
-            });
+            var clientIdDto = new ClientIdDto()
+                    .instanceId(source.getXroadInstance())
+                    .memberClass(Optional.ofNullable(source.getMemberClass()).map(MemberClass::getCode)
+                            .orElse(null))
+
+                    .memberCode(source.getMemberCode())
+                    .subsystemCode(source.getSubsystemCode())
+                    .type(xRoadObjectTypeDtoMapper.convert(source.getType()));
+            clientIdDto.encodedId(toEncodedId(clientIdDto));
+
+            return new ClientDto()
+                    .memberName(source.getMemberName())
+                    .clientId(clientIdDto);
         }
 
         @Override

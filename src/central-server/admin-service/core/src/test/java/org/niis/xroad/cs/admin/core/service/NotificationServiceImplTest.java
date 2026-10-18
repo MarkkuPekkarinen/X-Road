@@ -1,21 +1,21 @@
 /*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,17 +27,17 @@
 
 package org.niis.xroad.cs.admin.core.service;
 
-import ee.ria.xroad.common.SystemProperties;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
+import ee.ria.xroad.common.util.TimeUtils;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.vault.DsTlsEnrollmentMethod;
+import org.niis.xroad.common.vault.DsTlsEnrollmentStatus;
 import org.niis.xroad.cs.admin.api.domain.ConfigurationSigningKey;
 import org.niis.xroad.cs.admin.api.dto.AlertInfo;
 import org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus;
@@ -45,24 +45,29 @@ import org.niis.xroad.cs.admin.api.facade.SignerProxyFacade;
 import org.niis.xroad.cs.admin.api.service.ConfigurationSigningKeysService;
 import org.niis.xroad.cs.admin.api.service.GlobalConfGenerationStatusService;
 import org.niis.xroad.cs.admin.api.service.SystemParameterService;
+import org.niis.xroad.cs.admin.core.config.AdminServiceProperties;
+import org.niis.xroad.restapi.service.DsTlsCertificateService;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.protocol.dto.KeyInfoProto;
+import org.niis.xroad.signer.protocol.dto.TokenInfoProto;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static ee.ria.xroad.signer.protocol.dto.KeyUsageInfo.SIGNING;
-import static ee.ria.xroad.signer.protocol.dto.TokenStatusInfo.OK;
-import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
+import static org.niis.xroad.common.core.exception.ErrorCode.INTERNAL_ERROR;
 import static org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus.GlobalConfGenerationStatusEnum.FAILURE;
 import static org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus.GlobalConfGenerationStatusEnum.SUCCESS;
 import static org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus.GlobalConfGenerationStatusEnum.UNKNOWN;
 import static org.niis.xroad.cs.admin.api.service.ConfigurationSigningKeysService.SOURCE_TYPE_EXTERNAL;
 import static org.niis.xroad.cs.admin.api.service.ConfigurationSigningKeysService.SOURCE_TYPE_INTERNAL;
+import static org.niis.xroad.signer.protocol.dto.KeyUsageInfo.SIGNING;
+import static org.niis.xroad.signer.protocol.dto.TokenStatusInfo.OK;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceImplTest {
@@ -75,13 +80,22 @@ class NotificationServiceImplTest {
     private ConfigurationSigningKeysService configurationSigningKeysService;
     @Mock
     private GlobalConfGenerationStatusService globalConfGenerationStatus;
+    @Mock
+    private AdminServiceProperties adminServiceProperties;
+    @Mock
+    private DsTlsCertificateService dsTlsCertificateService;
 
     @InjectMocks
     private NotificationServiceImpl notificationService;
 
+    @BeforeEach
+    void setUp() {
+        lenient().when(dsTlsCertificateService.getEnrollmentStatus()).thenReturn(new DsTlsEnrollmentStatus(null, null, null));
+    }
+
     @Test
-    void getAlertsSignerException() throws Exception {
-        when(signerProxyFacade.getTokens()).thenThrow(new Exception());
+    void getAlertsSignerException() {
+        when(signerProxyFacade.getTokens()).thenThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).build());
 
         final Set<AlertInfo> alerts = notificationService.getAlerts();
 
@@ -90,75 +104,66 @@ class NotificationServiceImplTest {
     }
 
     @Test
-    void getAlertsAllOk() throws Exception {
+    void getAlertsAllOk() {
         ConfigurationSigningKey confSigningKey = new ConfigurationSigningKey();
         confSigningKey.setKeyIdentifier("id");
         mockInitialized(true, true);
-        when(globalConfGenerationStatus.get()).thenReturn(new GlobalConfGenerationStatus(SUCCESS, now()));
+        when(globalConfGenerationStatus.get()).thenReturn(new GlobalConfGenerationStatus(SUCCESS, TimeUtils.now()));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_INTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_EXTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
+        when(adminServiceProperties.isTrustedAnchorsAllowed()).thenReturn(true);
 
-        try (MockedStatic<SystemProperties> utilities = Mockito.mockStatic(SystemProperties.class)) {
-            utilities.when(SystemProperties::getCenterTrustedAnchorsAllowed).thenReturn(true);
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
 
-            final Set<AlertInfo> alerts = notificationService.getAlerts();
-
-            assertThat(alerts).isEmpty();
-        }
+        assertThat(alerts).isEmpty();
     }
 
     @Test
-    void getAlertsAllFail() throws Exception {
+    void getAlertsAllFail() {
         ConfigurationSigningKey confSigningKey = new ConfigurationSigningKey();
         confSigningKey.setKeyIdentifier("id-other");
         mockInitialized(true, true);
 
-        Instant time = Instant.now();
+        Instant time = TimeUtils.now();
         when(globalConfGenerationStatus.get()).thenReturn(new GlobalConfGenerationStatus(FAILURE, time));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_INTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_EXTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
+        when(adminServiceProperties.isTrustedAnchorsAllowed()).thenReturn(true);
 
-        try (MockedStatic<SystemProperties> utilities = Mockito.mockStatic(SystemProperties.class)) {
-            utilities.when(SystemProperties::getCenterTrustedAnchorsAllowed).thenReturn(true);
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
 
-            final Set<AlertInfo> alerts = notificationService.getAlerts();
-
-            assertThat(alerts).hasSize(3)
-                    .contains(new AlertInfo("status.signing_key.internal.token_not_found"))
-                    .contains(new AlertInfo("status.signing_key.external.token_not_found"))
-                    .contains(new AlertInfo("status.global_conf_generation.failing", time));
-        }
+        assertThat(alerts).hasSize(3)
+                .contains(new AlertInfo("status.signing_key.internal.token_not_found"))
+                .contains(new AlertInfo("status.signing_key.external.token_not_found"))
+                .contains(new AlertInfo("status.global_conf_generation.failing", time));
     }
 
     @Test
-    void getAlertsTokenNotActive() throws Exception {
+    void getAlertsTokenNotActive() {
         ConfigurationSigningKey confSigningKey = new ConfigurationSigningKey();
         confSigningKey.setKeyIdentifier("id");
         mockInitialized(false, true);
         when(systemParameterService.getConfExpireIntervalSeconds()).thenReturn(600);
-        when(globalConfGenerationStatus.get()).thenReturn(new GlobalConfGenerationStatus(SUCCESS, now()));
+        when(globalConfGenerationStatus.get()).thenReturn(new GlobalConfGenerationStatus(SUCCESS, TimeUtils.now()));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_INTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_EXTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
+        when(adminServiceProperties.isTrustedAnchorsAllowed()).thenReturn(true);
 
-        try (MockedStatic<SystemProperties> utilities = Mockito.mockStatic(SystemProperties.class)) {
-            utilities.when(SystemProperties::getCenterTrustedAnchorsAllowed).thenReturn(true);
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
 
-            final Set<AlertInfo> alerts = notificationService.getAlerts();
-
-            assertThat(alerts).hasSize(2)
-                    .contains(new AlertInfo("status.signing_key.internal.token_not_active"))
-                    .contains(new AlertInfo("status.signing_key.external.token_not_active"));
-        }
+        assertThat(alerts).hasSize(2)
+                .contains(new AlertInfo("status.signing_key.internal.token_not_active"))
+                .contains(new AlertInfo("status.signing_key.external.token_not_active"));
     }
 
     @Test
-    void getAlertsKeyNotActiveConfStatusUnkown() throws Exception {
+    void getAlertsKeyNotActiveConfStatusUnknown() {
         ConfigurationSigningKey confSigningKey = new ConfigurationSigningKey();
         confSigningKey.setKeyIdentifier("id");
         mockInitialized(true, false);
@@ -168,47 +173,133 @@ class NotificationServiceImplTest {
                 .thenReturn(Optional.of(confSigningKey));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_EXTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
+        when(adminServiceProperties.isTrustedAnchorsAllowed()).thenReturn(true);
 
-        try (MockedStatic<SystemProperties> utilities = Mockito.mockStatic(SystemProperties.class)) {
-            utilities.when(SystemProperties::getCenterTrustedAnchorsAllowed).thenReturn(true);
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
 
-            final Set<AlertInfo> alerts = notificationService.getAlerts();
-
-            assertThat(alerts).hasSize(3)
-                    .contains(new AlertInfo("status.global_conf_generation.status_not_found"))
-                    .contains(new AlertInfo("status.signing_key.internal.key_not_available"))
-                    .contains(new AlertInfo("status.signing_key.external.key_not_available"));
-        }
+        assertThat(alerts).hasSize(3)
+                .contains(new AlertInfo("status.global_conf_generation.status_not_found"))
+                .contains(new AlertInfo("status.signing_key.internal.key_not_available"))
+                .contains(new AlertInfo("status.signing_key.external.key_not_available"));
     }
 
     @Test
-    void getAlertsGlobalConfExpired() throws Exception {
+    void getAlertsGlobalConfExpired() {
         ConfigurationSigningKey confSigningKey = new ConfigurationSigningKey();
         confSigningKey.setKeyIdentifier("id");
         mockInitialized(true, true);
         when(globalConfGenerationStatus.get())
-                .thenReturn(new GlobalConfGenerationStatus(SUCCESS, now().minus(1, HOURS)));
+                .thenReturn(new GlobalConfGenerationStatus(SUCCESS, TimeUtils.now().minus(1, HOURS)));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_INTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
         when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_EXTERNAL))
                 .thenReturn(Optional.of(confSigningKey));
+        when(adminServiceProperties.isTrustedAnchorsAllowed()).thenReturn(true);
 
-        try (MockedStatic<SystemProperties> utilities = Mockito.mockStatic(SystemProperties.class)) {
-            utilities.when(SystemProperties::getCenterTrustedAnchorsAllowed).thenReturn(true);
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
 
-            final Set<AlertInfo> alerts = notificationService.getAlerts();
-
-            assertThat(alerts).hasSize(1)
-                    .contains(new AlertInfo("status.global_conf_generation.global_conf_expired"));
-        }
+        assertThat(alerts).hasSize(1)
+                .contains(new AlertInfo("status.global_conf_generation.global_conf_expired"));
     }
 
-    private void mockInitialized(boolean tokenActive, boolean keyAvailable) throws Exception {
-        KeyInfo keyinfo = new KeyInfo(keyAvailable, SIGNING, "", "id", "", "", List.of(),
-                List.of(), "");
-        TokenInfo tokenInfo = new TokenInfo("", "", "0", false, true,
-                tokenActive, "", "", 0, OK,
-                List.of(keyinfo), Map.of());
+    @Test
+    void getAlertsDsTlsAcmeEnrollmentFailing() {
+        mockInitialized(true, true);
+        when(globalConfGenerationStatus.get()).thenReturn(new GlobalConfGenerationStatus(SUCCESS, TimeUtils.now()));
+        ConfigurationSigningKey confSigningKey = new ConfigurationSigningKey();
+        confSigningKey.setKeyIdentifier("id");
+        when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_INTERNAL))
+                .thenReturn(Optional.of(confSigningKey));
+        when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_EXTERNAL))
+                .thenReturn(Optional.of(confSigningKey));
+        when(adminServiceProperties.isTrustedAnchorsAllowed()).thenReturn(true);
+        when(dsTlsCertificateService.getEnrollmentStatus()).thenReturn(new DsTlsEnrollmentStatus(null, null, "CA unreachable"));
+
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
+
+        assertThat(alerts).hasSize(1)
+                .contains(new AlertInfo("status.dataspace_tls_acme.enrollment_failing", "CA unreachable"));
+    }
+
+    @Test
+    void getAlertsDsTlsAcmeRenewalFailing() {
+        mockInitialized(true, true);
+        when(globalConfGenerationStatus.get()).thenReturn(new GlobalConfGenerationStatus(SUCCESS, TimeUtils.now()));
+        ConfigurationSigningKey confSigningKey = new ConfigurationSigningKey();
+        confSigningKey.setKeyIdentifier("id");
+        when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_INTERNAL))
+                .thenReturn(Optional.of(confSigningKey));
+        when(configurationSigningKeysService.findActiveForSource(SOURCE_TYPE_EXTERNAL))
+                .thenReturn(Optional.of(confSigningKey));
+        when(adminServiceProperties.isTrustedAnchorsAllowed()).thenReturn(true);
+        when(dsTlsCertificateService.getEnrollmentStatus())
+                .thenReturn(new DsTlsEnrollmentStatus(DsTlsEnrollmentMethod.ACME, Instant.now(), "CA unreachable"));
+
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
+
+        assertThat(alerts).hasSize(1)
+                .contains(new AlertInfo("status.dataspace_tls_acme.renewal_failing", "CA unreachable"));
+    }
+
+    @Test
+    void getAlertsDsTlsAcmeFailingSurfacesEvenWhenNotYetInitialized() {
+        // instance identifier left blank -> isInitialized() is false, so none of the signer/globalconf checks run
+        when(signerProxyFacade.getTokens()).thenReturn(List.of());
+        when(systemParameterService.getInstanceIdentifier()).thenReturn("");
+        when(dsTlsCertificateService.getEnrollmentStatus()).thenReturn(new DsTlsEnrollmentStatus(null, null, "CA unreachable"));
+
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
+
+        assertThat(alerts).containsExactly(new AlertInfo("status.dataspace_tls_acme.enrollment_failing", "CA unreachable"));
+    }
+
+    @Test
+    void getAlertsDsTlsAcmeEnrollmentStatusCheckThrowsProducesFallbackAlertNotException() {
+        when(dsTlsCertificateService.getEnrollmentStatus()).thenThrow(new RuntimeException("vault unreachable"));
+        when(signerProxyFacade.getTokens()).thenReturn(List.of());
+        when(systemParameterService.getInstanceIdentifier()).thenReturn("");
+
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
+
+        assertThat(alerts).containsExactly(new AlertInfo("status.dataspace_tls_acme.status_check_failed"));
+    }
+
+    @Test
+    void getAlertsSurfacesBothSignerErrorAndDsTlsAcmeFailureWhenBothFail() {
+        when(dsTlsCertificateService.getEnrollmentStatus()).thenReturn(new DsTlsEnrollmentStatus(null, null, "CA unreachable"));
+        when(signerProxyFacade.getTokens()).thenThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).build());
+
+        final Set<AlertInfo> alerts = notificationService.getAlerts();
+
+        assertThat(alerts).hasSize(2)
+                .contains(new AlertInfo("status.signer_error"))
+                .contains(new AlertInfo("status.dataspace_tls_acme.enrollment_failing", "CA unreachable"));
+    }
+
+    private void mockInitialized(boolean tokenActive, boolean keyAvailable) {
+        KeyInfoProto keyinfo = KeyInfoProto.newBuilder()
+                .setAvailable(keyAvailable)
+                .setUsage(SIGNING)
+                .setFriendlyName("")
+                .setId("id")
+                .setLabel("")
+                .setPublicKey("")
+                .setSignMechanismName("")
+                .build();
+
+        TokenInfo tokenInfo = new TokenInfo(TokenInfoProto.newBuilder()
+                .setType("")
+                .setFriendlyName("")
+                .setId("0")
+                .setReadOnly(false)
+                .setAvailable(true)
+                .setActive(tokenActive)
+                .setSerialNumber("")
+                .setLabel("")
+                .setStatus(OK)
+                .addKeyInfo(keyinfo)
+                .build());
+
         when(signerProxyFacade.getTokens()).thenReturn(List.of(tokenInfo));
         when(systemParameterService.getInstanceIdentifier()).thenReturn("CS");
         when(systemParameterService.getCentralServerAddress()).thenReturn("https://cs");

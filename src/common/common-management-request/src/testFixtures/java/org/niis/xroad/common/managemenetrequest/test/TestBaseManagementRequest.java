@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,10 +25,11 @@
  */
 package org.niis.xroad.common.managemenetrequest.test;
 
+import ee.ria.xroad.common.crypto.identifier.SignAlgorithm;
 import ee.ria.xroad.common.util.MimeTypes;
 
 import lombok.RequiredArgsConstructor;
-import org.eclipse.jetty.util.MultiPartOutputStream;
+import org.niis.xroad.common.managementrequest.model.MultiPartOutputStream;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -64,8 +65,8 @@ public abstract class TestBaseManagementRequest {
         multipart.write(message);
     }
 
-    protected byte[] createSignature(PrivateKey key, String signAlgoId) throws Exception {
-        var sig = Signature.getInstance(signAlgoId);
+    protected byte[] createSignature(PrivateKey key, SignAlgorithm signAlgoId) throws Exception {
+        var sig = Signature.getInstance(signAlgoId.name());
         sig.initSign(key);
         sig.update(message);
         return sig.sign();

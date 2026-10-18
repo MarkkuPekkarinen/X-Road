@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,161 +25,54 @@
  */
 package ee.ria.xroad.common.db;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.common.SystemProperties;
-import ee.ria.xroad.common.util.PrefixedProperties;
-
-import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.HibernateException;
 import org.hibernate.Interceptor;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
-import org.hibernate.cfg.Environment;
 import org.hibernate.internal.util.config.ConfigurationHelper;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
-import static ee.ria.xroad.common.ErrorCodes.X_DATABASE_ERROR;
+import static org.niis.xroad.common.core.exception.ErrorCode.DATABASE_ERROR;
 
 /**
  * Hibernate utility methods.
  */
 @Slf4j
+@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class HibernateUtil {
 
-    @Data
-    private static class SessionFactoryCtx {
-        private final SessionFactory sessionFactory;
-    }
-
-    private HibernateUtil() {
-    }
-
-    private static Map<String, SessionFactoryCtx> sessionFactoryCache = new HashMap<>();
-
-    /**
-     * Returns the session factory for the given session factory name.
-     * If the session factory has not been already created, it is created and stored in the cache.
-     *
-     * @param name the name of the session factory
-     * @return the session factory
-     */
-    public static synchronized SessionFactory getSessionFactory(String name) {
-        return getSessionFactory(name, null);
-    }
-
-    /**
-     * Returns the session factory for the given session factory name.
-     * If the session factory has not been already created, it is created and stored in the cache.
-     *
-     * @param name        the name of the session factory
-     * @param interceptor the interceptor to use on sessions created with this factory
-     * @return the session factory
-     */
-    public static synchronized SessionFactory getSessionFactory(String name, Interceptor interceptor) {
-        if (sessionFactoryCache.containsKey(name)) {
-            return sessionFactoryCache.get(name).getSessionFactory();
-        } else {
-            try {
-                SessionFactoryCtx ctx = createSessionFactoryCtx(name, interceptor);
-                sessionFactoryCache.put(name, ctx);
-
-                return ctx.getSessionFactory();
-            } catch (Exception e) {
-                log.error("Failed to create session factory", e);
-
-                throw new CodedException(X_DATABASE_ERROR, e);
-            }
-        }
-    }
-
-    /**
-     * Closes the session factory.
-     *
-     * @param name the name of the session factory to close
-     */
-    public static synchronized void closeSessionFactory(String name) {
-        log.trace("closeSessionFactory({})", name);
-
-        if (sessionFactoryCache.containsKey(name)) {
-            closeSessionFactory(sessionFactoryCache.get(name));
-            sessionFactoryCache.remove(name);
-        }
-    }
-
-    /**
-     * Closes all session factories in the cache. Should be called when the main program exits.
-     */
-    public static synchronized void closeSessionFactories() {
-        log.trace("closeSessionFactories()");
-
-        Collection<SessionFactoryCtx> sessionFactories = new ArrayList<>(sessionFactoryCache.values());
-
-        for (SessionFactoryCtx ctx : sessionFactories) {
-            closeSessionFactory(ctx);
-        }
-
-        sessionFactoryCache.clear();
-    }
-
-    private static void closeSessionFactory(SessionFactoryCtx ctx) {
-        try {
-            ctx.getSessionFactory().getCurrentSession().close();
-        } catch (HibernateException e) {
-            log.error("Error closing session", e);
-        }
-
-        try {
-            ctx.getSessionFactory().close();
-        } catch (HibernateException e) {
-            log.error("Error closing session factory", e);
-        }
-
-    }
-
-    private static SessionFactoryCtx createSessionFactoryCtx(String name, Interceptor interceptor) throws Exception {
+    static SessionFactory createSessionFactory(String name, Map<String, String> hibernateProperties, Interceptor interceptor) {
         log.trace("Creating session factory for '{}'...", name);
-
-        Configuration configuration = new Configuration();
-        if (interceptor != null) {
-            configuration.setInterceptor(interceptor);
-        }
-
-        configuration
-                .configure()
-                .configure(name + ".hibernate.cfg.xml");
-        applyDatabasePropertyFile(configuration, name);
-        applySystemProperties(configuration, name);
-
-        SessionFactory sessionFactory = configuration.buildSessionFactory();
-
-        return new SessionFactoryCtx(sessionFactory);
-    }
-
-    private static void applySystemProperties(Configuration configuration, String name) {
-        final String prefix = name + ".hibernate.";
-        for (String key : System.getProperties().stringPropertyNames()) {
-            if (key.startsWith(prefix)) {
-                configuration.setProperty(key.substring(name.length() + 1), System.getProperty(key));
+        try {
+            Configuration configuration = createEmptyConfiguration();
+            if (interceptor != null) {
+                configuration.setInterceptor(interceptor);
             }
+
+            configuration
+                    .configure()
+                    .configure(name + ".hibernate.cfg.xml");
+
+            if (hibernateProperties != null) {
+                hibernateProperties.forEach((key, value) -> configuration.setProperty("hibernate." + key, value));
+            } else {
+                throw XrdRuntimeException.systemException(DATABASE_ERROR, "Database (%s) properties not found.", name);
+            }
+            return configuration.buildSessionFactory();
+        } catch (Exception e) {
+            log.error("Failed to create session factory", e);
+
+            throw XrdRuntimeException.systemException(DATABASE_ERROR, e, "Error accessing database (%s)", name);
         }
     }
 
-    private static void applyDatabasePropertyFile(Configuration configuration, String name) throws IOException {
-        try (InputStream in = new FileInputStream(SystemProperties.getDatabasePropertiesFile())) {
-            final Properties extraProperties = new PrefixedProperties(name + ".");
-            extraProperties.load(in);
-            configuration.addProperties(extraProperties);
-        }
+    static Configuration createEmptyConfiguration() {
+        return new Configuration();
     }
 
     /**
@@ -191,7 +84,7 @@ public final class HibernateUtil {
      */
     public static int getConfiguredBatchSize(Session session, int defaultBatchSize) {
         final Map<String, Object> props = session.getSessionFactory().getProperties();
-        int configuredBatchSize = ConfigurationHelper.getInt(Environment.STATEMENT_BATCH_SIZE, props, defaultBatchSize);
+        int configuredBatchSize = ConfigurationHelper.getInt(AvailableSettings.STATEMENT_BATCH_SIZE, props, defaultBatchSize);
 
         log.trace("Configured JDBC batch size is {}", configuredBatchSize);
 

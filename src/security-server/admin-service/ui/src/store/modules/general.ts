@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -26,12 +27,13 @@
 
 import { defineStore } from 'pinia';
 import * as api from '@/util/api';
-import { MemberName } from '@/openapi-types';
+import { MemberName, XRoadInstance } from '@/openapi-types';
 
 export const useGeneral = defineStore('general', {
   state: () => {
     return {
-      xroadInstances: [] as string[],
+      xRoadInstances: [] as XRoadInstance[],
+      xRoadInstanceIdentifiers: [] as string[],
       memberClasses: [] as string[],
       memberClassesCurrentInstance: [] as string[],
       memberName: '' as string,
@@ -39,7 +41,7 @@ export const useGeneral = defineStore('general', {
   },
 
   actions: {
-    fetchMemberClasses() {
+    async fetchMemberClasses() {
       return api
         .get<string[]>('/member-classes')
         .then((res) => {
@@ -50,7 +52,7 @@ export const useGeneral = defineStore('general', {
         });
     },
 
-    fetchMemberClassesForCurrentInstance() {
+    async fetchMemberClassesForCurrentInstance() {
       return api
         .get<string[]>('/member-classes?current_instance=true')
         .then((res) => {
@@ -61,12 +63,10 @@ export const useGeneral = defineStore('general', {
         });
     },
 
-    fetchMemberName(memberClass: string, memberCode: string) {
+    async fetchMemberName(memberClass: string, memberCode: string) {
       // this is currently an inline schema and is not automatically generated to a typescript type
       return api
-        .get<MemberName>(
-          `/member-names?member_class=${memberClass}&member_code=${memberCode}`,
-        )
+        .get<MemberName>(`/member-names?member_class=${memberClass}&member_code=${memberCode}`)
         .then((res) => {
           this.memberName = res.data.member_name || '';
         })
@@ -75,11 +75,12 @@ export const useGeneral = defineStore('general', {
         });
     },
 
-    fetchXroadInstances() {
+    async fetchXRoadInstances() {
       return api
         .get('/xroad-instances')
         .then((res) => {
-          this.xroadInstances = res.data as string[];
+          this.xRoadInstances = res.data as XRoadInstance[];
+          this.xRoadInstanceIdentifiers = this.xRoadInstances.map((instance) => instance.identifier);
         })
         .catch((error) => {
           throw error;

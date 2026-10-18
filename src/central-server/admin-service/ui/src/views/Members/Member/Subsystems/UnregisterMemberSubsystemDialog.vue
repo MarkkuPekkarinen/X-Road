@@ -25,65 +25,43 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-sub-view-container>
-    <v-dialog v-if="true" :value="true" width="500" persistent>
-      <v-card class="xrd-card">
-        <v-card-title>
-          <span class="headline">
-            {{ $t('members.member.subsystems.deleteSubsystem') }}
-          </span>
-        </v-card-title>
-        <v-card-text class="pt-4" data-test="unregister-subsystem">
-          <i18n path="members.member.subsystems.areYouSureUnregister">
-            <template #subsystemCode>
-              <b>{{ subsystemCode }}</b>
-            </template>
-            <template #serverCode>
-              <b>{{ serverCode }}</b>
-            </template>
-          </i18n>
-        </v-card-text>
-        <v-card-actions class="xrd-card-actions">
-          <v-spacer></v-spacer>
-          <xrd-button
-            outlined
-            :disabled="loading"
-            data-test="dialog-cancel-button"
-            @click="cancel()"
-          >
-            {{ $t('action.cancel') }}
-          </xrd-button>
-          <xrd-button
-            data-test="dialog-unregister-button"
-            :disabled="loading"
-            @click="unregisterSubsystem()"
-          >
-            {{ $t('action.delete') }}
-          </xrd-button>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </xrd-sub-view-container>
+  <XrdConfirmDialog
+    :loading="loading"
+    title="members.member.subsystems.deleteSubsystem"
+    focus-on-accept
+    @cancel="cancel"
+    @accept="unregisterSubsystem"
+  >
+    <template #text>
+      <span class="font-weight-regular body-regular">
+        <i18n-t scope="global" keypath="members.member.subsystems.areYouSureUnregister">
+          <template #subsystemCode>
+            <span class="font-weight-bold">{{ subsystemCode }}</span>
+          </template>
+          <template #serverCode>
+            <span class="font-weight-bold">{{ serverCode }}</span>
+          </template>
+        </i18n-t>
+      </span>
+    </template>
+  </XrdConfirmDialog>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { mapActions, mapState, mapStores } from 'pinia';
-import { clientStore } from '@/store/modules/clients';
-import { systemStore } from '@/store/modules/system';
-import { notificationsStore } from '@/store/modules/notifications';
-import { subsystemStore } from '@/store/modules/subsystems';
-import { memberStore } from '@/store/modules/members';
+import { defineComponent, PropType } from 'vue';
+import { mapState, mapStores } from 'pinia';
+import { useClient } from '@/store/modules/clients';
+import { useSystem } from '@/store/modules/system';
+import { useSubsystem } from '@/store/modules/subsystems';
+import { useMember } from '@/store/modules/members';
 import { toIdentifier } from '@/util/helpers';
-import { Client } from '@/openapi-types';
+import { ClientId } from '@/openapi-types';
+import { useNotifications, XrdConfirmDialog } from '@niis/shared-ui';
 
-export default Vue.extend({
+export default defineComponent({
   name: 'UnregisterMemberSubsystemDialog',
+  components: { XrdConfirmDialog },
   props: {
-    showDialog: {
-      type: Boolean,
-      required: true,
-    },
     subsystemCode: {
       type: String,
       required: true,
@@ -92,6 +70,19 @@ export default Vue.extend({
       type: String,
       required: true,
     },
+    serverId: {
+      type: String,
+      required: true,
+    },
+    member: {
+      type: Object as PropType<{ client_id: ClientId }>,
+      required: true,
+    },
+  },
+  emits: ['cancel', 'unregistered-subsystem'],
+  setup() {
+    const { addError, addSuccessMessage } = useNotifications();
+    return { addError, addSuccessMessage };
   },
   data() {
     return {
@@ -99,36 +90,26 @@ export default Vue.extend({
     };
   },
   computed: {
-    ...mapStores(clientStore, memberStore, subsystemStore),
-    ...mapState(systemStore, ['getSystemStatus']),
+    ...mapStores(useClient, useMember, useSubsystem),
+    ...mapState(useSystem, ['getSystemStatus']),
   },
   methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
     cancel(): void {
       this.$emit('cancel');
     },
     unregisterSubsystem(): void {
       this.loading = true;
-      const currentMember = this.memberStore.$state.currentMember;
       this.subsystemStore
-        .unregisterById(
-          toIdentifier(currentMember.client_id) + ':' + this.subsystemCode,
-          toIdentifier(currentMember.client_id) + ':' + this.serverCode,
-        )
+        .unregisterById(toIdentifier(this.member.client_id) + ':' + this.subsystemCode, this.serverId)
         .then(() => {
-          this.showSuccess(
-            this.$t(
-              'members.member.subsystems.subsystemSuccessfullyUnregistered',
-              {
-                subsystemCode: this.subsystemCode,
-                serverCode: this.serverCode,
-              },
-            ),
-          );
-          this.$emit('unregisteredSubsystem');
+          this.addSuccessMessage('members.member.subsystems.subsystemSuccessfullyUnregistered', {
+            subsystemCode: this.subsystemCode,
+            serverCode: this.serverCode,
+          });
+          this.$emit('unregistered-subsystem');
         })
         .catch((error) => {
-          this.showError(error);
+          this.addError(error);
           this.$emit('cancel');
         })
         .finally(() => {

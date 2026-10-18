@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -29,9 +29,8 @@ package org.niis.xroad.securityserver.restapi.openapi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.restapi.openapi.ControllerUtil;
-import org.niis.xroad.restapi.openapi.InternalServerErrorException;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +39,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.io.IOException;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_OPENAPI_FILE_NOT_FOUND;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.OPENAPI_FILE_NOT_FOUND;
 
 /**
  * OpenAPI controller
@@ -52,6 +51,7 @@ import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_OPENAPI_FIL
 public class OpenapiApiController implements OpenapiApi {
 
     static final String OPENAPI_DEFINITION_PATH = "classpath:META-INF/openapi-definition.yaml";
+    static final String OPENAPI_DOWNLOAD_FILENAME = "openapi.yaml";
 
     private final ResourceLoader resourceLoader;
 
@@ -59,10 +59,10 @@ public class OpenapiApiController implements OpenapiApi {
     public ResponseEntity<Resource> downloadOpenApi() {
         try {
             byte[] bytes = IOUtils.toByteArray(resourceLoader.getResource(OPENAPI_DEFINITION_PATH).getInputStream());
-            return ControllerUtil.createAttachmentResourceResponse(bytes, OPENAPI_DEFINITION_PATH);
+            return ControllerUtil.createAttachmentResourceResponse(bytes, OPENAPI_DOWNLOAD_FILENAME);
         } catch (IOException e) {
             log.error("Error reading OpenAPI definition file", e);
-            throw new InternalServerErrorException(new ErrorDeviation(ERROR_OPENAPI_FILE_NOT_FOUND));
+            throw new InternalServerErrorException(OPENAPI_FILE_NOT_FOUND.build());
         }
     }
 }

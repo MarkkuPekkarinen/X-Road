@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -44,9 +44,7 @@ public class GlobalGroupMember extends Auditable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof GlobalGroupMember)) return false;
-
-        final GlobalGroupMember member = (GlobalGroupMember) o;
+        if (!(o instanceof GlobalGroupMember member)) return false;
 
         return identifier.equals(member.identifier);
     }

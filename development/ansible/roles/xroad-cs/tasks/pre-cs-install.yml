@@ -1,0 +1,43 @@
+---
+# Pre-seeds the Issuer Service dev-only trust reload interval in
+# local-ds-issuer-service.yaml before the xroad-ds-issuer-service postinst runs:
+# the postinst merges its own keys into that same file and skips keys already
+# present, so the file has to exist first. Permanent dev tuning, independent of
+# packaging.
+
+# xroad user/group are already created by the xroad-base role (meta dependency
+# of xroad-cs) before this file runs.
+
+# ---------------------------------------------------------------------------
+# 1. /etc/xroad/conf.d — the packages create it during install; the preseed in
+#    section 2 needs it before that. dpkg leaves pre-existing dirs intact (not a
+#    conffile). Stays as long as the dev-only tuning below does.
+# ---------------------------------------------------------------------------
+- name: ensure /etc/xroad/conf.d exists for preseeded configs
+  file:
+    path: /etc/xroad/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# ---------------------------------------------------------------------------
+# 2. DS issuer-service dev-only runtime tuning.
+#
+#    xroad.edc.web.https.trust.reload-interval-seconds: see the identical setting in
+#    xroad-ss/tasks/pre-ss-install.yml — the Issuer Service's own outbound self-connect trust needs
+#    the same reload-cycle shortening, since it is subject to the same fail-closed trust extension.
+# ---------------------------------------------------------------------------
+- name: preseed ds-issuer-service runtime overrides
+  copy:
+    dest: /etc/xroad/conf.d/local-ds-issuer-service.yaml
+    owner: xroad
+    group: xroad
+    mode: "0640"
+    content: |
+      xroad:
+        edc:
+          web:
+            https:
+              trust:
+                reload-interval-seconds: 5

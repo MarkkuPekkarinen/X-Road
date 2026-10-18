@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -28,16 +29,6 @@
  These are not in openapi definitions.
 */
 import { Client } from '@/openapi-types';
-import { Location } from 'vue-router';
-import { AxiosError } from 'axios';
-
-// Interface for Tab data
-export interface Tab {
-  key: string; // Unique key needed for v-for looping
-  name: string; // Localisation key for the name
-  to: Location; // Contains the path or path name for router. Same type as https://router.vuejs.org/api/#to
-  permissions?: string[]; // Permissions needed to view this tab
-}
 
 // Extension for Client
 export type ExtendedClient = Client & {
@@ -54,32 +45,6 @@ export interface ServiceCandidate {
   id: string;
 }
 
-// The result of the FileUpload components fileChanged event
-export type FileUploadResult = {
-  buffer: ArrayBuffer;
-  file: File;
-};
-
-// Data for snackbar notification
-export interface Notification {
-  timeAdded: number;
-  timeout: number;
-  errorMessage?: string; // Localised error message
-  successMessage?: string; // Localised success message
-  show: boolean;
-  count: number;
-  isWarning: boolean;
-  validationErrors?: ValidationError[];
-  errorCode?: string; // x-road error code
-  metaData?: string[];
-  errorId?: string;
-  errorObjectAsString?: string;
-  responseData?: string;
-  url?: string;
-  status?: string;
-}
-
-export type ValidationError = {
-  field: string;
-  errorCodes: string[];
+export type SessionStatus = {
+  valid: boolean;
 };

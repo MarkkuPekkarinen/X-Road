@@ -28,143 +28,125 @@
   Member details view
 -->
 <template>
-  <main id="member-details-content">
+  <XrdSubView>
     <!-- Member Details -->
-    <div id="member-details">
-      <info-card
-        :title-text="$t('global.memberName')"
-        :action-text="$t('action.edit')"
-        :show-action="allowMemberRename"
-        :info-text="memberStore.currentMember.member_name || ''"
-        data-test="member-name-card"
-        @actionClicked="showEditNameDialog = true"
-      />
+    <XrdCard data-test="member-details" :loading="memberStore.loadingCurrent">
+      <XrdCardTable>
+        <XrdCardTableRow data-test="member-name" label="global.memberName" :value="memberStore.current?.member_name">
+          <XrdBtn
+            v-if="allowMemberRename"
+            data-test="info-card-edit-button"
+            variant="text"
+            color="tertiary"
+            text="action.edit"
+            @click="showEditNameDialog = true"
+          />
+        </XrdCardTableRow>
+        <XrdCardTableRow data-test="member-class" label="global.memberClass" :value="memberStore.current?.client_id.member_class" />
+        <XrdCardTableRow data-test="member-code" label="global.memberCode" :value="memberStore.current?.client_id.member_code" />
+      </XrdCardTable>
+    </XrdCard>
 
-      <info-card
-        :title-text="$t('global.memberClass')"
-        :info-text="memberStore.currentMember.client_id.member_class || ''"
-        data-test="member-class-card"
-      />
-
-      <info-card
-        :title-text="$t('global.memberCode')"
-        :info-text="memberStore.currentMember.client_id.member_code || ''"
-        data-test="member-code-card"
+    <!-- Owned Servers -->
+    <div id="owned-servers" class="mt-4">
+      <ServersList
+        title-key="members.member.details.ownedServers"
+        :loading="loadingOwnedServers"
+        :servers="ownedServers"
+        data-test="owned-servers-table"
       />
     </div>
 
-    <!-- Owned Servers -->
-    <div id="owned-servers">
-      <div class="xrd-title-search mb-8">
-        <div class="xrd-view-title">
-          {{ $t('members.member.details.ownedServers') }}
-        </div>
-        <xrd-search v-model="searchServers" data-test="search-owned-servers" />
-      </div>
+    <!-- Used Servers -->
+    <div id="used-servers" class="mt-4">
+      <ServersList
+        title-key="members.member.details.usedServers"
+        :loading="loadingUsedServers"
+        :servers="usedServers"
+        data-test="used-servers-table"
+      >
+        <template #actions="{ server }">
+          <XrdBtn
+            v-if="allowUnregisterMember"
+            variant="text"
+            color="tertiary"
+            text="action.unregister"
+            :data-test="`unregister-${server.server_id.server_code}`"
+            @click="unregisterFromServer = server"
+          />
+        </template>
+      </ServersList>
 
-      <v-card flat>
-        <!-- Table -->
-        <v-data-table
-          :loading="loadingServers"
-          :headers="serversHeaders"
-          :items="servers"
-          :search="searchServers"
-          :must-sort="true"
-          :items-per-page="-1"
-          class="elevation-0 data-table"
-          item-key="id"
-          :loader-height="2"
-          hide-default-footer
-          data-test="owned-servers-table"
-        >
-          <template #footer>
-            <div class="cs-table-custom-footer"></div>
-          </template>
-        </v-data-table>
-      </v-card>
+      <UnregisterMemberDialog
+        v-if="allowUnregisterMember && unregisterFromServer && memberStore.current"
+        :member="memberStore.current"
+        :server="unregisterFromServer"
+        data-test="unregister-member"
+        @cancel="unregisterFromServer = null"
+        @unregister="
+          unregisterFromServer = null;
+          loadClientServers();
+        "
+      />
     </div>
 
     <!-- Global Groups -->
-    <div id="global-groups">
-      <div class="xrd-title-search mt-8 mb-8">
-        <div class="xrd-view-title">
-          {{ $t('members.member.details.globalGroups') }}
-        </div>
-        <xrd-search v-model="searchGroups" data-test="search-global-groups" />
-      </div>
-
-      <v-card flat>
-        <!-- Table -->
+    <div id="global-groups" class="mt-4">
+      <XrdCard title="members.member.details.globalGroups">
+        <template #append-title>
+          <XrdSearchField v-model="searchGroups" data-test="search-query-field" width="360" :label="$t('action.search')" />
+        </template>
         <v-data-table
+          data-test="global-groups-table"
+          class="xrd bg-surface-container"
+          hide-default-footer
           :loading="loadingGroups"
           :headers="groupsHeaders"
           :items="globalGroups"
           :search="searchGroups"
           :must-sort="true"
           :items-per-page="-1"
-          class="elevation-0 data-table"
           :loader-height="2"
-          hide-default-footer
-          data-test="global-groups-table"
         >
-          <template #[`item.added_to_group`]="{ item }">
-            {{ item.added_to_group | formatDateTime }}
+          <template #[`item.group_code`]="{ item }">
+            <div class="d-flex flex-row align-center">
+              <v-icon icon="group" color="tertiary" size="24" />
+              <span class="text-primary font-weight-medium ml-3">{{ item.group_code }}</span>
+            </div>
           </template>
-          <template #footer>
-            <div class="cs-table-custom-footer"></div>
+          <template #[`item.added_to_group`]="{ item }">
+            <XrdDateTime :value="item.added_to_group" />
           </template>
         </v-data-table>
-      </v-card>
-
-      <div
-        v-if="allowMemberDelete"
-        class="delete-action"
-        data-test="delete-member"
-        @click="showDeleteDialog = true"
-      >
-        <div>
-          <v-icon class="xrd-large-button-icon" :color="colors.Purple100"
-            >mdi-close-circle</v-icon
-          >
-        </div>
-        <div class="action-text">
-          {{ $t('members.member.details.deleteMember') }} "{{
-            memberStore.currentMember.member_name || ''
-          }}"
-        </div>
-      </div>
+      </XrdCard>
     </div>
 
     <!-- Edit member name dialog -->
     <EditMemberNameDialog
-      v-if="showEditNameDialog"
-      :member="memberStore.currentMember"
+      v-if="showEditNameDialog && memberStore.current"
+      :member="memberStore.current"
       @cancel="cancelEditMemberName"
-      @nameChanged="memberNameChanged"
-    ></EditMemberNameDialog>
-
-    <!-- Delete member - Check member code dialog -->
-    <MemberDeleteDialog
-      v-if="showDeleteDialog"
-      :member="memberStore.currentMember"
-      @cancel="cancelDelete"
-      @deleted="memberDeleted"
-    ></MemberDeleteDialog>
-  </main>
+      @save="memberNameChanged"
+    />
+  </XrdSubView>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { DataTableHeader } from 'vuetify';
-import { Colors, Permissions, RouteName } from '@/global';
-import InfoCard from '@/components/ui/InfoCard.vue';
-import { mapActions, mapState, mapStores } from 'pinia';
-import { memberStore } from '@/store/modules/members';
+import { defineComponent } from 'vue';
+
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
+import { mapState, mapStores } from 'pinia';
+
+import { useNotifications, XrdBtn, XrdCard, XrdCardTable, XrdCardTableRow, XrdDateTime, XrdSubView } from '@niis/shared-ui';
+
+import { Permissions } from '@/global';
 import { MemberGlobalGroup, SecurityServer } from '@/openapi-types';
-import { notificationsStore } from '@/store/modules/notifications';
-import { userStore } from '@/store/modules/user';
-import MemberDeleteDialog from '@/views/Members/Member/Details/DeleteMemberDialog.vue';
-import EditMemberNameDialog from '@/views/Members/Member/Details/EditMemberNameDialog.vue';
+import { useMember } from '@/store/modules/members';
+import { useUser } from '@/store/modules/user';
+
+import EditMemberNameDialog from './EditMemberNameDialog.vue';
+import ServersList from './ServersList.vue';
+import UnregisterMemberDialog from './UnregisterMemberDialog.vue';
 
 // To provide the Vue instance to debounce
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -173,180 +155,117 @@ let that: any;
 /**
  * Component for a Members details view
  */
-export default Vue.extend({
+export default defineComponent({
   name: 'MemberDetails',
   components: {
+    ServersList,
+    XrdDateTime,
     EditMemberNameDialog,
-    MemberDeleteDialog,
-    InfoCard,
+    UnregisterMemberDialog,
+    XrdBtn,
+    XrdCard,
+    XrdCardTable,
+    XrdCardTableRow,
+    XrdSubView,
   },
   props: {
-    memberid: {
+    memberId: {
       type: String,
       required: true,
     },
   },
+  setup() {
+    const { addError } = useNotifications();
+    return { addError };
+  },
   data() {
     return {
-      colors: Colors,
-
       showEditNameDialog: false,
-      showDeleteDialog: false,
 
-      loadingServers: false,
-      searchServers: '',
-      servers: [] as SecurityServer[],
+      loadingOwnedServers: false,
+      ownedServers: [] as SecurityServer[],
+
+      loadingUsedServers: false,
+      usedServers: [] as SecurityServer[],
+      unregisterFromServer: null as SecurityServer | null,
 
       loadingGroups: false,
       searchGroups: '',
       globalGroups: [] as MemberGlobalGroup[],
+      groupsHeaders: [
+        {
+          key: 'group_code',
+          title: this.$t('members.member.details.group') as string,
+          align: 'start',
+        },
+        {
+          key: 'subsystem',
+          title: this.$t('global.subsystem') as string,
+          align: 'start',
+        },
+        {
+          key: 'added_to_group',
+          title: this.$t('members.member.details.addedToGroup') as string,
+          align: 'start',
+        },
+      ] as DataTableHeader[],
     };
   },
   computed: {
-    ...mapState(userStore, ['hasPermission']),
-    ...mapStores(memberStore),
-    allowMemberDelete(): boolean {
-      return this.hasPermission(Permissions.DELETE_MEMBER);
-    },
+    ...mapState(useUser, ['hasPermission']),
+    ...mapStores(useMember),
     allowMemberRename(): boolean {
       return this.hasPermission(Permissions.EDIT_MEMBER_NAME);
     },
-    serversHeaders(): DataTableHeader[] {
-      return [
-        {
-          text: this.$t('global.server') as string,
-          align: 'start',
-          value: 'server_id.server_code',
-          class: 'xrd-table-header servers-table-header-server',
-        },
-      ];
-    },
-    groupsHeaders(): DataTableHeader[] {
-      return [
-        {
-          value: 'group_code',
-          text: this.$t('members.member.details.group') as string,
-          align: 'start',
-          class: 'xrd-table-header groups-table-header-group',
-        },
-        {
-          value: 'subsystem',
-          text: this.$t('global.subsystem') as string,
-          align: 'start',
-          class: 'xrd-table-header groups-table-header-subsystem',
-        },
-        {
-          value: 'added_to_group',
-          text: this.$t('members.member.details.addedToGroup') as string,
-          align: 'start',
-          class: 'xrd-table-header groups-table-header-added',
-        },
-      ];
+    allowUnregisterMember(): boolean {
+      return this.hasPermission(Permissions.UNREGISTER_MEMBER);
     },
   },
-  created() {
-    that = this;
+  watch: {
+    memberId: {
+      immediate: true,
+      handler(memberId) {
+        this.loadingGroups = true;
+        this.memberStore
+          .getMemberGlobalGroups(memberId)
+          .then((resp) => {
+            this.globalGroups = resp;
+          })
+          .catch((error) => {
+            this.addError(error);
+          })
+          .finally(() => {
+            this.loadingGroups = false;
+          });
 
-    this.loadingGroups = true;
-    this.memberStore
-      .getMemberGlobalGroups(this.memberid)
-      .then((resp) => {
-        this.globalGroups = resp;
-      })
-      .catch((error) => {
-        this.showError(error);
-      })
-      .finally(() => {
-        this.loadingGroups = false;
-      });
+        this.loadingOwnedServers = true;
+        this.memberStore
+          .getMemberOwnedServers(memberId)
+          .then((resp) => (this.ownedServers = resp))
+          .catch((error) => this.addError(error))
+          .finally(() => (this.loadingOwnedServers = false));
 
-    this.loadingServers = true;
-    this.memberStore
-      .getMemberOwnedServers(this.memberid)
-      .then((resp) => {
-        this.servers = resp;
-      })
-      .catch((error) => {
-        this.showError(error);
-      })
-      .finally(() => {
-        this.loadingServers = false;
-      });
+        this.loadClientServers();
+      },
+    },
   },
   methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
     cancelEditMemberName() {
       this.showEditNameDialog = false;
     },
     memberNameChanged() {
       this.showEditNameDialog = false;
     },
-    memberDeleted() {
-      this.showDeleteDialog = false;
-      this.$router.replace({ name: RouteName.Members });
-      this.showSuccess(this.$t('members.member.details.memberDeleted'));
-    },
-    cancelDelete() {
-      this.showDeleteDialog = false;
+    loadClientServers() {
+      this.loadingUsedServers = true;
+      this.memberStore
+        .getUsedServers(this.memberId)
+        .then((resp) => (this.usedServers = resp))
+        .catch((error) => this.addError(error))
+        .finally(() => (this.loadingUsedServers = false));
     },
   },
 });
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/colors';
-@import '~styles/tables';
-
-.card-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  color: $XRoad-Black70;
-  font-weight: bold;
-  padding-top: 5px;
-  padding-bottom: 5px;
-}
-
-.card-corner-button {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.delete-action {
-  margin-top: 34px;
-  color: $XRoad-Link;
-  cursor: pointer;
-  display: flex;
-  flex-direction: row;
-  .action-text {
-    margin-top: 2px;
-  }
-}
-
-#member-details {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-end;
-
-  margin-bottom: 24px;
-
-  .details-card {
-    width: 100%;
-
-    &:first-child {
-      margin-right: 30px;
-    }
-
-    &:last-child {
-      margin-left: 30px;
-    }
-  }
-}
-
-#global-groups-table {
-  tbody tr td:last-child {
-    width: 50px;
-  }
-}
-</style>
+<style lang="scss" scoped></style>

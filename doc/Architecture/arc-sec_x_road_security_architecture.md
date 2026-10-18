@@ -2,8 +2,8 @@
 
 **Technical Specification**
 
-Version: 0.8  
-01.06.2023
+Version: 0.12
+12.08.2026
 
 Doc. ID: ARC-SEC
 
@@ -11,16 +11,20 @@ Doc. ID: ARC-SEC
 
 ## Version history
 
- Date       | Version | Description                                    | Author
- ---------- |---------|------------------------------------------------| --------------------
- 20.06.2019 | 0.1     | Initial version                                | Niall O’Donoghue
- 27.06.2019 | 0.2     | Converted to Github flavoured Markdown         | Petteri Kivimäki
- 29.06.2019 | 0.3     | Editorial changes, updated chapters 5-7, 14-18 | Petteri Kivimäki
- 28.02.2021 | 0.4     | Update X-Road security architecture diagram    | Petteri Kivimäki
- 25.08.2021 | 0.5     | Update X-Road references from version 6 to 7   | Caro Hautamäki
- 07.09.2021 | 0.6     | Update with the new message log features       | Ilkka Seppälä
- 23.09.2022 | 0.7     | Added new Registration Web Service             | Eneli Reimets
- 01.06.2023 | 0.8     | Update references                              | Petteri Kivimäki
+ Date       | Version | Description                                      | Author
+ ---------- |---------|--------------------------------------------------| --------------------
+ 20.06.2019 | 0.1     | Initial version                                  | Niall O’Donoghue
+ 27.06.2019 | 0.2     | Converted to Github flavoured Markdown           | Petteri Kivimäki
+ 29.06.2019 | 0.3     | Editorial changes, updated chapters 5-7, 14-18   | Petteri Kivimäki
+ 28.02.2021 | 0.4     | Update X-Road security architecture diagram      | Petteri Kivimäki
+ 25.08.2021 | 0.5     | Update X-Road references from version 6 to 7     | Caro Hautamäki
+ 07.09.2021 | 0.6     | Update with the new message log features         | Ilkka Seppälä
+ 23.09.2022 | 0.7     | Added new Registration Web Service               | Eneli Reimets
+ 01.06.2023 | 0.8     | Update references                                | Petteri Kivimäki
+ 24.08.2023 | 0.9     | Minimum supported client Security Server version | Eneli Reimets
+ 12.06.2024 | 0.10    | Update with the new ACME features                | Petteri Kivimäki
+ 21.03.2025 | 0.11    | Syntax and styling                               | Pauline Dimmek
+ 12.08.2026 | 0.12    | Add reference to X-Road Threat Model; correct package signing description | Petteri Kivimäki
 
 ## Table of Contents
 
@@ -41,6 +45,7 @@ Doc. ID: ARC-SEC
   - [7 Access Control](#7-access-control)
     - [7.1 Messaging Access Control](#71-messaging-access-control)
     - [7.2 Web UI Access Control](#72-web-ui-access-control)
+    - [7.3 Minimum Supported Client Security Server Version](#73-minimum-supported-client-security-server-version)
   - [8 Input Validation](#8-input-validation)
     - [8.1 Web UI Input Validation](#81-web-ui-input-validation)
     - [8.2 Messaging Validation](#82-messaging-validation)
@@ -84,6 +89,13 @@ Figure 1. X-Road security architecture.
 
 The identity of each organization (X-Road Service Provider or Service Consumer) and technical entry point (Security Server) is verified using certificates that are issued by a trusted Certification Authority (CA) when an organization joins an X-Road ecosystem. The identities are maintained centrally, but all the data is exchanged directly between a consumer and provider. Message routing is based on organization and service level identifiers that are mapped to physical network locations of the services by X-Road. All the evidence regarding data exchange is stored locally by the data exchange parties, and no third parties have access to the data. Time-stamping and digital signature together guarantee non-repudiation of the data sent via X-Road.
 
+Please see the X-Road Threat Model \[[ARC-TM](#Ref_ARC-TM)\] for more detailed information on:
+
+  * Trust boundaries and entry points.
+  * Assets that need protection.
+  * Prioritised threat scenarios that cross those boundaries.
+  * Automated tests that verify the corresponding controls.
+
 ### 1.1 Terms and Abbreviations
 
 See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
@@ -101,9 +113,12 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 8. <a id="Ref_UC-FED" class="anchor"></a>\[UC-FED\] X-Road 7. Use Case Model for Federation. Document ID: [UC-FED](../UseCases/uc-fed_x-road_use_case_model_for_federation_1.1_Y-883-7.md)
 9. <a id="Ref_ARC-CS" class="anchor"></a>\[ARC-CS\] X-Road: Central Server Architecture. Document ID: [ARC-CS](arc-cs_x-road_central_server_architecture.md). 
 10. <a id="Ref_ARC-SS" class="anchor"></a>\[ARC-SS\] X-Road: Security Server Architecture. Document ID: [ARC-SS](arc-ss_x-road_security_server_architecture.md)
-12. <a id="Ref_ARC-ENVMON" class="anchor"></a>\[ARC-ENVMON\] X-Road: Environmental Monitoring Architecture. Document ID: [ARC-ENVMON](../EnvironmentalMonitoring/Monitoring-architecture.md).
-13. <a id="Ref_ARC-OPMOND" class="anchor"></a>\[ARC-OPMOND\] X-Road: Operational Monitoring Daemon Architecture. Document ID: [ARC-OPMOND](../OperationalMonitoring/Architecture/arc-opmond_x-road_operational_monitoring_daemon_architecture_Y-1096-1.md).
-14. <a id="Ref_GDPR" class="anchor"></a>\[GDPR\] EU Regulation No 679/2016 – Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC
+11. <a id="Ref_ARC-ENVMON" class="anchor"></a>\[ARC-ENVMON\] X-Road: Environmental Monitoring Architecture. Document ID: [ARC-ENVMON](../EnvironmentalMonitoring/Monitoring-architecture.md).
+12. <a id="Ref_ARC-OPMOND" class="anchor"></a>\[ARC-OPMOND\] X-Road: Operational Monitoring Daemon Architecture. Document ID: [ARC-OPMOND](../OperationalMonitoring/Architecture/arc-opmond_x-road_operational_monitoring_daemon_architecture_Y-1096-1.md).
+13. <a id="Ref_GDPR" class="anchor"></a>\[GDPR\] EU Regulation No 679/2016 – Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC
+14. <a id="Ref_UG-SEC" class="anchor"></a>\[UG-SEC\] X-Road: Security hardening guidelines. Document ID: [UG-SEC](../Manuals/ug-sec_x_road_security_hardening.md)
+15. <a id="Ref_ACME" class="anchor"></a>\[ACME\] RFC8555: Automatic Certificate Management Environment (ACME), <https://datatracker.ietf.org/doc/html/rfc8555>
+16. <a id="Ref_ARC-TM" class="anchor"></a>\[ARC-TM\] X-Road Threat Model. Document ID: [ARC-TM](arc-tm_x-road_threat_model.md).
 
 ## 2 Environment Assumptions
 
@@ -171,6 +186,10 @@ Details on Security Server user roles and associated access controls are describ
 
 In X-Road, access control starts by denying all access by default. Access will not be allowed to all roles if a new resource is added and authorisation is somehow configured incorrectly.
 
+### 7.3 Minimum Supported Client Security Server Version
+
+To increase the security of the X-Road ecosystem, it is recommended to limit the minimum version of the client Security Server that is allowed to access a service. Service providers can configure a minimum client Security Server version that's required to consume their services. For details, refer to \[[UG-SEC](#Ref_UG-SEC)\] section 3.1.1.
+
 ## 8 Input Validation
 
 For compliance with the principle of sanitised input, it is security best practice to validate all inputs at the server. X-Road has two validation aspects; a) web UI input validation and b) messaging validation.
@@ -209,7 +228,7 @@ The time-stamping feature is directly related to message logging. If the message
 
 ## 11 Updatability
 
-X-Road is designed to enable reliable installation of software updates including security updates. X-Road software packages are signed so that their origins are traceable. 
+X-Road is designed to enable reliable installation of software updates including security updates. RPM packages are signed individually; Debian packages are distributed through a repository whose index is signed, so that the origin of both is traceable.
 
 ## 12 Trust Federation
 
@@ -235,6 +254,7 @@ For compliance with security principle of economy of mechanism, X-Road member or
   * Management Services Protocol is used by Security Servers to perform management tasks such as registering a Security Server client or deleting an authentication certificate. The Management Services Protocol is implemented by two web services: Member Management Web Service and Registration Web Service. The Member Management Web Service is implemented as a standard X-Road service that is offered by the organization managing the X-Road instance. The Member Management Web Service is accessed by Security Servers through the management Security Server. Instead, the Registration Web Service is implemented as a separate web service that is accessed directly by Security Servers. Both web services translate the incoming SOAP requests to REST calls for the Central Server management REST API. 
   * Online Certificate Status Protocol (OCSP) is used by the Security Servers to query the validity information about the signing and authentication certificates. OCSP protocol is a synchronous protocol that is offered by the OCSP responder belonging to a certification authority. In X-Road, each Security Server is responsible for downloading and caching the validity information about its certificates. The OCSP responses are sent to the other Security Servers as part of the message transport protocol to ensure that the Security Servers do not need to discover the OCSP service used by the other party. 
   * Time-Stamping Protocol is used by Security Servers to ensure long-term proof value of  exchanged messages. The Security Servers log all messages and their signatures. These logs are periodically time-stamped to create long-term proof. Time-stamping is used in an asynchronous manner, so temporary unavailability of the time-stamping service does not directly affect the X-Road message exchange.
+  * Automated Certificate Management Environment \[[ACME](#Ref_ACME)\] protocol is used by the Security Servers to partly automate certificate management of the authentication and sign certificates.
 
 ## 14 Central Server
 
@@ -246,7 +266,7 @@ The Central Server manages the database of X-Road members and Security Servers. 
    
 Both the member database and the security policy are made available to the Security Servers via the HTTP protocol. This distributed set of data forms the global configuration. The integrity of the global configuration is guaranteed using digital signatures - the Central Server signs the global configuration, and the signature is verified by the Security Servers.
 
-The set of information that is needed to access the configuration source and to verify the downloaded global configuration is distributed to the Security Servers using the configuration anchor. The configuration anchor is an XML file, and it is uploaded to the Seuciry Server by the Security Server administrator during the initialization process. The X-Road operator is responsible for providing the configuration anchor to the new member organisations.
+The set of information that is needed to access the configuration source and to verify the downloaded global configuration is distributed to the Security Servers using the configuration anchor. The configuration anchor is an XML file, and it is uploaded to the Security Server by the Security Server administrator during the initialization process. The X-Road operator is responsible for providing the configuration anchor to the new member organisations.
 
 For Central Server components, refer to \[[ARC-CS](#Ref_ARC-CS)\] section 2.
 
@@ -277,6 +297,8 @@ For Security Server roles, refer to \[[UG-SS](#Ref_UG-SS)\] section 2.
 Only certificates issued by approved certification authorities can be used in X-Road. Approved certification authorities are defined on the Central Server and the configuration is environment specific. It is possible to have multiple approved certification authorities within an X-Road instance. 
 
 Security Server authentication key and certificate are stored on a software token. Central Server and Security Server signing keys and certificates can be stored on a software token or an HSM device.
+
+Security Server authentication and sign certificate management can be partly automated using the \[[ACME](#Ref_ACME)\] protocol. However, the ACME protocol can be used only if the Certificate Authority issuing the certificates supports it and the X-Road operator has enabled the use of the protocol on the Central Server.
 
 The signer component is responsible for managing signing keys and certificates. The signer is called by other components when creating or verifying signatures. The user interface also calls the signer when generating authentication and signing keys or certificate requests.
 

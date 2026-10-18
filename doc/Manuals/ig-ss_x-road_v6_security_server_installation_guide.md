@@ -2,69 +2,84 @@
 
 **X-ROAD 7**
 
-Version: 2.45  
+Version: 2.60  
 Doc. ID: IG-SS
 
 ---
 
 ## Version history <!-- omit in toc -->
 
-| Date       | Version | Description                                                                                                                                                                                                          | Author           |
-|------------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|
-| 01.12.2014 | 1.0     | Initial version                                                                                                                                                                                                      |                  |
-| 19.01.2015 | 1.1     | License information added                                                                                                                                                                                            |                  |
-| 18.03.2015 | 1.2     | Meta-package for security server added. Legacy securelog module removed                                                                                                                                              |                  |
-| 02.04.2015 | 1.3     | “sdsb” change to “xroad”                                                                                                                                                                                             |                  |
-| 27.05.2015 | 1.4     | Some typos fixed                                                                                                                                                                                                     |                  |
-| 30.06.2015 | 1.5     | Minor corrections done                                                                                                                                                                                               |                  |
-| 06.07.2015 | 1.6     | New repository address                                                                                                                                                                                               |                  |
-| 18.09.2015 | 1.7     | Reference data in [3.2](#32-reference-data) updated                                                                                                                                                                  |                  |
-| 18.09.2015 | 2.0     | Editorial changes made                                                                                                                                                                                               |                  |
-| 13.10.2015 | 2.1     | Editorial changes made                                                                                                                                                                                               |                  |
-| 10.12.2015 | 2.2     | Updated the installing of the support for hardware tokens ([2.7](#27-installing-the-support-for-hardware-tokens))                                                                                                    |                  |
-| 17.12.2015 | 2.3     | Added *xroad-addon-wsdlvalidator* package                                                                                                                                                                            |                  |
-| 19.05.2016 | 2.4     | Merged changes from xtee6-doc repo. Updated table [2.2](#22-reference-data) with p 1.12, added chapter [2.8](#28-installing-support-for-monitoring) and updated [3.2](#32-reference-data).                           |                  |
-| 30.09.2016 | 2.5     | Added chapter „[Different versions of xroad-\* package after successful upgrade](#45-different-versions-of-xroad--packages-after-successful-upgrade)“.                                                               |                  |
-| 07.12.2016 | 2.6     | Added operational data monitoring packages. 2 GB RAM -&gt; 3 GB RAM                                                                                                                                                  |                  |
-| 23.02.2017 | 2.7     | Converted to Github flavoured Markdown, added license text, adjusted tables for better output in PDF                                                                                                                 | Toomas Mölder    |
-| 13.04.2017 | 2.8     | Added token ID formatting                                                                                                                                                                                            | Cybernetica AS   |
-| 25.08.2017 | 2.9     | Update environmental monitoring installation information                                                                                                                                                             | Ilkka Seppälä    |
-| 15.09.2017 | 2.10    | Added package with configuration specific to Estonia xroad-securityserver-ee                                                                                                                                         | Cybernetica AS   |
-| 05.03.2018 | 2.11    | Added terms and abbreviations reference and document links                                                                                                                                                           | Tatu Repo        |
-| 10.04.2018 | 2.12    | Updated chapter "[Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini'                        | Cybernetica AS   |
-| 14.10.2018 | 2.13    | Update package repository address                                                                                                                                                                                    | Petteri Kivimäki |
-| 25.10.2018 | 2.14    | Add RHEL7 as supported platform, update section 2.2 Reference data                                                                                                                                                   | Petteri Kivimäki |
-| 15.11.2018 | 2.15    | Add Ubuntu 18 installation instructions                                                                                                                                                                              | Jarkko Hyöty     |
-| 28.01.2018 | 2.16    | Update port 2080 documentation                                                                                                                                                                                       | Petteri Kivimäki |
-| 30.05.2019 | 2.17    | Added package installation instructions on chapter "[2.4 Preparing OS](#24-preparing-os)"                                                                                                                            | Raul Martinez    |
-| 11.09.2019 | 2.18    | Remove Ubuntu 14.04 from supported platforms                                                                                                                                                                         | Jarkko Hyöty     |
-| 20.09.2019 | 2.19    | Add instructions for using remote databases                                                                                                                                                                          | Ilkka Seppälä    |
-| 12.04.2020 | 2.20    | Add note about the default value of the *connector-host* property in the EE-package                                                                                                                                  | Petteri Kivimäki |
-| 29.04.2020 | 2.21    | Add instructions how to use remote database located in Microsoft Azure                                                                                                                                               | Ilkka Seppälä    |
-| 12.06.2020 | 2.22    | Update reference data regarding JMX listening ports                                                                                                                                                                  | Petteri Kivimäki |
-| 24.06.2020 | 2.23    | Add repository sign key details in section [2.2 Reference data](#22-reference-data)                                                                                                                                  | Petteri Kivimäki |
-| 24.06.2020 | 2.24    | Remove environmental and operational monitoring daemon JMX listening ports from section [2.2 Reference data](#22-reference-data)                                                                                     | Petteri Kivimäki |
-| 09.08.2020 | 2.25    | Update ports information in section [2.2 Reference data](#22-reference-data), add section [2.2.1 Network Diagram](#221-network-diagram)                                                                              | Petteri Kivimäki |
-| 17.08.2020 | 2.26    | Update for RHEL 8.                                                                                                                                                                                                   | Jarkko Hyöty     |
-| 08.09.2020 | 2.27    | Fix minimum RAM requirement.                                                                                                                                                                                         | Ilkka Seppälä    |
-| 16.09.2020 | 2.28    | Describe deployment options and database customization options.                                                                                                                                                      | Ilkka Seppälä    |
-| 29.09.2020 | 2.29    | Add instructions for creating database structure and roles manually.                                                                                                                                                 | Ilkka Seppälä    |
-| 19.01.2021 | 2.30    | Add instructions for using an alternative Java distribution.                                                                                                                                                         | Jarkko Hyöty     |
-| 04.02.2021 | 2.31    | Minor updates.                                                                                                                                                                                                       | Ilkka Seppälä    |
-| 13.04.2021 | 2.32    | Update minimum requirements in section [2.2 Reference data](#22-reference-data)                                                                                                                                      | Petteri Kivimäki |
-| 16.04.2021 | 2.33    | Update remote database installation instructions                                                                                                                                                                     | Jarkko Hyöty     |
-| 18.05.2021 | 2.34    | Update error handling section                                                                                                                                                                                        | Ilkka Seppälä    |
-| 02.06.2021 | 2.35    | Add backup encryption information                                                                                                                                                                                    | Andres Allkivi   |
-| 01.07.2021 | 2.36    | Update 3rd party key server                                                                                                                                                                                          | Petteri Kivimäki |
-| 11.08.2021 | 2.37    | Minor updates                                                                                                                                                                                                        | Petteri Kivimäki |
-| 18.08.2021 | 2.38    | Minor updates to Annex D                                                                                                                                                                                             | Ilkka Seppälä    |
-| 25.08.2021 | 2.39    | Update X-Road references from version 6 to 7                                                                                                                                                                         | Caro Hautamäki   |
-| 26.08.2021 | 2.40    | Add instructions how to disable the messagelog addon before installing, add section [2.7 Disable the Messagelog Addon before Installation (optional)](#27-disable-the-messagelog-addon-before-installation-optional) | Caro Hautamäki   |
-| 03.08.2021 | 2.41    | Minor fixes                                                                                                                                                                                                          | Ilkka Seppälä    |
-| 06.09.2021 | 2.42    | Update list of running services                                                                                                                                                                                      | Jarkko Hyöty     |
-| 26.09.2022 | 2.43    | Remove Ubuntu 18.04 support                                                                                                                                                                                          | Andres Rosenthal |
-| 23.05.2023 | 2.44    | Minor backup encryption configuration fixes                                                                                                                                                                          | Eneli Reimets    |
-| 01.06.2023 | 2.45    | Update references                                                                                                                                                                                                    | Petteri Kivimäki |
+| Date       | Version | Description                                                                                                                                                                                                          | Author               |
+|------------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|
+| 01.12.2014 | 1.0     | Initial version                                                                                                                                                                                                      |                      |
+| 19.01.2015 | 1.1     | License information added                                                                                                                                                                                            |                      |
+| 18.03.2015 | 1.2     | Meta-package for Security Server added. Legacy securelog module removed                                                                                                                                              |                      |
+| 02.04.2015 | 1.3     | “sdsb” change to “xroad”                                                                                                                                                                                             |                      |
+| 27.05.2015 | 1.4     | Some typos fixed                                                                                                                                                                                                     |                      |
+| 30.06.2015 | 1.5     | Minor corrections done                                                                                                                                                                                               |                      |
+| 06.07.2015 | 1.6     | New repository address                                                                                                                                                                                               |                      |
+| 18.09.2015 | 1.7     | Reference data in [3.2](#32-reference-data) updated                                                                                                                                                                  |                      |
+| 18.09.2015 | 2.0     | Editorial changes made                                                                                                                                                                                               |                      |
+| 13.10.2015 | 2.1     | Editorial changes made                                                                                                                                                                                               |                      |
+| 10.12.2015 | 2.2     | Updated the installing of the support for hardware tokens ([2.7](#27-installing-the-support-for-hardware-tokens))                                                                                                    |                      |
+| 17.12.2015 | 2.3     | Added *xroad-addon-wsdlvalidator* package                                                                                                                                                                            |                      |
+| 19.05.2016 | 2.4     | Merged changes from xtee6-doc repo. Updated table [2.2](#22-reference-data) with p 1.12, added chapter [2.8](#28-installing-support-for-monitoring) and updated [3.2](#32-reference-data).                           |                      |
+| 30.09.2016 | 2.5     | Added chapter „[Different versions of xroad-\* package after successful upgrade](#45-different-versions-of-xroad--packages-after-successful-upgrade)“.                                                               |                      |
+| 07.12.2016 | 2.6     | Added operational data monitoring packages. 2 GB RAM -&gt; 3 GB RAM                                                                                                                                                  |                      |
+| 23.02.2017 | 2.7     | Converted to Github flavoured Markdown, added license text, adjusted tables for better output in PDF                                                                                                                 | Toomas Mölder        |
+| 13.04.2017 | 2.8     | Added token ID formatting                                                                                                                                                                                            | Cybernetica AS       |
+| 25.08.2017 | 2.9     | Update environmental monitoring installation information                                                                                                                                                             | Ilkka Seppälä        |
+| 15.09.2017 | 2.10    | Added package with configuration specific to Estonia xroad-securityserver-ee                                                                                                                                         | Cybernetica AS       |
+| 05.03.2018 | 2.11    | Added terms and abbreviations reference and document links                                                                                                                                                           | Tatu Repo            |
+| 10.04.2018 | 2.12    | Updated chapter "[Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini'                        | Cybernetica AS       |
+| 14.10.2018 | 2.13    | Update package repository address                                                                                                                                                                                    | Petteri Kivimäki     |
+| 25.10.2018 | 2.14    | Add RHEL7 as supported platform, update section 2.2 Reference data                                                                                                                                                   | Petteri Kivimäki     |
+| 15.11.2018 | 2.15    | Add Ubuntu 18 installation instructions                                                                                                                                                                              | Jarkko Hyöty         |
+| 28.01.2018 | 2.16    | Update port 2080 documentation                                                                                                                                                                                       | Petteri Kivimäki     |
+| 30.05.2019 | 2.17    | Added package installation instructions on chapter "[2.4 Preparing OS](#24-preparing-os)"                                                                                                                            | Raul Martinez        |
+| 11.09.2019 | 2.18    | Remove Ubuntu 14.04 from supported platforms                                                                                                                                                                         | Jarkko Hyöty         |
+| 20.09.2019 | 2.19    | Add instructions for using remote databases                                                                                                                                                                          | Ilkka Seppälä        |
+| 12.04.2020 | 2.20    | Add note about the default value of the *connector-host* property in the EE-package                                                                                                                                  | Petteri Kivimäki     |
+| 29.04.2020 | 2.21    | Add instructions how to use remote database located in Microsoft Azure                                                                                                                                               | Ilkka Seppälä        |
+| 12.06.2020 | 2.22    | Update reference data regarding JMX listening ports                                                                                                                                                                  | Petteri Kivimäki     |
+| 24.06.2020 | 2.23    | Add repository sign key details in section [2.2 Reference data](#22-reference-data)                                                                                                                                  | Petteri Kivimäki     |
+| 24.06.2020 | 2.24    | Remove environmental and operational monitoring daemon JMX listening ports from section [2.2 Reference data](#22-reference-data)                                                                                     | Petteri Kivimäki     |
+| 09.08.2020 | 2.25    | Update ports information in section [2.2 Reference data](#22-reference-data), add section [2.2.1 Network Diagram](#221-network-diagram)                                                                              | Petteri Kivimäki     |
+| 17.08.2020 | 2.26    | Update for RHEL 8.                                                                                                                                                                                                   | Jarkko Hyöty         |
+| 08.09.2020 | 2.27    | Fix minimum RAM requirement.                                                                                                                                                                                         | Ilkka Seppälä        |
+| 16.09.2020 | 2.28    | Describe deployment options and database customization options.                                                                                                                                                      | Ilkka Seppälä        |
+| 29.09.2020 | 2.29    | Add instructions for creating database structure and roles manually.                                                                                                                                                 | Ilkka Seppälä        |
+| 19.01.2021 | 2.30    | Add instructions for using an alternative Java distribution.                                                                                                                                                         | Jarkko Hyöty         |
+| 04.02.2021 | 2.31    | Minor updates.                                                                                                                                                                                                       | Ilkka Seppälä        |
+| 13.04.2021 | 2.32    | Update minimum requirements in section [2.2 Reference data](#22-reference-data)                                                                                                                                      | Petteri Kivimäki     |
+| 16.04.2021 | 2.33    | Update remote database installation instructions                                                                                                                                                                     | Jarkko Hyöty         |
+| 18.05.2021 | 2.34    | Update error handling section                                                                                                                                                                                        | Ilkka Seppälä        |
+| 02.06.2021 | 2.35    | Add backup encryption information                                                                                                                                                                                    | Andres Allkivi       |
+| 01.07.2021 | 2.36    | Update 3rd party key server                                                                                                                                                                                          | Petteri Kivimäki     |
+| 11.08.2021 | 2.37    | Minor updates                                                                                                                                                                                                        | Petteri Kivimäki     |
+| 18.08.2021 | 2.38    | Minor updates to Annex D                                                                                                                                                                                             | Ilkka Seppälä        |
+| 25.08.2021 | 2.39    | Update X-Road references from version 6 to 7                                                                                                                                                                         | Caro Hautamäki       |
+| 26.08.2021 | 2.40    | Add instructions how to disable the messagelog addon before installing, add section [2.7 Disable the Messagelog Addon before Installation (optional)](#27-disable-the-messagelog-addon-before-installation-optional) | Caro Hautamäki       |
+| 03.08.2021 | 2.41    | Minor fixes                                                                                                                                                                                                          | Ilkka Seppälä        |
+| 06.09.2021 | 2.42    | Update list of running services                                                                                                                                                                                      | Jarkko Hyöty         |
+| 26.09.2022 | 2.43    | Remove Ubuntu 18.04 support                                                                                                                                                                                          | Andres Rosenthal     |
+| 23.05.2023 | 2.44    | Minor backup encryption configuration fixes                                                                                                                                                                          | Eneli Reimets        |
+| 01.06.2023 | 2.45    | Update references                                                                                                                                                                                                    | Petteri Kivimäki     |
+| 20.11.2023 | 2.46    | Update firewall configuration documentation                                                                                                                                                                          | Taavi Meinberg       |
+| 27.11.2023 | 2.47    | Updated default proxy client http(s) ports                                                                                                                                                                           | Mikk-Erik Bachmann   |
+| 19.12.2023 | 2.48    | Add RHEL 9 as supported platform                                                                                                                                                                                     | Justas Samuolis      |
+| 02.01.2024 | 2.49    | Loopback ports added                                                                                                                                                                                                 | Justas Samuolis      |
+| 26.04.2024 | 2.50    | Ubuntu 24.04 support                                                                                                                                                                                                 | Madis Loitmaa        |
+| 12.06.2024 | 2.51    | Add ACME server to the network diagram, add a section about enabling ACME support                                                                                                                                    | Petteri Kivimäki     |
+| 25.06.2024 | 2.52    | Add global configuration download port 443 to the network diagram                                                                                                                                                    | Petteri Kivimäki     |
+| 24.09.2024 | 2.53    | Add mail server to the network diagram                                                                                                                                                                               | Mikk-Erik Bachmann   |
+| 08.11.2024 | 2.54    | Update for configurable parameters in the `/etc/xroad/devices.ini` after added support for ECDSA keys                                                                                                                | Ovidijus Narkevicius |
+| 13.02.2025 | 2.55    | Additional request for Proxy service memory allocation information while installing                                                                                                                                  | Ovidijus Narkevicius |
+| 10.03.2025 | 2.56    | Update required connections and other minor updates                                                                                                                                                                  | Petteri Kivimäki     |
+| 21.03.2025 | 2.57    | Syntax and styling                                                                                                                                                                                                   | Pauline Dimmek       |
+| 03.06.2025 | 2.58    | Setup database connection with SSL certificates                                                                                                                                                                      | Eneli Reimets        |
+| 30.06.2025 | 2.59    | Update the method of adding X-Road apt repository                                                                                                                                                                    | Mikk-Erik Bachmann   |
+| 10.09.2026 | 2.60    | Document hardware token configuration via the `xroad.signer.modules` database property                                                                                                                              | Ričardas Bučiūnas    |
 
 ## License
 
@@ -97,7 +112,11 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
   - [3.1 Prerequisites](#31-prerequisites)
   - [3.2 Reference Data](#32-reference-data)
   - [3.3 Configuration](#33-configuration)
-  - [3.4 Configuring configuration backup encryption](#34-configuring-configuration-backup-encryption)
+  - [3.4 Configuring Firewall](#34-configuring-firewall)
+    - [3.4.1 Accepting Connections](#341-accepting-connections)
+  - [3.5 Configuring Configuration Backup Encryption](#35-configuring-configuration-backup-encryption)
+  - [3.6 Enabling ACME Support](#36-enabling-acme-support)
+  - [3.7 Enabling EC Keys for Authentication and Signing Certificates](#37-Enabling-EC-Keys-for-Authentication-and-Signing-Certificates)
 - [4 Installation Error handling](#4-installation-error-handling)
   - [4.1 Cannot Set LC\_ALL to Default Locale](#41-cannot-set-lc_all-to-default-locale)
   - [4.2 PostgreSQL Is Not UTF8 Compatible](#42-postgresql-is-not-utf8-compatible)
@@ -124,7 +143,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ### 1.1 Target Audience
 
-The intended audience of this Installation Guide are X-Road Security server system administrators responsible for installing and using X-Road software. The daily operation and maintenance of the security server is covered by its User Guide \[[UG-SS](#Ref_UG-SS)\].
+The intended audience of this Installation Guide are X-Road Security Server system administrators responsible for installing and using X-Road software. The daily operation and maintenance of the Security Server is covered by its User Guide \[[UG-SS](#Ref_UG-SS)\].
 
 The document is intended for readers with a moderate knowledge of Linux server management, computer networks, and the X-Road working principles.
 
@@ -136,28 +155,27 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 ### 1.3 References
 
-1.  <a id="Ref_UG-SS" class="anchor"></a>\[UG-SS\] X-Road 7. Security Server User Guide. Document ID: [UG-SS](ug-ss_x-road_6_security_server_user_guide.md)
+1. <a id="Ref_UG-SS" class="anchor"></a>\[UG-SS\] X-Road 7. Security Server User Guide. Document ID: [UG-SS](ug-ss_x-road_6_security_server_user_guide.md)
 
-2.  <a id="Ref_TERMS" class="anchor"></a>\[TA-TERMS\] X-Road Terms and Abbreviations. Document ID: [TA-TERMS](../terms_x-road_docs.md).
+2. <a id="Ref_TERMS" class="anchor"></a>\[TA-TERMS\] X-Road Terms and Abbreviations. Document ID: [TA-TERMS](../terms_x-road_docs.md)
 
 3. <a name="Ref_UG-SYSPAR" class="anchor"></a>\[UG-SYSPAR\] X-Road: System Parameters User Guide. Document ID:
-[UG-SYSPAR](ug-syspar_x-road_v6_system_parameters.md).
+[UG-SYSPAR](ug-syspar_x-road_v6_system_parameters.md)
 
 4. <a name="Ref_IG-XLB" class="anchor"></a>\[IG-XLB\] X-Road: External Load Balancer Installation Guide. Document ID:
-[IG-XLB](LoadBalancing/ig-xlb_x-road_external_load_balancer_installation_guide.md).
-
+[IG-XLB](LoadBalancing/ig-xlb_x-road_external_load_balancer_installation_guide.md)
 
 ## 2 Installation
 
 
 ### 2.1 Prerequisites to Installation
 
-There are multiple alternatives how the security server can be deployed. The options are described in [Annex C Deployment Options](#annex-c-deployment-options).
+There are multiple alternatives how the Security Server can be deployed. The options are described in [Annex C Deployment Options](#annex-c-deployment-options).
 
-The security server is officially supported on the following platforms:
+The Security Server is officially supported on the following platforms:
 
-* Ubuntu Server 20.04 or 22.04 Long-Term Support (LTS) operating system on a x86-64 platform.
-* Red Hat Enterprise Linux (RHEL) 7 and 8 (x86-64). See [IG-SS-RHEL](ig-ss_x-road_v6_security_server_installation_guide_for_rhel.md) for more information.
+* Ubuntu Server 22.04 and 24.04 Long-Term Support (LTS) operating system on a x86-64 platform.
+* Red Hat Enterprise Linux (RHEL) 8 and 9 on a x86-64 platform. See [IG-SS-RHEL](ig-ss_x-road_v6_security_server_installation_guide_for_rhel.md) for more information.
 
 The software can be installed both on physical and virtualized hardware (of the latter, Xen and Oracle VirtualBox have been tested).
 
@@ -169,56 +187,73 @@ The software can be installed both on physical and virtualized hardware (of the 
 **Caution**: Data necessary for the functioning of the operating system is not included.
 
 
- **Ref** |                                                                                                                      | **Explanation**
- ------ |----------------------------------------------------------------------------------------------------------------------| ----------------------------------------------------------
- 1.0    | Ubuntu 20.04, Ubuntu 22.04 (x86-64)<br>3 GB RAM, 3 GB free disk space                                                | Minimum requirements without the `monitoring` and `op-monitoring` add-ons. With the add-ons minimum of 4 GB of RAM is required.
- 1.1    | https://artifactory.niis.org/xroad-release-deb                                                                       | X-Road package repository
- 1.2    | https://artifactory.niis.org/api/gpg/key/public                                                                      | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index)
- 1.3    |                                                                                                                      | Account name in the user interface
- 1.4    | **Inbound ports from external network**                                                                              | Ports for inbound connections from the external network to the security server
- &nbsp; | TCP 5500                                                                                                             | Message exchange between security servers
- &nbsp; | TCP 5577                                                                                                             | Querying of OCSP responses between security servers
- 1.5    | **Outbound ports to external network**                                                                               | Ports for outbound connections from the security server to the external network
- &nbsp; | TCP 5500                                                                                                             | Message exchange between security servers
- &nbsp; | TCP 5577                                                                                                             | Querying of OCSP responses between security servers
- &nbsp; | TCP 4001                                                                                                             | Communication with the central server
- &nbsp; | TCP 80                                                                                                               | Downloading global configuration from the central server
- &nbsp; | TCP 80,443                                                                                                           | Most common OCSP and time-stamping services
- 1.6    | **Inbound ports from internal network**                                                                              | Ports for inbound connections from the internal network to the security server
- &nbsp; | TCP 4000                                                                                                             | User interface and management REST API (local network). **Must not be accessible from the internet!**
- &nbsp; | TCP 80, 443                                                                                                          | Information system access points (in the local network). **Must not be accessible from the external network without strong authentication. If open to the external network, IP filtering is strongly recommended.**
- 1.7    | **Outbound ports to internal network**                                                                               | Ports for inbound connections from the internal network to the security server
- &nbsp; | TCP 80, 443, *other*                                                                                                 | Producer information system endpoints
- &nbsp; | TCP 2080                                                                                                             | Message exchange between security server and operational data monitoring daemon (by default on localhost)
- 1.8  |                                                                                                                      | Security server internal IP address(es) and hostname(s)
- 1.9  |                                                                                                                      | Security server public IP address, NAT address
- 1.10 | &lt;by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field&gt; | Information about the user interface TLS certificate
- 1.11 | &lt;by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field&gt; | Information about the services TLS certificate
-
-It is strongly recommended to protect the security server from unwanted access using a firewall (hardware or software based). The firewall can be applied to both incoming and outgoing connections depending on the security requirements of the environment where the security server is deployed. It is recommended to allow incoming traffic to specific ports only from explicitly defined sources using IP filtering. **Special attention should be paid with the firewall configuration since incorrect configuration may leave the security server vulnerable to exploits and attacks.**
-
+| **Ref** |                                                                                                                      | **Explanation**                                                                                                                                                                                                                                                                           |
+|---------|----------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.0     | Ubuntu 22.04 or 24.04 (x86-64)<br>3 GB RAM, 3 GB free disk space                                                     | Minimum requirements without the `monitoring` and `op-monitoring` add-ons. With the add-ons minimum of 4 GB of RAM is required.                                                                                                                                                           |
+| 1.1     | https://artifactory.niis.org/xroad-release-deb                                                                       | X-Road package repository                                                                                                                                                                                                                                                                 |
+| 1.2     | https://artifactory.niis.org/api/gpg/key/public                                                                      | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index) |
+| 1.3     |                                                                                                                      | Account name in the user interface                                                                                                                                                                                                                                                        |
+| 1.4     | **Inbound ports from external network**                                                                              | Ports for inbound connections from the external network to the Security Server                                                                                                                                                                                                            |
+| &nbsp;  | TCP 80                                                                                                               | Incoming ACME challenge requests from ACME servers                                                                                                                                                                                                                                        |
+| &nbsp;  | TCP 5500                                                                                                             | Message exchange between Security Servers                                                                                                                                                                                                                                                 |
+| &nbsp;  | TCP 5577                                                                                                             | Querying of OCSP responses between Security Servers                                                                                                                                                                                                                                       |
+| 1.5     | **Outbound ports to external network**                                                                               | Ports for outbound connections from the Security Server to the external network                                                                                                                                                                                                           |
+| &nbsp;  | TCP 5500                                                                                                             | Message exchange between Security Servers                                                                                                                                                                                                                                                 |
+| &nbsp;  | TCP 5577                                                                                                             | Querying of OCSP responses between Security Servers                                                                                                                                                                                                                                       |
+| &nbsp;  | TCP 4001                                                                                                             | Communication with the Central Server                                                                                                                                                                                                                                                     |
+| &nbsp;  | TCP 80,443                                                                                                           | Downloading global configuration from the Central Server                                                                                                                                                                                                                                  |
+| &nbsp;  | TCP 80,443                                                                                                           | Most common OCSP and time-stamping services                                                                                                                                                                                                                                               |
+| &nbsp;  | TCP 80,443                                                                                                           | Communication with ACME servers                                                                                                                                                                                                                                                           |
+| &nbsp;  | TCP 587                                                                                                              | Communication with mail servers. The mail server may be located in internal or external network                                                                                                                                                                                           |
+| 1.6     | **Inbound ports from internal network**                                                                              | Ports for inbound connections from the internal network to the Security Server                                                                                                                                                                                                            |
+| &nbsp;  | TCP 4000                                                                                                             | User interface and management REST API (local network). **Must not be accessible from the internet!**                                                                                                                                                                                     |
+| &nbsp;  | TCP 8080, 8443                                                                                                       | Information system access points (in the local network). **Must not be accessible from the external network without strong authentication. If open to the external network, IP filtering is strongly recommended.**                                                                       |
+| 1.7     | **Outbound ports to internal network**                                                                               | Ports for inbound connections from the internal network to the Security Server                                                                                                                                                                                                            |
+| &nbsp;  | TCP 80, 443, *other*                                                                                                 | Producer information system endpoints                                                                                                                                                                                                                                                     |
+| &nbsp;  | TCP 2080                                                                                                             | Message exchange between Security Server and operational data monitoring daemon (by default on localhost)                                                                                                                                                                                 |
+| 1.8     |                                                                                                                      | Security Server internal IP address(es) and hostname(s)                                                                                                                                                                                                                                   |
+| 1.9     |                                                                                                                      | Security Server public IP address, NAT address                                                                                                                                                                                                                                            |
+| 1.10    | &lt;by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field&gt; | Information about the user interface TLS certificate                                                                                                                                                                                                                                      |
+| 1.11    | &lt;by default, the server’s IP addresses and names are added to the certificate’s Distinguished Name (DN) field&gt; | Information about the services TLS certificate                                                                                                                                                                                                                                            |
 
 #### 2.2.1 Network Diagram
 
 The network diagram below provides an example of a basic Security Server setup. Allowing incoming connections from the Monitoring Security Server on ports 5500/tcp and 5577/tcp is necessary for the X-Road Operator to be able to monitor the ecosystem and provide statistics and support for Members.
 
-![network diagram](img/ig-ss_network_diagram_Ubuntu.png)
+![network diagram](img/ig-ss_network_diagram.svg)
 
 The table below lists the required connections between different components.
 
-**Connection Type** | **Source** | **Target** | **Target Ports** | **Protocol** | **Note** |
------------|------------|-----------|-----------|-----------|-----------|
-Out | Security Server | Central Server | 80, 4001 | tcp | |
-Out | Security Server | Management Security Server | 5500, 5577 | tcp | |
-Out | Security Server | OCSP Service | 80 / 443 | tcp | |
-Out | Security Server | Timestamping Service | 80 / 443 | tcp | |
-Out | Security Server | Data Exchange Partner Security Server (Service Producer) | 5500, 5577 | tcp | |
-Out | Security Server | Producer Information System | 80, 443, other | tcp | Target in the internal network |
-In  | Monitoring Security Server | Security Server | 5500, 5577 | tcp | |
-In  | Data Exchange Partner Security Server (Service Consumer) | Security Server | 5500, 5577 | tcp | |
-In | Consumer Information System | Security Server | 80, 443 | tcp | Source in the internal network |
-In | Admin | Security Server | 4000 | tcp | Source in the internal network |
+| **Connection Type** | **Source**                                               | **Target**                                               | **Target Ports** | **Protocol** | **Note**                                                                                                                                                                              |
+|---------------------|----------------------------------------------------------|----------------------------------------------------------|------------------|--------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Out                 | Security Server                                          | Central Server                                           | 80, 443, 4001    | tcp          |                                                                                                                                                                                       |
+| Out                 | Security Server                                          | Management Security Server                               | 5500, 5577       | tcp          |                                                                                                                                                                                       |
+| Out                 | Security Server                                          | OCSP Service                                             | 80 / 443         | tcp          |                                                                                                                                                                                       |
+| Out                 | Security Server                                          | Timestamping Service                                     | 80 / 443         | tcp          |                                                                                                                                                                                       |
+| Out                 | Security Server                                          | Data Exchange Partner Security Server (Service Producer) | 5500, 5577       | tcp          |                                                                                                                                                                                       |
+| Out                 | Security Server                                          | Producer Information System                              | 80, 443, other   | tcp          | Target in the internal network                                                                                                                                                        |
+| Out                 | Security Server                                          | ACME Server                                              | 80 / 443         | tcp          |                                                                                                                                                                                       |
+| Out                 | Security Server                                          | Mail server                                              | 587              | tcp          |                                                                                                                                                                                       |
+| In                  | Monitoring Security Server                               | Security Server                                          | 5500, 5577       | tcp          |                                                                                                                                                                                       |
+| In                  | Data Exchange Partner Security Server (Service Consumer) | Security Server                                          | 5500, 5577       | tcp          |                                                                                                                                                                                       |
+| In                  | ACME Server                                              | Security Server                                          | 80               | tcp          |                                                                                                                                                                                       | 
+| In                  | Consumer Information System                              | Security Server                                          | 8080, 8443       | tcp          | Source in the internal network                                                                                                                                                        |
+| In                  | Admin                                                    | Security Server                                          | 4000             | tcp          | Source in the internal network                                                                                                                                                        |
+| In                  | Monitoring system                                        | Security Server                                          | other            | tcp          | Source in the internal network<br />The health check interface is disabled by default and the target port is defined by the Security Server administrator when the feature is enabled |
 
+The table below lists the open ports for Security Server components utilizing the _loopback_ interface. A loopback interface is a virtual network interface on a computer, facilitating self-communication for processes and applications. This enables local communication and the ports must be accessible locally.
+
+| **Component**            | **Ports** | **Protocol** | **Note**                        |
+|--------------------------|-----------|--------------|---------------------------------|
+| PostgreSQL database      | 5432      | tcp          | Default PostgreSQL port         |
+| OP Monitoring daemon     | 2080      | tcp          |                                 |
+| Environmental monitoring | 2552      | tcp          |                                 |
+| Signer                   | 5559      | tcp          | Signer admin port               |
+| Signer                   | 5560      | tcp          | Signer gRPC port                |
+| Proxy                    | 5566      | tcp          | Proxy admin port                |
+| Proxy                    | 5567      | tcp          | Proxy gRPC server port          |
+| Configuration Client     | 5675      | tcp          | Configuration Client admin port |
+| Audit Log                | 514       | udp          |                                 |
 
 ### 2.3 Requirements for the Security Server
 
@@ -232,45 +267,55 @@ Minimum recommended hardware parameters:
 
 Requirements to software and settings:
 
-* an installed and configured Ubuntu 20.04 LTS or 22.04 LTS x86-64 operating system;
-* if the security server is separated from other networks by a firewall and/or NAT, the necessary connections to and from the security server are allowed (**reference data: 1.4; 1.5; 1.6; 1.7**). The enabling of auxiliary services which are necessary for the functioning and management of the operating system (such as DNS, NTP, and SSH) stay outside the scope of this guide;
-* if the security server has a private IP address, a corresponding NAT record must be created in the firewall (**reference data: 1.9**).
+* an installed and configured Ubuntu 22.04 LTS or 24.04 LTS x86-64 operating system;
+* if the Security Server is separated from other networks by a firewall and/or NAT, the necessary connections to and from the Security Server are allowed (**reference data: 1.4; 1.5; 1.6; 1.7**). The enabling of auxiliary services which are necessary for the functioning and management of the operating system (such as DNS, NTP, and SSH) stay outside the scope of this guide;
+* if the Security Server has a private IP address, a corresponding NAT record must be created in the firewall (**reference data: 1.9**).
 
 
 ### 2.4 Preparing OS
 
 * Add an X-Road system administrator user (**reference data: 1.3**) whom all roles in the user interface are granted to. Add a new user with the command
 
-        sudo adduser <username>
+  ```bash
+  sudo adduser <username>
+  ```
 
     User roles are discussed in detail in X-Road Security Server User Guide \[[UG-SS](#Ref_UG-SS)\]. Do not use the user name `xroad`, it is reserved for the X-Road system user.
 
 * Set the operating system locale. Add following line to the `/etc/environment` file.
 
-        LC_ALL=en_US.UTF-8
+  ```bash
+  LC_ALL=en_US.UTF-8
+  ```
 
-* Ensure that the packages `locales` and `software-properties-common` are present
+* Ensure that the packages `locales` and `lsb-release` are present
 
-        sudo apt-get install locales software-properties-common
+```bash
+sudo apt-get install locales lsb-release
+```
 
 * Ensure that the locale is available
-
-        sudo locale-gen en_US.UTF-8
-
+  
+  ```bash
+  sudo locale-gen en_US.UTF-8
+  ```
 
 ### 2.5 Setup Package Repository
 
 Add the X-Road repository’s signing key to the list of trusted keys (**reference data: 1.2**):
+
 ```bash
-curl https://artifactory.niis.org/api/gpg/key/public | sudo apt-key add -
+curl -fsSL https://x-road.eu/gpg/key/public/niis-artifactory-public.gpg | sudo tee /usr/share/keyrings/niis-artifactory-keyring.gpg > /dev/null
 ```
 
 Add X-Road package repository (**reference data: 1.1**)
+
 ```bash
-sudo apt-add-repository -y "deb https://artifactory.niis.org/xroad-release-deb $(lsb_release -sc)-current main"
+echo "deb [signed-by=/usr/share/keyrings/niis-artifactory-keyring.gpg] https://artifactory.niis.org/xroad-release-deb $(lsb_release -sc)-current main" | sudo tee /etc/apt/sources.list.d/xroad.list > /dev/null
 ```
 
 Update package repository metadata:
+
 ```bash
 sudo apt update
 ```
@@ -281,7 +326,7 @@ If you are installing the default setup with local PostgreSQL database and want 
 
 *This is an optional step.* 
 
-Optionally, the security server can use a remote database server. To avoid installing the default local PostgreSQL server during security server installation, first install the `xroad-database-remote` -package.
+Optionally, the Security Server can use a remote database server. To avoid installing the default local PostgreSQL server during Security Server installation, first install the `xroad-database-remote` -package.
 ```bash
 sudo apt install xroad-database-remote
 ```
@@ -295,11 +340,16 @@ psql -h <database host> -U <superuser> -tAc 'show server_version'
 10.16 (Ubuntu 10.16-0ubuntu0.18.04.1)
 ```
 
-The security server installer can create the database and users for you, but you need to create a configuration file containing the database administrator credentials. 
+The Security Server installer can create the database and users for you, but you need to create a configuration file containing the database administrator credentials. 
 
-For advanced setup, e.g. when using separate servers for the databases, sharing a database with several security servers, or if storing the database administrator password on the security server is not an option, you can create the database users and structure manually as described in [Annex D Create Database Structure Manually](#annex-d-create-database-structure-manually) and then continue to section 2.7. Otherwise, perform the following steps:
+For advanced setup, e.g. when using separate servers for the databases, sharing a database with several Security Servers, or if storing the database administrator password on the Security Server is not an option, you can create the database users and structure manually as described in [Annex D Create Database Structure Manually](#annex-d-create-database-structure-manually) and then continue to section 2.7.
+
+For setting up a database connection with SSL certificates, you need to create an additional configuration file `db_libpq.env` in the `/etc/xroad/` folder. For more details see the section „Passing additional parameters to psql“ in [UG-SS](#Ref_UG-SS).
+
+When leaving the database and user creation to the installer, continue with the following steps:
 
 Create the property file:
+
 ```bash
 sudo touch /etc/xroad.properties
 sudo chown root:root /etc/xroad.properties
@@ -307,13 +357,16 @@ sudo chmod 600 /etc/xroad.properties
 ```
 
 Edit `/etc/xroad.properties`. See the example below. Replace parameter values with your own.
+
 ```properties
 postgres.connection.password = <database superuser password>
 postgres.connection.user = <database superuser name, postgres by default>
 ```
+
 Note. If Microsoft Azure database for PostgreSQL is used, the connection user needs to be in format `username@hostname`.
 
 Before continuing, test that the connection to the database works, e.g.
+
 ```bash
 psql -h <database host> -U <superuser> -tAc 'show server_version'
 ```
@@ -332,7 +385,7 @@ sudo debconf-set-selections <<< 'xroad-addon-messagelog xroad-addon-messagelog/e
 
 ### 2.8 Security Server Installation
 
-Issue the following command to install the security server packages (use package `xroad-securityserver-ee` to include configuration specific to Estonia; use package `xroad-securityserver-fi` to include configuration specific to Finland; use package `xroad-securityserver-is` to include configuration specific to Iceland):
+Issue the following command to install the Security Server packages (use package `xroad-securityserver-ee` to include configuration specific to Estonia; use package `xroad-securityserver-fi` to include configuration specific to Finland; use package `xroad-securityserver-is` to include configuration specific to Iceland):
 
 ```bash
 sudo apt install xroad-securityserver
@@ -347,22 +400,40 @@ Upon the first installation of the packages, the system asks for the following i
 
   * The *Subject DN* must be entered in the format:
 
-            /CN=server.domain.tld
-
+    ```bash
+    /CN=server.domain.tld
+    ```
+  
   * All IP addresses and domain names in use must be entered as alternative names in the format:
 
-            IP:1.2.3.4,IP:4.3.2.1,DNS:servername,DNS:servername2.domain.tld
+    ```bash
+    IP:1.2.3.4,IP:4.3.2.1,DNS:servername,DNS:servername2.domain.tld
+    ```
 
 * The Distinguished Name of the owner of the TLS certificate that is used for securing the HTTPS access point of information systems (**reference data: 1.8; 1.11**).
     The name and IP addresses detected from the system are suggested as default values.
 
     * The *Subject DN* must be entered in the format:
 
-            /CN=server.domain.tld
+      ```bash
+      /CN=server.domain.tld
+      ```
 
     * All IP addresses and domain names in use must be entered as alternative names in the format:
 
-            IP:1.2.3.4,IP:4.3.2.1,DNS:servername,DNS:servername2.domain.tld
+      ```bash
+      IP:1.2.3.4,IP:4.3.2.1,DNS:servername,DNS:servername2.domain.tld
+      ```
+
+* The memory allocation configuration for the Java Virtual Machine (JVM) used by the proxy service.
+  Allowed values are:
+    * *d* - default, adds `-Xms100m -Xmx512m` config to the JVM options in `XROAD_PROXY_PARAMS` in `/etc/xroad/services/local.properties` file;
+  
+    * *r* - recommended, adds recommended Xms and Xmx values based on total memory in current server to the JVM options in `XROAD_PROXY_PARAMS` in `/etc/xroad/services/local.properties` file;
+  
+    * `<initialSize>[k|m|g] <maxSize>[k|m|g]` - custom values, which will be transformed to `-Xms<initialSize>[k|m|g] -Xmx<maxSize>[k|m|g]`.
+  
+  Note that in all cases `/etc/xroad/services/local.properties` file is updated so that `XROAD_PROXY_PARAMS` property contains new memory configs in the end of any other already present options there.
 
 The meta-package `xroad-securityserver` also installs metaservices module `xroad-addon-metaservices`, messagelog module `xroad-addon-messagelog` and WSDL validator module `xroad-addon-wsdlvalidator`. The meta-packages `xroad-securityserver-ee`, `xroad-securityserver-fi`, `xroad-securityserver-is`, and `xroad-securityserver-fo` install operational data monitoring module `xroad-addon-opmonitoring`.
 
@@ -373,6 +444,7 @@ The meta-package `xroad-securityserver` also installs metaservices module `xroad
 The installation is successful if system services are started and the user interface is responding.
 
 * Ensure from the command line that X-Road services are in the `running` state (example output follows):
+
   ```bash
   sudo systemctl list-units "xroad-*"
 
@@ -385,7 +457,8 @@ The installation is successful if system services are started and the user inter
   xroad-proxy.service            loaded active running X-Road Proxy
   xroad-signer.service           loaded active running X-Road signer
   ```
-* Ensure that the security server user interface at https://SECURITYSERVER:4000/ (**reference data: 1.8; 1.6**) can be opened in a Web browser. To log in, use the account name chosen during the installation (**reference data: 1.3**). While the user interface is still starting up, the Web browser may display a connection refused -error.
+
+* Ensure that the Security Server user interface at https://SECURITYSERVER:4000/ (**reference data: 1.8; 1.6**) can be opened in a Web browser. To log in, use the account name chosen during the installation (**reference data: 1.3**). While the user interface is still starting up, the Web browser may display a connection refused -error.
 
 ### 2.10 Installing the Support for Hardware Tokens
 
@@ -393,76 +466,114 @@ To configure support for hardware security tokens (smartcard, USB token, Hardwar
 
 1.  Install the hardware token support module using the following command:
 
-        sudo apt-get install xroad-addon-hwtokens
+    ```bash
+    sudo apt-get install xroad-addon-hwtokens
+    ```
 
 2.  Install and configure a PKCS\#11 driver for the hardware token according to the manufacturer's instructions.
 
-3.  Add the path to the PKCS\#11 driver to the file `/etc/xroad/devices.ini` (as described in the example given in the file).
+3.  Configure the module by adding an entry for it to the `xroad.signer.modules` configuration property, as described below.
 
 4.  After installing and configuring the driver, the `xroad-signer` service must be restarted:
 
-        sudo service xroad-signer restart
+    ```bash
+    sudo systemctl restart xroad-signer
+    ```
 
-If you are running a high availability (HA) hardware token setup (such as a cluster with replicated tokens) then you may need to constrain the token identifier format such that the token replicas can be seen as the same token. The token identifier format can be changed in `/etc/xroad/devices.ini` via the `token_id_format` property (default value: `{moduleType}{slotIndex}{serialNumber}{label}`). Removing certain parts of the identifier will allow the HA setup to work correctly when one of the tokens goes down and is replaced by a replica. For example, if the token replicas are reported to be on different slots the `{slotIndex}` part should be removed from the identifier format.
+Hardware token (HSM) modules are configured as a single JSON document stored in the `xroad.signer.modules` configuration property, not as a file on disk. The document is a JSON object that maps a module identifier of your own choosing (used as the token's UID) to that module's settings, for example:
 
-Depending on the hardware token there may be a need for more additional configuration. All possible configurable parameters in the `/etc/xroad/devices.ini` are described in the next table.
+```json
+{
+  "softhsm2": {
+    "library": "/usr/lib/softhsm/libsofthsm2.so",
+    "os-locking-ok": true,
+    "library-cant-create-os-threads": true,
+    "slot-ids": [0],
+    "token-id-format": "1"
+  }
+}
+```
 
-Parameter   | Type    | Default Value | Explanation
------------ | ------- |-------------- | ---------------------------------------
-*enabled*     | BOOLEAN | *true* | Indicates whether this device is enabled.
-*library*     | STRING  |      | The path to the pkcs#11 library of the device driver.
-*library_cant_create_os_threads* | BOOLEAN | *false* | Indicates whether application threads, which are executing calls to the pkcs#11 library, may not use native operating system calls to spawn new threads (in other words, the library’s code may not create its own threads).
-*os_locking_ok* | BOOLEAN | *false* | Indicates whether the pkcs#11 library may use the native operation system threading model for locking.
-*sign_verify_pin* | BOOLEAN | *false* | Indicates whether the PIN should be entered per signing operation.
-*token_id_format* | STRING | *{moduleType}{slotIndex}{serialNumber}{label}* | Specifies the identifier format used to uniquely identify a token. In certain high availability setups may need be constrained to support replicated tokens (eg. by removing the slot index part which may be diffirent for the token replicas).
-*sign_mechanism*  | STRING | *CKM_RSA_PKCS* | Specifies the signing mechanism. Supported values: *CKM_RSA_PKCS*, *CKM_RSA_PKCS_PSS*.
-*pub_key_attribute_encrypt*  | BOOLEAN | *true* | Indicates whether public key can be used for encryption.
-*pub_key_attribute_verify* | BOOLEAN | *true* | Indicates whether public key can be used for verification.
-*pub_key_attribute_wrap* | BOOLEAN | | Indicates whether public key can be used for wrapping other keys.
-*pub_key_attribute_allowed_mechanisms* | STRING LIST | | Specifies public key allowed mechanisms. Supported values: *CKM_RSA_PKCS*, *CKM_SHA256_RSA_PKCS*, *CKM_SHA384_RSA_PKCS*, *CKM_SHA512_RSA_PKCS*, and *CKM_RSA_PKCS_PSS*, *CKM_SHA256_RSA_PKCS_PSS*, *CKM_SHA384_RSA_PKCS_PSS*, *CKM_SHA512_RSA_PKCS_PSS*.
-*priv_key_attribute_sensitive* | BOOLEAN | *true* | Indicates whether private key is sensitive.
-*priv_key_attribute_decrypt* | BOOLEAN | *true* | Indicates whether private key can be used for encryption.
-*priv_key_attribute_sign* | BOOLEAN | *true* | Indicates whether private key can be used for signing.
-*priv_key_attribute_unwrap* | BOOLEAN | | Indicates whether private key can be used for unwrapping wrapped keys.
-*priv_key_attribute_allowed_mechanisms* | STRING LIST | | Specifies private key allowed mechanisms. Supported values: *CKM_RSA_PKCS*, *CKM_SHA256_RSA_PKCS*, *CKM_SHA384_RSA_PKCS*, *CKM_SHA512_RSA_PKCS*, and *CKM_RSA_PKCS_PSS*, *CKM_SHA256_RSA_PKCS_PSS*, *CKM_SHA384_RSA_PKCS_PSS*, *CKM_SHA512_RSA_PKCS_PSS*.
+All possible properties of a module entry are described in the next table.
 
-**Note 1:** Only parameter *library* is mandatory, all the others are optional.
-**Note 2:** The item separator of the type STRING LIST is ",".
+| Property                                 | Type         | Default Value                                  | Explanation                                                                                                                                                                                                                                                                                                                        |
+|-------------------------------------------|--------------|-------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `enabled`                                  | BOOLEAN      | `true`                                          | Indicates whether this module is enabled. Setting `enabled: false` for the reserved module id `softToken` disables the built-in software token instead of a hardware module.                                                                                                                                                    |
+| `library`                                  | STRING       |                                                  | The path to the PKCS#11 library of the device driver, as seen by the signer process.                                                                                                                                                                                                                                              |
+| `library-cant-create-os-threads`           | BOOLEAN      |                                                  | Indicates whether application threads, which are executing calls to the PKCS#11 library, may not use native operating system calls to spawn new threads (in other words, the library's code may not create its own threads).                                                                                                    |
+| `os-locking-ok`                            | BOOLEAN      |                                                  | Indicates whether the PKCS#11 library may use the native operating system threading model for locking.                                                                                                                                                                                                                            |
+| `sign-verify-pin`                          | BOOLEAN      | `false`                                          | Indicates whether the PIN should be entered per signing operation.                                                                                                                                                                                                                                                                 |
+| `token-id-format`                          | STRING       | `{moduleType}{slotIndex}{serialNumber}{label}`  | Specifies the identifier format used to uniquely identify a token. In certain high availability setups may need to be constrained to support replicated tokens (e.g. by removing the slot index part which may be different for the token replicas).                                                                             |
+| `sign-mechanism`                           | STRING       | `CKM_RSA_PKCS`                                  | Specifies the signing mechanism. Supported values: `CKM_RSA_PKCS`, `CKM_RSA_PKCS_PSS`.                                                                                                                                                                                                                                            |
+| `rsa-sign-mechanism`                       | STRING       | value of `sign-mechanism`                       | Specifies the signing mechanism for RSA keys, overriding `sign-mechanism`. Supported values: `CKM_RSA_PKCS`, `CKM_RSA_PKCS_PSS`.                                                                                                                                                                                                  |
+| `ec-sign-mechanism`                        | STRING       | `CKM_ECDSA`                                     | Specifies the signing mechanism for EC keys. Supported values: `CKM_ECDSA`.                                                                                                                                                                                                                                                       |
+| `pub-key-attribute-encrypt`                | BOOLEAN      | `true`                                           | Indicates whether the public key can be used for encryption.                                                                                                                                                                                                                                                                      |
+| `pub-key-attribute-verify`                 | BOOLEAN      | `true`                                           | Indicates whether the public key can be used for verification.                                                                                                                                                                                                                                                                    |
+| `pub-key-attribute-wrap`                   | BOOLEAN      |                                                  | Indicates whether the public key can be used for wrapping other keys.                                                                                                                                                                                                                                                             |
+| `pub-key-attribute-verify-recover`         | BOOLEAN      |                                                  | Indicates whether the public key has the verify-recover attribute.                                                                                                                                                                                                                                                                |
+| `pub-key-attribute-trusted`                | BOOLEAN      |                                                  | Indicates whether the public key has the trusted attribute.                                                                                                                                                                                                                                                                       |
+| `pub-key-attribute-allowed-mechanisms`     | STRING LIST  |                                                  | Specifies public key allowed mechanisms. Supported values: `CKM_RSA_PKCS`, `CKM_SHA256_RSA_PKCS`, `CKM_SHA384_RSA_PKCS`, `CKM_SHA512_RSA_PKCS`, `CKM_RSA_PKCS_PSS`, `CKM_SHA256_RSA_PKCS_PSS`, `CKM_SHA384_RSA_PKCS_PSS`, `CKM_SHA512_RSA_PKCS_PSS`, `CKM_ECDSA`, `CKM_ECDSA_SHA256`, `CKM_ECDSA_SHA384`, `CKM_ECDSA_SHA512`.       |
+| `priv-key-attribute-sensitive`             | BOOLEAN      | `true`                                           | Indicates whether the private key is sensitive.                                                                                                                                                                                                                                                                                   |
+| `priv-key-attribute-decrypt`               | BOOLEAN      | `true`                                           | Indicates whether the private key can be used for decryption.                                                                                                                                                                                                                                                                     |
+| `priv-key-attribute-sign`                  | BOOLEAN      | `true`                                           | Indicates whether the private key can be used for signing.                                                                                                                                                                                                                                                                        |
+| `priv-key-attribute-unwrap`                | BOOLEAN      |                                                  | Indicates whether the private key can be used for unwrapping wrapped keys.                                                                                                                                                                                                                                                        |
+| `priv-key-attribute-sign-recover`          | BOOLEAN      |                                                  | Indicates whether the private key has the sign-recover attribute.                                                                                                                                                                                                                                                                 |
+| `priv-key-attribute-extractable`           | BOOLEAN      |                                                  | Indicates whether the private key has the extractable attribute.                                                                                                                                                                                                                                                                  |
+| `priv-key-attribute-always-sensitive`      | BOOLEAN      |                                                  | Indicates whether the private key has the always-sensitive attribute.                                                                                                                                                                                                                                                             |
+| `priv-key-attribute-never-extractable`     | BOOLEAN      |                                                  | Indicates whether the private key has the never-extractable attribute.                                                                                                                                                                                                                                                            |
+| `priv-key-attribute-wrap-with-trusted`     | BOOLEAN      |                                                  | Indicates whether the private key has the wrap-with-trusted attribute.                                                                                                                                                                                                                                                            |
+| `priv-key-attribute-allowed-mechanisms`    | STRING LIST  |                                                  | Specifies private key allowed mechanisms. Supported values: same as `pub-key-attribute-allowed-mechanisms`.                                                                                                                                                                                                                       |
+| `slot-ids`                                 | INTEGER LIST |                                                  | Restricts the module to the given PKCS#11 slot IDs. Useful when a driver reports more slots than there are physical tokens.                                                                                                                                                                                                       |
+| `batch-signing-enabled`                    | BOOLEAN      | `true`                                           | Indicates whether batch signing is enabled for this module.                                                                                                                                                                                                                                                                       |
+| `read-only`                                | BOOLEAN      | `false`                                          | Indicates whether the module is opened read-only.                                                                                                                                                                                                                                                                                 |
+
+**Note 1:** Only property `library` is mandatory, all the others are optional.
+**Note 2:** Properties of the type STRING LIST are JSON arrays of strings, e.g. `["CKM_RSA_PKCS", "CKM_ECDSA"]`.
+
+Set the property with `db_property.sh`, installed at `/usr/share/xroad/scripts/db_property.sh`:
+
+```bash
+sudo /usr/share/xroad/scripts/db_property.sh set xroad.signer.modules '{"softhsm2":{"library":"/usr/lib/softhsm/libsofthsm2.so","slot-ids":[0]}}' --yes
+```
+
+`xroad.signer.modules` is not exposed in the Security Server admin UI's System Parameters view; `db_property.sh` is the supported way to read and write it. The new value takes effect on the next `xroad-signer` restart — module configuration is read once at signer startup.
+
+**Migrating from a pre-version-8 `devices.ini`:** versions of X-Road before 8 configured hardware tokens in an INI file at `/etc/xroad/devices.ini`. On X-Road 8 this file is no longer read by the signer — do not create it. When upgrading, `migration-cli signer-devices <devices.ini file> <db.properties file>` converts an existing `devices.ini` into the `xroad.signer.modules` document described above; see the version 8 upgrade guide for details.
 
 ### 2.11 Installing the Support for Environmental Monitoring
 
-The support for environmental monitoring functionality on a security server is provided by package xroad-monitor that is installed by default. The package installs and starts the `xroad-monitor` process that will gather and make available the monitoring information.
+The support for environmental monitoring functionality on a Security Server is provided by package xroad-monitor that is installed by default. The package installs and starts the `xroad-monitor` process that will gather and make available the monitoring information.
 
 ## 3 Security Server Initial Configuration
 
-During the security server initial configuration, the server’s X-Road membership information and the software token’s PIN are set.
+During the Security Server initial configuration, the server’s X-Road membership information and the software token’s PIN are set.
 
 
 ### 3.1 Prerequisites
 
-Configuring the security server assumes that the security server owner is a member of the X-Road.
+Configuring the Security Server assumes that the Security Server owner is a member of the X-Road.
 
 
 ### 3.2 Reference Data
 
-ATTENTION: Reference items 2.1 - 2.3 in the reference data are provided to the security server owner by the X-Road central’s administrator.
+ATTENTION: Reference items 2.1 - 2.3 in the reference data are provided to the Security Server owner by the X-Road central’s administrator.
 
-The security server code and the software token’s PIN will be determined during the installation at the latest, by the person performing the installation.
+The Security Server code and the software token’s PIN will be determined during the installation at the latest, by the person performing the installation.
 
- Ref  |                                                   | Explanation
- ---- | ------------------------------------------------- | --------------------------------------------------
- 2.1  | &lt;global configuration anchor file&gt; or &lt;URL&gt; | Global configuration anchor file
- 2.2  | E.g.<br>GOV - government<br> COM - commercial     | Member class of the security server's owner
- 2.3  | &lt;security server owner register code&gt;       | Member code of the security server's owner
- 2.4  | &lt;choose security server identificator name&gt; | Security server's code
- 2.5  | &lt;choose PIN for software token&gt;             | Software token’s PIN
-
+| Ref |                                                         | Explanation                                 |
+|-----|---------------------------------------------------------|---------------------------------------------|
+| 2.1 | &lt;global configuration anchor file&gt; or &lt;URL&gt; | Global configuration anchor file            |
+| 2.2 | E.g.<br>GOV - government<br> COM - commercial           | Member class of the Security Server's owner |
+| 2.3 | &lt;Security Server owner register code&gt;             | Member code of the Security Server's owner  |
+| 2.4 | &lt;choose Security Server identificator name&gt;       | Security Server's code                      |
+| 2.5 | &lt;choose PIN for software token&gt;                   | Software token’s PIN                        |
 
 ### 3.3 Configuration
 
 To perform the initial configuration, open the address
-
-    https://SECURITYSERVER:4000/
+```
+https://SECURITYSERVER:4000/
+```
 
 in a Web browser (**reference data: 1.8; 1.6**). To log in, use the account name chosen during the installation (**reference data: 1.3).**
 
@@ -474,46 +585,83 @@ Upon first log-in, the system asks for the following information.
 
 If the configuration is successfully downloaded, the system asks for the following information.
 
-* The security server owner’s member class (**reference data: 2.2**).
-* The security server owner’s member code (**reference data: 2.3**).
+* The Security Server owner’s member class (**reference data: 2.2**).
+* The Security Server owner’s member code (**reference data: 2.3**).
 
-  If the member class and member code are correctly entered, the system displays the security server owner’s name as registered in the X-Road center.
+  If the member class and member code are correctly entered, the system displays the Security Server owner’s name as registered in the X-Road center.
 
-* Security server code (**reference data: 2.4**), which is chosen by the security server administrator and which has to be unique across all the security servers belonging to the same X-Road member.
+* Security Server code (**reference data: 2.4**), which is chosen by the Security Server administrator and which has to be unique across all the Security Servers belonging to the same X-Road member.
 * Software token’s PIN (**reference data: 2.5**). The PIN will be used to protect the keys stored in the software token. The PIN must be stored in a secure place, because it will be no longer possible to use or recover the private keys in the token once the PIN has been lost.
 
-### 3.4 Configuring configuration backup encryption
+### 3.4 Configuring Firewall
 
-It is possible to automatically encrypt security server configuration backups. Security server uses The GNU Privacy Guard (https://www.gnupg.org)
+It is strongly recommended to protect the Security Server from unwanted access using a firewall (hardware or software based). The firewall can be
+applied to both incoming and outgoing connections depending on the security requirements of the environment where the Security Server is deployed. 
+
+**Special attention should be paid with the firewall configuration since incorrect configuration may leave the Security Server vulnerable to exploits and attacks.**
+This type of abuse could result in compromised access to the Security Server and the data that is exchanged through it.
+
+It is recommended to allow incoming traffic to specific ports only from explicitly defined sources using IP filtering. Access for ports `8080`, `8443` and `4000`
+should be especially defined, as these ports are used for making X-Road queries and accessing the user interface.
+
+When installing the Security Server, it is strongly recommended to look over the list of ports at [2.2 Reference Data](#22-reference-data) and define
+firewall access rules for specific hosts based on their descriptions.
+
+#### 3.4.1 Accepting Connections
+
+The Security Server has a special `[proxy]` parameter [connector-host](ug-syspar_x-road_v6_system_parameters.md#32-proxy-parameters-proxy) which determines
+the interfaces that the Security Server uses to listen for incoming connections. The default value for this parameter in the default X-Road packages is `0.0.0.0`,
+which makes the Security Server accept connections from any server. For country-specific defaults, please refer to the system parameters documentation. 
+
+The parameter can be changed by following the [System Parameters guide](ug-syspar_x-road_v6_system_parameters.md#21-changing-the-system-parameter-values-in-configuration-files).
+
+### 3.5 Configuring Configuration Backup Encryption
+
+It is possible to automatically encrypt Security Server configuration backups. Security Server uses The GNU Privacy Guard (https://www.gnupg.org)
 for backup encryption and verification. Backups are always signed, but backup encryption is initially turned off.
 To turn encryption on, please override the default configuration in the file `/etc/xroad/conf.d/local.ini`, in the `[proxy]` section (add or edit this section).
 
-    [proxy]
-    backup-encryption-enabled = true
-    backup-encryption-keyids = <keyid1>, <keyid2>, ...
+```ini
+[proxy]
+backup-encryption-enabled = true
+backup-encryption-keyids = <keyid1>, <keyid2>, ...
+```
 
 To turn backup encryption on, please change the `backup-encryption-enabled` property value to `true`.
-By default, backups are encrypted using security server's backup encryption key. Additional encryption keys can be imported in the /etc/xroad/gpghome keyring and key identifiers listed using the backup-encryption-keyids parameter. It is recommended to set up at least one additional key, otherwise the backups will be unusable in case security server's private key is lost. It is up to security server's administrator to check that keys used are sufficiently strong, there are no automatic checks.
+By default, backups are encrypted using Security Server's backup encryption key. Additional encryption keys can be imported in the /etc/xroad/gpghome keyring and key identifiers listed using the backup-encryption-keyids parameter. It is recommended to set up at least one additional key, otherwise the backups will be unusable in case Security Server's private key is lost. It is up to Security Server's administrator to check that keys used are sufficiently strong, there are no automatic checks.
 
 Warning. All keys listed in backup-encryption-keyids must be present in the gpg keyring or backup fails.
 
 All these keys are used to encrypt backups so that ANY of these keys can decrypt the backups. This is useful both for verifying encrypted backups'
-consistency and decrypting backups in case security server's backup encryption key gets lost for whatever reason.
+consistency and decrypting backups in case Security Server's backup encryption key gets lost for whatever reason.
 
-To externally verify a backup archive's consistency, security server's backup encryption public key has to be exported
-and imported into external GPG keyring. Note that this can be done only after security server has been initialised - the
-security server backup encryption key is generated during initialisation.
+To externally verify a backup archive's consistency, Security Server's backup encryption public key has to be exported
+and imported into external GPG keyring. Note that this can be done only after Security Server has been initialised - the
+Security Server backup encryption key is generated during initialisation.
 
-To export security server's backup encryption public key use the following command:
+To export Security Server's backup encryption public key use the following command:
 
-    gpg --homedir /etc/xroad/gpghome --armor --output server-public-key.gpg --export AA/GOV/TS1OWNER/TS1
+```bash
+gpg --homedir /etc/xroad/gpghome --armor --output server-public-key.gpg --export AA/GOV/TS1OWNER/TS1
+```
 
-where `AA/GOV/TS1OWNER/TS1` is the security server id.
+where `AA/GOV/TS1OWNER/TS1` is the Security Server id.
 
 The key can then be moved to an external host and imported to GPG keyring with the following command:
 
-    gpg --homedir /your_gpg_homedir_here --import server-public-key.gpg
+```bash
+gpg --homedir /your_gpg_homedir_here --import server-public-key.gpg
+```
 
+### 3.6 Enabling ACME Support
+
+Automated Certificate Management Environment (ACME) protocol enables automated certificate management of the authentication and sign
+certificates on the Security Server. More information about the required configuration is available in the [Security Server User Guide](ug-ss_x-road_6_security_server_user_guide.md#24-configuring-acme).
+
+### 3.7 Enabling EC Keys for Authentication and Signing Certificates
+
+Security Server supports EC based authentication and signing certificates since version 7.6.0.
+More information about the required configuration is available in the [Security Server User Guide](ug-ss_x-road_6_security_server_user_guide.md#25-migrating-to-ec-based-authentication-and-signing-certificates).
 
 ## 4 Installation Error handling
 
@@ -522,88 +670,110 @@ The key can then be moved to an external host and imported to GPG keyring with t
 
 If running the locale command results in the error message
 
-    locale: Cannot set LC_ALL to default locale: No such file or directory,
+```bash
+locale: Cannot set LC_ALL to default locale: No such file or directory,
+```
 
 then the support for this particular language has not been installed. To install it, run the command (the example uses the English language):
 
-    sudo apt-get install language-pack-en
+```bash
+sudo apt-get install language-pack-en
+```
 
 Then, to update the system’s locale files, run the following commands (the example uses the US locale):
 
-    sudo locale-gen en_US.UTF-8
-    sudo update-locale en_US.UTF-8
+```bash
+sudo locale-gen en_US.UTF-8
+sudo update-locale en_US.UTF-8
+```
 
 Set operating system locale. Add following line to `/etc/environment` file:
 
-    LC_ALL=en_US.UTF-8
+```bash
+LC_ALL=en_US.UTF-8
+```
 
 After updating the system’s locale settings, it is recommended to restart the operating system.
 
 
 ### 4.2 PostgreSQL Is Not UTF8 Compatible
 
-If the security server installation is aborted with the error message
+If the Security Server installation is aborted with the error message
 
-    postgreSQL is not UTF8 compatible,
+```bash
+postgreSQL is not UTF8 compatible,
+```
 
 then the PostgreSQL package is installed with a wrong locale. One way to resolve it is to remove the data store created upon the PostgreSQL installation and recreate it with the correct encoding.
 
 **WARNING**: All data in the database will be erased!
 
-    sudo pg_dropcluster --stop 10 main
-    LC_ALL="en_US.UTF-8" sudo pg_createcluster --start 10 main
+```bash
+sudo pg_dropcluster --stop 10 main
+LC_ALL="en_US.UTF-8" sudo pg_createcluster --start 10 main
+```
 
 To complete the interrupted installation, run the command
 
-    sudo apt-get -f install
-
+```bash
+sudo apt-get -f install
+```
 
 ### 4.3 Could Not Create Default Cluster
 
 If the following error message is displayed during PostgreSQL installation:
 
-    Error: The locale requested by the environment is invalid.
-    Error: could not create default cluster. Please create it manually with pg_createcluster 10 main –start,
+```
+Error: The locale requested by the environment is invalid.
+Error: could not create default cluster. Please create it manually with pg_createcluster 10 main –start,
+```
 
 use the following command to create the PostgreSQL data cluster:
 
-    LC_ALL="en_US.UTF-8" sudo pg_createcluster --start 10 main
+```bash
+LC_ALL="en_US.UTF-8" sudo pg_createcluster --start 10 main
+```
 
 The interrupted installation can be finished using
 
-    sudo apt-get -f install
-
+```bash
+sudo apt-get -f install
+```
 
 ### 4.4 Is Postgres Running On Port 5432?
 
 If the following error message appears during installation
 
-    Is postgres running on port 5432 ?
-    Aborting installation! please fix issues and rerun with apt-get -f install,
-
+```
+Is postgres running on port 5432 ?
+Aborting installation! please fix issues and rerun with apt-get -f install,
+```
 check if any of the following errors occurred during the installation of PostgreSQL.
 
 * Error installing the data cluster. Refer to section [“Could not create default cluster”](#43-could-not-create-default-cluster).
 
-* The PostgreSQL data cluster installed during the installation of the security server is not configured to listen on port 5432. To verify and configure the listening port, edit the PostgreSQL configuration file in `/etc/postgresql/10/main/postgresql.conf`. If you change the listening port, the postgresql service must be restarted.
+* The PostgreSQL data cluster installed during the installation of the Security Server is not configured to listen on port 5432. To verify and configure the listening port, edit the PostgreSQL configuration file in `/etc/postgresql/10/main/postgresql.conf`. If you change the listening port, the postgresql service must be restarted.
 
 The interrupted installation can be finished using
 
-    sudo apt-get -f install
-
+```bash
+sudo apt-get -f install
+```
 
 ### 4.5 Different versions of xroad-\* packages after successful upgrade
 
 Sometimes, after using `sudo apt-get upgrade` command, some of the packages are not upgraded. In the following example `xroad-securityserver` package version is still 6.8.3 although other packages are upgraded to 6.8.5:
 
-    # sudo dpkg -l | grep xroad-
-    ii xroad-addon-messagelog 6.8.5.20160929134539gitfe60f90
-    ii xroad-addon-metaservices 6.8.5.20160929134539gitfe60f90
-    ii xroad-addon-wsdlvalidator 6.8.5.20160929134539gitfe60f90
-    ii xroad-common 6.8.5.20160929134539gitfe60f90
-    ii xroad-jetty9 6.8.5.20160929134539gitfe60f90
-    ii xroad-proxy 6.8.5.20160929134539gitfe60f90
-    ii xroad-securityserver 6.8.3-3-201605131138
+```bash
+# sudo dpkg -l | grep xroad-
+ii xroad-addon-messagelog 6.8.5.20160929134539gitfe60f90
+ii xroad-addon-metaservices 6.8.5.20160929134539gitfe60f90
+ii xroad-addon-wsdlvalidator 6.8.5.20160929134539gitfe60f90
+ii xroad-common 6.8.5.20160929134539gitfe60f90
+ii xroad-jetty9 6.8.5.20160929134539gitfe60f90
+ii xroad-proxy 6.8.5.20160929134539gitfe60f90
+ii xroad-securityserver 6.8.3-3-201605131138
+```
 
 `apt-get upgrade` command doesn’t install new packages - in this particular case new packages `xroad-monitor` and `xroad-addon-proxymonitor` installation is needed for upgrade of `xroad-securityserver` package.
 
@@ -611,13 +781,13 @@ To be sure that packages are installed correctly please use `sudo apt upgrade` o
 
 ### 4.6 ERROR: Upgrade supported from version X.Y.Z or newer
 
-The following error message may come up during the security server upgrade.
+The following error message may come up during the Security Server upgrade.
 
 `ERROR: Upgrade supported from version X.Y.Z or newer`
 
-Upgrading the packages from the current version to the target version is not supported directly. The fix is to upgrade the security server to the target version step by step.
+Upgrading the packages from the current version to the target version is not supported directly. The fix is to upgrade the Security Server to the target version step by step.
 
-For example, the following security server packages are currently installed.
+For example, the following Security Server packages are currently installed.
 
 ```bash
 root@test-ss:~# dpkg -l | grep xroad
@@ -643,7 +813,7 @@ xroad-securityserver | 7.3.0-1.ubuntu20.04 | https://artifactory.niis.org/xroad-
 xroad-securityserver | 7.1.2-1.ubuntu20.04 | https://artifactory.niis.org/xroad-release-deb focal-current/main amd64 Packages
 ```
 
-Now trying to upgrade the security server packages directly will produce the following error.
+Now trying to upgrade the Security Server packages directly will produce the following error.
 
 ```bash
 root@test-ss:~# apt-get upgrade xroad-securityserver
@@ -652,7 +822,7 @@ Preparing to unpack .../0-xroad-securityserver_7.3.0-1.ubuntu20.04_all.deb ...
 ERROR: Upgrade supported from version 7.1.2 or newer.
 ```
 
-The fix is to upgrade the security server in two separate steps. First, upgrade to 7.1.x with the following command.
+The fix is to upgrade the Security Server in two separate steps. First, upgrade to 7.1.x with the following command.
 
 ```bash
 apt install xroad-securityserver=7.1.2-1.ubuntu20.04 xroad-proxy=7.1.2-1.ubuntu20.04 xroad-monitor=7.1.2-1.ubuntu20.04 xroad-addon-metaservices=7.1.2-1.ubuntu20.04 xroad-addon-messagelog=7.1.2-1.ubuntu20.04 xroad-addon-proxymonitor=7.1.2-1.ubuntu20.04 xroad-addon-wsdlvalidator=7.1.2-1.ubuntu20.04 xroad-proxy-ui-api=7.1.2-1.ubuntu20.04 xroad-confclient=7.1.2-1.ubuntu20.04 xroad-signer=7.1.2-1.ubuntu20.04 xroad-database-local=7.1.2-1.ubuntu20.04 xroad-base=7.1.2-1.ubuntu20.04
@@ -702,7 +872,7 @@ op-monitor.hibernate.jdbc.use_streams_for_binary = true
 ## Annex B Default Database Users
 
 | User             | Database   | Privileges               | Description                                                                              |
-| ---------------- | ---------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+|------------------|------------|--------------------------|------------------------------------------------------------------------------------------|
 | serverconf       | serverconf | TEMPORARY,CONNECT        | The database user used to read/write the serverconf database during application runtime. |
 | serverconf_admin | serverconf | CREATE,TEMPORARY,CONNECT | The database user used to create/update the serverconf schema.                           |
 | messagelog       | messagelog | TEMPORARY,CONNECT        | The database user used to read/write the messagelog database during application runtime. |
@@ -717,67 +887,68 @@ op-monitor.hibernate.jdbc.use_streams_for_binary = true
 
 ### C.1 General
 
-X-Road security server has multiple deployment options. The simplest choice is to have a single security server with local database. This is usually fine for majority of the cases, but there are multiple reasons to tailor the deployment.
+X-Road Security Server has multiple deployment options. The simplest choice is to have a single Security Server with local database. This is usually fine for majority of the cases, but there are multiple reasons to tailor the deployment.
 
 
 ### C.2 Local Database
 
-The simplest deployment option is to use a single security server with local database. For development and testing purposes there is rarely need for anything else, but for production the requirements may be stricter.
+The simplest deployment option is to use a single Security Server with local database. For development and testing purposes there is rarely need for anything else, but for production the requirements may be stricter.
 
-![Security server with local database](img/ig-ss_local_db.svg)
+![Security Server with local database](img/ig-ss_local_db.svg)
 
 
 ### C.3 Remote Database
 
-It is possible to use a remote database with security server. This option is sometimes used in development and testing when there's need to externalize the database state.
+It is possible to use a remote database with Security Server. This option is sometimes used in development and testing when there's need to externalize the database state.
 
-Security server supports a variety of cloud databases including AWS RDS and Azure Database for PostgreSQL. This deployment option is useful when doing development in cloud environment, where use of cloud native database is the first choice.
+Security Server supports a variety of cloud databases including AWS RDS and Azure Database for PostgreSQL. This deployment option is useful when doing development in cloud environment, where use of cloud native database is the first choice.
 
-![Security server with remote database](img/ig-ss_remote_db.svg)
+![Security Server with remote database](img/ig-ss_remote_db.svg)
 
 
 ### C.4 High Availability Setup
 
-In production systems it's rarely acceptable to have a single point of failure. Security server supports provider side high availability setup via so called internal load balancing mechanism. The setup works so that the same member / member class / member code / subsystem / service code is configured on multiple security servers and X-Road will then route the request to the server that responds the fastest. Note that this deployment option does not provide performance benefits, just redundancy.
+In production systems it's rarely acceptable to have a single point of failure. Security Server supports provider side high availability setup via so called internal load balancing mechanism. The setup works so that the same member / member class / member code / subsystem / service code is configured on multiple Security Servers and X-Road will then route the request to the server that responds the fastest. Note that this deployment option does not provide performance benefits, just redundancy.
 
-![Security server high-availability setup](img/ig-ss_high_availability.svg)
+![Security Server high-availability setup](img/ig-ss_high_availability.svg)
 
 
 ### C.5 Load Balancing Setup
 
-Busy production systems may need scalable performance in addition to high availability. X-Road supports external load balancing mechanism to address both of these problems simultaneously. A load balancer is added in front of a security server cluster to route the requests based on selected algorithm. This deployment option is extensively documented in \[[IG-XLB](#Ref_IG-XLB)\].
+Busy production systems may need scalable performance in addition to high availability. X-Road supports external load balancing mechanism to address both of these problems simultaneously. A load balancer is added in front of a Security Server cluster to route the requests based on selected algorithm. This deployment option is extensively documented in \[[IG-XLB](#Ref_IG-XLB)\].
 
-![Security server load balancing setup](img/ig-ss_load_balancing.svg)
+![Security Server load balancing setup](img/ig-ss_load_balancing.svg)
 
 
 ### C.6 Summary
 
-The following table lists a summary of the security server deployment options and indicates whether they are aimed for development or production use.
+The following table lists a summary of the Security Server deployment options and indicates whether they are aimed for development or production use.
 
-| Deployment               | Dev  | Prod  |
-|--------------------------|------|-------|
-| Local database           | x    |       |
-| Remote database          | x    |       |
-| High-availability Setup  |      | x     |
-| Load Balancing Setup     |      | x     |
+| Deployment              | Dev | Prod |
+| ----------------------- | --- | ---- |
+| Local database          | x   |      |
+| Remote database         | x   |      |
+| High-availability Setup |     | x    |
+| Load Balancing Setup    |     | x    |
 
 ## Annex D Create Database Structure Manually
 
-Depending on installed components, the security server uses one to three databases (catalogs):
+Depending on installed components, the Security Server uses one to three databases (catalogs):
 
-* _serverconf_ for storing security server configuration (required)
+* _serverconf_ for storing Security Server configuration (required)
 * _messagelog_ for storing message records (optional, but installed by default)
 * _op-monitor_ for operational monitoring data (optional)
 
 These databases can be hosted on one database server (default setup), or you can use several servers. 
 
 Login to the database server(s) as the superuser (`postgres` by default) to run the commands, e.g.
+
 ```bash
 psql -h <database host>:<port> -U <superuser> -d postgres
 ```
 
 Run the following commands to create the necessary database structures.
-If necessary, customize the database and role names to suit your environment (e.g when the same database server is shared between several security server instances, it is necessary to have separate database names and roles for each server).
+If necessary, customize the database and role names to suit your environment (e.g when the same database server is shared between several Security Server instances, it is necessary to have separate database names and roles for each server).
 
 **serverconf** (required)
 
@@ -858,6 +1029,7 @@ Lastly, customize the database connection properties to match the values used wh
 Note. When using Microsoft Azure PostgreSQL, the user names need to be in format `username@hostname` in the properties files.
 
 Create the configuration file `/etc/xroad.properties`.
+
 ```bash
 sudo touch /etc/xroad.properties
 sudo chown root:root /etc/xroad.properties
@@ -865,6 +1037,7 @@ sudo chmod 600 /etc/xroad.properties
 ```
 
 Edit `/etc/xroad.properties` and add/update the following properties (if you customized the role names, use your own). The admin users are used to run database migrations during the install and upgrades.
+
 ```properties
 serverconf.database.admin_user = <serverconf_admin_user>
 serverconf.database.admin_password = <serverconf_admin_user password>
@@ -875,6 +1048,7 @@ op-monitor.database.admin_password = <opmonitor_admin_user password>
 ```
 
 Create the `/etc/xroad/db.properties` file
+
 ```bash
 sudo mkdir /etc/xroad
 sudo chown xroad:xroad /etc/xroad
@@ -886,6 +1060,7 @@ sudo chown xroad:xroad /etc/xroad/db.properties
 
 Edit the `/etc/xroad/db.properties` file and add/update the following connection properties (if you customized the database, user, and/or role names, use the customized values).
 The database connection url format is `jdbc:postgresql://<database host>:<port>/<database name>`
+
 ```properties
 serverconf.hibernate.connection.url = jdbc:postgresql://<database host>:<port>/<serverconf_database>
 serverconf.hibernate.connection.username = <serverconf_database_user>

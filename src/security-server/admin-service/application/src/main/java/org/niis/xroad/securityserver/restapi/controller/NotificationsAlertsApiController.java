@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -61,7 +61,7 @@ public class NotificationsAlertsApiController {
     /**
      * check if there are alerts
      */
-    @GetMapping(value = "/alerts", produces = { "application/json" })
+    @GetMapping(value = "/alerts", produces = {"application/json"})
     public ResponseEntity<AlertData> checkAlerts() {
         AlertStatus alertStatus = notificationService.getAlerts();
         return new ResponseEntity<>(alertDataConverter.convert(alertStatus), HttpStatus.OK);

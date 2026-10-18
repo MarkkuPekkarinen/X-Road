@@ -1,0 +1,15 @@
+FROM openbao/openbao:2.6.1
+
+USER root
+RUN apk add --no-progress jq bash curl openssl > /dev/null 2>&1
+# creating xroad user and folder to reuse the secret-store-init.sh script
+RUN addgroup -S xroad && \
+    adduser -S -G xroad xroad && \
+    mkdir -p /etc/xroad/
+
+COPY --from=openbao-init-ctx /usr /usr
+
+COPY files/ /
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

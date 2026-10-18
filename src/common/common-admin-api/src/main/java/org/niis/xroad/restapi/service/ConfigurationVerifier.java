@@ -31,16 +31,15 @@ import ee.ria.xroad.common.util.process.ProcessFailedException;
 import ee.ria.xroad.common.util.process.ProcessNotExecutableException;
 
 import lombok.RequiredArgsConstructor;
-import org.niis.xroad.common.exception.ServiceException;
-import org.niis.xroad.restapi.exceptions.DeviationProvider;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.springframework.stereotype.Component;
 
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.ANCHOR_NOT_FOR_EXTERNAL_SOURCE;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.CONF_VERIFICATION_OTHER;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.CONF_VERIFICATION_OUTDATED;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.CONF_VERIFICATION_SIGNATURE;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.CONF_VERIFICATION_UNREACHABLE;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.MISSING_PRIVATE_PARAMS;
+import static org.niis.xroad.common.core.exception.ErrorCode.ANCHOR_NOT_FOR_EXTERNAL_SOURCE;
+import static org.niis.xroad.common.core.exception.ErrorCode.CONF_VERIFICATION_OTHER;
+import static org.niis.xroad.common.core.exception.ErrorCode.CONF_VERIFICATION_OUTDATED;
+import static org.niis.xroad.common.core.exception.ErrorCode.CONF_VERIFICATION_SIGNATURE;
+import static org.niis.xroad.common.core.exception.ErrorCode.CONF_VERIFICATION_UNREACHABLE;
+import static org.niis.xroad.common.core.exception.ErrorCode.MISSING_PRIVATE_PARAMS;
 
 /**
  * Verify internal and external configurations
@@ -48,7 +47,7 @@ import static org.niis.xroad.common.exception.util.CommonDeviationMessage.MISSIN
 @Component
 @RequiredArgsConstructor
 public class ConfigurationVerifier {
-    public static final int EXIT_STATUS_ANCHOR_NOT_FOR_EXTERNAL_SOURCE = 120;
+    public static final int EXIT_STATUS_ANCHOR_NOT_FOR_EXTERNAL_SOURCE = 117;
     public static final int EXIT_STATUS_MISSING_PRIVATE_PARAMS = 121;
     public static final int EXIT_STATUS_UNREACHABLE = 122;
     public static final int EXIT_STATUS_OUTDATED = 123;
@@ -59,50 +58,38 @@ public class ConfigurationVerifier {
 
     /**
      * Verify configuration file.
-     *
      * @param verificationScriptPath verification script path
      * @param fileToValidatePath     path to the configuration file
      * @throws ProcessNotExecutableException
      * @throws ProcessFailedException
-     * @throws InterruptedException               if the thread running the verifier is interrupted. <b>The interrupted thread has
-     *                                            already been handled with so you can choose to ignore this exception if you so please.</b>
-     * @throws ConfigurationVerificationException when a known exception happens during verification. An error code
-     *                                            is attached to this exception according to the correct exit code
+     * @throws InterruptedException          if the thread running the verifier is interrupted. <b>The interrupted thread has
+     *                                       already been handled with so you can choose to ignore this exception if you so please.</b>
      */
-    public void verifyConfiguration(String verificationScriptPath, String fileToValidatePath) throws ProcessNotExecutableException,
-            ProcessFailedException, InterruptedException, ConfigurationVerificationException {
+    public void verifyConfiguration(String verificationScriptPath, String fileToValidatePath)
+            throws ProcessNotExecutableException, ProcessFailedException, InterruptedException {
         ExternalProcessRunner.ProcessResult processResult =
                 externalProcessRunner.execute(verificationScriptPath, fileToValidatePath);
-        int exitCode = processResult.getExitCode();
-        switch (exitCode) {
+        throwIfErrorCodeReturned(processResult.getExitCode());
+    }
+
+    public static void throwIfErrorCodeReturned(int returnCode) {
+        switch (returnCode) {
             case 0:
                 break;
             case EXIT_STATUS_ANCHOR_NOT_FOR_EXTERNAL_SOURCE:
-                throw new ConfigurationVerificationException(ANCHOR_NOT_FOR_EXTERNAL_SOURCE);
+                throw new InternalServerErrorException(ANCHOR_NOT_FOR_EXTERNAL_SOURCE.build());
             case EXIT_STATUS_MISSING_PRIVATE_PARAMS:
-                throw new ConfigurationVerificationException(MISSING_PRIVATE_PARAMS);
+                throw new InternalServerErrorException(MISSING_PRIVATE_PARAMS.build());
             case EXIT_STATUS_UNREACHABLE:
-                throw new ConfigurationVerificationException(CONF_VERIFICATION_UNREACHABLE);
+                throw new InternalServerErrorException(CONF_VERIFICATION_UNREACHABLE.build());
             case EXIT_STATUS_OUTDATED:
-                throw new ConfigurationVerificationException(CONF_VERIFICATION_OUTDATED);
+                throw new InternalServerErrorException(CONF_VERIFICATION_OUTDATED.build());
             case EXIT_STATUS_INVALID_SIGNATURE:
-                throw new ConfigurationVerificationException(CONF_VERIFICATION_SIGNATURE);
+                throw new InternalServerErrorException(CONF_VERIFICATION_SIGNATURE.build());
             case EXIT_STATUS_OTHER:
-                throw new ConfigurationVerificationException(CONF_VERIFICATION_OTHER);
+                throw new InternalServerErrorException(CONF_VERIFICATION_OTHER.build());
             default:
-                throw new RuntimeException("Internal configuration verifier exited with an unknown code: " + exitCode);
-        }
-    }
-
-    /**
-     * Thrown when the configuration verification script fails
-     */
-    public static class ConfigurationVerificationException extends ServiceException {
-        /**
-         * @param errorCode i18n key for an error code string
-         */
-        public ConfigurationVerificationException(DeviationProvider errorCode) {
-            super(errorCode);
+                throw new InternalServerErrorException("Configuration verifier exited with an unknown code: " + returnCode);
         }
     }
 }

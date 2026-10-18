@@ -28,6 +28,7 @@
 package org.niis.xroad.cs.admin.rest.api.openapi;
 
 import lombok.RequiredArgsConstructor;
+import org.niis.xroad.common.CostType;
 import org.niis.xroad.cs.admin.api.dto.OcspResponder;
 import org.niis.xroad.cs.admin.api.dto.OcspResponderAddRequest;
 import org.niis.xroad.cs.admin.api.dto.OcspResponderRequest;
@@ -36,6 +37,7 @@ import org.niis.xroad.cs.admin.rest.api.converter.CertificateAuthorityDtoConvert
 import org.niis.xroad.cs.admin.rest.api.converter.OcspResponderDtoConverter;
 import org.niis.xroad.cs.openapi.IntermediateCasApi;
 import org.niis.xroad.cs.openapi.model.CertificateAuthorityDto;
+import org.niis.xroad.cs.openapi.model.CostTypeDto;
 import org.niis.xroad.cs.openapi.model.OcspResponderDto;
 import org.niis.xroad.restapi.config.audit.AuditEventMethod;
 import org.niis.xroad.restapi.openapi.ControllerUtil;
@@ -48,7 +50,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.ADD_INTERMEDIATE_CA_OCSP_RESPONDER;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.DELETE_INTERMEDIATE_CA;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.DELETE_OCSP_RESPONDER;
@@ -73,13 +74,19 @@ public class IntermediateCasController implements IntermediateCasApi {
     @Override
     @PreAuthorize("hasAuthority('ADD_APPROVED_CA')")
     @AuditEventMethod(event = ADD_INTERMEDIATE_CA_OCSP_RESPONDER)
-    public ResponseEntity<OcspResponderDto> addIntermediateCaOcspResponder(Integer id, String url, MultipartFile certificate) {
-        byte[] fileBytes = readBytes(certificate);
-        fileVerifier.validateCertificate(certificate.getOriginalFilename(), fileBytes);
+    public ResponseEntity<OcspResponderDto> addIntermediateCaOcspResponder(Integer id,
+                                                                           String url,
+                                                                           CostTypeDto costType,
+                                                                           MultipartFile certificate) {
         final OcspResponderRequest ocspResponderRequest = new OcspResponderAddRequest()
                 .setUrl(url)
-                .setCertificate(fileBytes);
+                .setCostType(CostType.valueOf(costType.name()));
 
+        if (certificate != null && !certificate.isEmpty()) {
+            byte[] fileBytes = readBytes(certificate);
+            fileVerifier.validateCertificate(certificate.getOriginalFilename(), fileBytes);
+            ocspResponderRequest.setCertificate(fileBytes);
+        }
         final OcspResponder ocspResponder = intermediateCasService.addOcspResponder(id, ocspResponderRequest);
 
         return status(CREATED).body(ocspResponderDtoConverter.toDto(ocspResponder));
@@ -112,6 +119,6 @@ public class IntermediateCasController implements IntermediateCasApi {
     public ResponseEntity<List<OcspResponderDto>> getIntermediateCaOcspResponders(Integer id) {
         return ok(intermediateCasService.getOcspResponders(id).stream()
                 .map(ocspResponderDtoConverter::toDto)
-                .collect(toList()));
+                .toList());
     }
 }

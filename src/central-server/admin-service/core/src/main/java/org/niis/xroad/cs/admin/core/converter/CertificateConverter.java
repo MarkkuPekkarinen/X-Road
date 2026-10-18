@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,21 +27,29 @@ package org.niis.xroad.cs.admin.core.converter;
 
 import ee.ria.xroad.common.util.CertUtils;
 import ee.ria.xroad.common.util.CryptoUtils;
+import ee.ria.xroad.common.util.EncoderUtils;
+import ee.ria.xroad.common.util.X500Names;
 
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
 import org.niis.xroad.cs.admin.api.dto.CertificateDetails;
+import org.niis.xroad.cs.admin.api.dto.OcspResponderCertificateDetails;
 import org.niis.xroad.cs.admin.api.dto.SecurityServerAuthenticationCertificateDetails;
 import org.niis.xroad.cs.admin.core.entity.AuthCertEntity;
+import org.niis.xroad.cs.admin.core.entity.OcspInfoEntity;
 import org.springframework.stereotype.Component;
 
 import java.security.PublicKey;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 
+import static ee.ria.xroad.common.crypto.NamedCurves.getCurveName;
+import static ee.ria.xroad.common.crypto.NamedCurves.getEncodedPoint;
 import static ee.ria.xroad.common.util.CertUtils.getIssuerCommonName;
 import static ee.ria.xroad.common.util.CertUtils.getSubjectAlternativeNames;
-import static ee.ria.xroad.common.util.CertUtils.getSubjectCommonName;
 import static java.lang.String.valueOf;
 
 @Component
@@ -55,45 +63,91 @@ public class CertificateConverter {
         if (cert == null) {
             return null;
         }
-        CertificateDetails certificateDetails = new CertificateDetails();
+        var certificateDetails = new CertificateDetails();
         populateCertificateDetails(certificateDetails, cert);
         return certificateDetails;
     }
 
+    public OcspResponderCertificateDetails toCertificateDetails(final OcspInfoEntity ocspInfo) {
+        if (ocspInfo.getCert() == null) {
+            return null;
+        }
+        OcspResponderCertificateDetails certificateDetails = new OcspResponderCertificateDetails();
+        populateCertificateDetails(certificateDetails, ocspInfo.getCert());
+        return certificateDetails;
+    }
+
+    public CertificateDetails toCertificateDetails(final X509Certificate certificate) {
+        var certificateDetails = new CertificateDetails();
+        populateCertificateDetails(certificateDetails, certificate);
+        return certificateDetails;
+    }
+
     public SecurityServerAuthenticationCertificateDetails toCertificateDetails(final AuthCertEntity authCert) {
-        SecurityServerAuthenticationCertificateDetails authCertificateDetails =
-                new SecurityServerAuthenticationCertificateDetails(authCert.getId());
+        var authCertificateDetails = new SecurityServerAuthenticationCertificateDetails(authCert.getId());
         populateCertificateDetails(authCertificateDetails, authCert.getCert());
         return authCertificateDetails;
     }
 
-    @SneakyThrows
+
+    private void populateCertificateDetails(final CertificateDetails certificateDetails, final X509Certificate certificate) {
+        populateCertificateDetails(certificateDetails, certificate, encode(certificate));
+    }
+
+
     private void populateCertificateDetails(final CertificateDetails certificateDetails, byte[] cert) {
         final X509Certificate[] certificates = CertUtils.readCertificateChain(cert);
         final X509Certificate certificate = certificates[0];
 
+        populateCertificateDetails(certificateDetails, certificate, cert);
+    }
+
+    private void populateCertificateDetails(final CertificateDetails certificateDetails,
+                                            final X509Certificate certificate,
+                                            final byte[] cert) {
         certificateDetails
-                .setHash(CryptoUtils.calculateCertHexHash(certificate.getEncoded()).toUpperCase())
+                .setHash(CryptoUtils.calculateCertHexHashOrThrow(certificate).toUpperCase())
                 .setVersion(certificate.getVersion())
                 .setSerial(valueOf(certificate.getSerialNumber()))
                 .setSignatureAlgorithm(certificate.getSigAlgName())
-                .setIssuerDistinguishedName(certificate.getIssuerDN().getName())
+                .setIssuerDistinguishedName(certificate.getIssuerX500Principal().toString())
                 .setNotBefore(certificate.getNotBefore().toInstant())
                 .setNotAfter(certificate.getNotAfter().toInstant())
-                .setSubjectDistinguishedName(certificate.getSubjectDN().getName())
+                .setSubjectDistinguishedName(certificate.getSubjectX500Principal().toString())
                 .setPublicKeyAlgorithm(certificate.getPublicKey().getAlgorithm())
                 .setKeyUsages(keyUsageConverter.convert(certificate.getKeyUsage()))
                 .setSubjectAlternativeNames(getSubjectAlternativeNames(certificate))
-                .setSignature(CryptoUtils.encodeHex(certificate.getSignature()))
+                .setSignature(EncoderUtils.encodeHex(certificate.getSignature()))
                 .setIssuerCommonName(getIssuerCommonName(certificate))
-                .setSubjectCommonName(getSubjectCommonName(certificate))
+                .setSubjectCommonName(getSubjectCommonNameOrNull(certificate))
                 .setEncoded(cert);
 
         final PublicKey publicKey = certificate.getPublicKey();
-        if (publicKey instanceof RSAPublicKey) {
-            final RSAPublicKey rsaPublicKey = (RSAPublicKey) publicKey;
-            certificateDetails.setRsaPublicKeyExponent(rsaPublicKey.getPublicExponent());
-            certificateDetails.setRsaPublicKeyModulus(rsaPublicKey.getModulus().toString(RADIX_FOR_HEX));
+        switch (publicKey) {
+            case RSAPublicKey rsaPublicKey -> {
+                certificateDetails.setRsaPublicKeyExponent(rsaPublicKey.getPublicExponent());
+                certificateDetails.setRsaPublicKeyModulus(rsaPublicKey.getModulus().toString(RADIX_FOR_HEX));
+            }
+            case ECPublicKey ecPublicKey -> {
+                certificateDetails.setEcPublicParameters(getCurveName(ecPublicKey));
+                certificateDetails.setEcPublicKeyPoint(getEncodedPoint(ecPublicKey));
+            }
+            default -> throw XrdRuntimeException.systemInternalError(
+                    "Unexpected type of public key: " + publicKey.getClass().getName());
+        }
+    }
+
+    private String getSubjectCommonNameOrNull(X509Certificate certificate) {
+        return CertUtils.getRDNValue(
+                X500Names.fromPrincipal(certificate.getSubjectX500Principal()),
+                BCStyle.CN);
+    }
+
+    private static byte[] encode(X509Certificate certificate) {
+        try {
+            return certificate.getEncoded();
+        } catch (CertificateEncodingException e) {
+            throw XrdRuntimeException.systemException(e);
         }
     }
 }

@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,18 +26,16 @@
  */
 package org.niis.xroad.securityserver.restapi.converter;
 
-import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.signer.protocol.dto.CertRequestInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
-
 import org.junit.Before;
 import org.junit.Test;
-import org.niis.xroad.securityserver.restapi.openapi.model.PossibleAction;
-import org.niis.xroad.securityserver.restapi.openapi.model.TokenCertificateSigningRequest;
+import org.niis.xroad.securityserver.restapi.openapi.model.PossibleActionDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.TokenCertificateSigningRequestDto;
 import org.niis.xroad.securityserver.restapi.service.PossibleActionEnum;
 import org.niis.xroad.securityserver.restapi.util.CertificateTestUtils;
 import org.niis.xroad.securityserver.restapi.util.TokenTestUtils;
+import org.niis.xroad.signer.api.dto.CertRequestInfo;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collection;
@@ -60,16 +59,14 @@ public class TokenCertificateSigningRequestConverterTest extends AbstractConvert
 
     @Test
     public void convert() {
-        CertRequestInfo certRequestInfo = new CertRequestInfo("id",
-                ClientId.Conf.create("a", "b", "c"),
-                "subject-name");
-        TokenCertificateSigningRequest csr = csrConverter.convert(certRequestInfo);
+        CertRequestInfo certRequestInfo = new CertificateTestUtils.CertRequestInfoBuilder().build();
+        TokenCertificateSigningRequestDto csr = csrConverter.convert(certRequestInfo);
         assertEquals("id", csr.getId());
         assertEquals("a:b:c", csr.getOwnerId());
     }
 
     @Test
-    public void convertWithPossibleActions() throws Exception {
+    public void convertWithPossibleActions() {
         CertRequestInfo certRequestInfo = new CertificateTestUtils.CertRequestInfoBuilder().build();
         KeyInfo keyInfo = new TokenTestUtils.KeyInfoBuilder()
                 .csr(certRequestInfo)
@@ -77,9 +74,9 @@ public class TokenCertificateSigningRequestConverterTest extends AbstractConvert
         TokenInfo tokenInfo = new TokenTestUtils.TokenInfoBuilder()
                 .key(keyInfo)
                 .build();
-        TokenCertificateSigningRequest csr = csrConverter.convert(certRequestInfo, keyInfo, tokenInfo);
-        Collection<PossibleAction> actions = csr.getPossibleActions();
-        assertTrue(actions.contains(PossibleAction.DELETE));
+        TokenCertificateSigningRequestDto csr = csrConverter.convert(certRequestInfo, keyInfo, tokenInfo);
+        Collection<PossibleActionDto> actions = csr.getPossibleActions();
+        assertTrue(actions.contains(PossibleActionDto.DELETE));
         assertEquals(1, actions.size());
     }
 

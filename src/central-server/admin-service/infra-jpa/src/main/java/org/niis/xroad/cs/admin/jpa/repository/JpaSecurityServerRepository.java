@@ -1,21 +1,21 @@
-/**
+/*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,15 +30,18 @@ import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.common.identifier.XRoadObjectType;
 
-import io.vavr.control.Option;
-import org.niis.xroad.cs.admin.core.entity.ClientIdEntity;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.XRoadIdEntity_;
 import org.niis.xroad.cs.admin.core.entity.SecurityServerClientEntity;
 import org.niis.xroad.cs.admin.core.entity.SecurityServerClientEntity_;
 import org.niis.xroad.cs.admin.core.entity.SecurityServerEntity;
 import org.niis.xroad.cs.admin.core.entity.SecurityServerEntity_;
 import org.niis.xroad.cs.admin.core.entity.ServerClientEntity_;
 import org.niis.xroad.cs.admin.core.entity.SubsystemEntity_;
-import org.niis.xroad.cs.admin.core.entity.XRoadIdEntity_;
 import org.niis.xroad.cs.admin.core.entity.XRoadMemberEntity;
 import org.niis.xroad.cs.admin.core.entity.XRoadMemberEntity_;
 import org.niis.xroad.cs.admin.core.repository.SecurityServerRepository;
@@ -50,10 +53,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.Join;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
+import java.util.Optional;
 
 @Repository
 public interface JpaSecurityServerRepository extends
@@ -64,18 +64,14 @@ public interface JpaSecurityServerRepository extends
         return findAll(multifieldSearch(query), pageable);
     }
 
-    Option<SecurityServerEntity> findByOwnerIdAndServerCode(Integer ownerId, String serverCode);
+    Optional<SecurityServerEntity> findByOwnerIdAndServerCode(Integer ownerId, String serverCode);
 
-    default Option<SecurityServerEntity> findBy(SecurityServerId serverId, ClientId clientId) {
-        return Option.ofOptional(
-                findOne(serverIdSpec(serverId).and(clientIdSpec(clientId)))
-        );
+    default Optional<SecurityServerEntity> findBy(SecurityServerId serverId, ClientId clientId) {
+        return findOne(serverIdSpec(serverId).and(clientIdSpec(clientId)));
     }
 
-    default Option<SecurityServerEntity> findBy(SecurityServerId serverId) {
-        return Option.ofOptional(
-                findOne(serverIdSpec(serverId))
-        );
+    default Optional<SecurityServerEntity> findBy(SecurityServerId serverId) {
+        return findOne(serverIdSpec(serverId));
     }
 
     default boolean existsBy(SecurityServerId serverId) {
@@ -137,12 +133,15 @@ public interface JpaSecurityServerRepository extends
         final Join<SecurityServerEntity, XRoadMemberEntity> owner = root.join(SecurityServerEntity_.owner);
         final Join<XRoadMemberEntity, ClientIdEntity> identifier =
                 owner.join(SecurityServerClientEntity_.identifier);
+        // XRoadMemberEntity is a SINGLE_TABLE subtype of SecurityServerClientEntity; an explicit treat() is
+        // required to reach a subtype-only attribute such as "name" via this association.
+        final Join<SecurityServerEntity, XRoadMemberEntity> ownerAsMember = builder.treat(owner, XRoadMemberEntity.class);
 
         return builder.or(
-                CriteriaBuilderUtil.caseInsensitiveLike(root, builder, q, root.get(SecurityServerEntity_.serverCode)),
-                CriteriaBuilderUtil.caseInsensitiveLike(root, builder, q, owner.get(XRoadMemberEntity_.name)),
-                CriteriaBuilderUtil.caseInsensitiveLike(root, builder, q, identifier.get(XRoadMemberEntity_.MEMBER_CLASS)),
-                CriteriaBuilderUtil.caseInsensitiveLike(root, builder, q, identifier.get(XRoadMemberEntity_.MEMBER_CODE))
+                CriteriaBuilderUtil.caseInsensitiveLike(builder, q, root.get(SecurityServerEntity_.serverCode)),
+                CriteriaBuilderUtil.caseInsensitiveLike(builder, q, ownerAsMember.get(XRoadMemberEntity_.NAME)),
+                CriteriaBuilderUtil.caseInsensitiveLike(builder, q, identifier.get(XRoadMemberEntity_.MEMBER_CLASS)),
+                CriteriaBuilderUtil.caseInsensitiveLike(builder, q, identifier.get(XRoadMemberEntity_.MEMBER_CODE))
         );
     }
 

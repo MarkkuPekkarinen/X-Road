@@ -25,287 +25,62 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-sub-view-container data-test="create-api-key-stepper-view">
-    <v-stepper v-model="step" :alt-labels="true" class="stepper mt-2">
-      <xrd-sub-view-title
-        :title="$t('apiKey.createApiKey.title')"
-        :show-close="true"
-        class="pa-4"
-        @close="close"
-      ></xrd-sub-view-title>
-
-      <v-stepper-header class="stepper-header">
-        <v-stepper-step :complete="step > 1" step="1">{{
-          $t('apiKey.createApiKey.step.roles.name')
-        }}</v-stepper-step>
-        <v-divider />
-        <v-stepper-step :complete="keyGenerated" step="2">{{
-          $t('apiKey.createApiKey.step.keyDetails.name')
-        }}</v-stepper-step>
-      </v-stepper-header>
-      <v-stepper-items>
-        <v-stepper-content
-          data-test="create-api-key-step-1"
-          step="1"
-          class="pa-0 centered"
-        >
-          <v-container class="wide-width">
-            <v-row class="mt-4">
-              <v-col
-                ><h3>{{ $t('apiKey.createApiKey.step.roles.name') }}</h3></v-col
-              >
-            </v-row>
-          </v-container>
-          <v-container class="narrow-width">
-            <v-row class="mb-5">
-              <v-col>
-                <h4>{{ $t('apiKey.createApiKey.step.roles.selectRoles') }}</h4>
-                <br />
-                {{ $t('apiKey.createApiKey.step.roles.description') }}
-              </v-col>
-              <v-col>
-                <v-row v-for="role in roles" :key="role" no-gutters>
-                  <v-col class="underline">
-                    <v-checkbox
-                      v-model="selectedRoles"
-                      height="10px"
-                      :value="role"
-                      :label="$t(`apiKey.role.${role}`)"
-                      :data-test="`role-${role}-checkbox`"
-                    />
-                  </v-col>
-                </v-row>
-              </v-col>
-            </v-row>
-          </v-container>
-
-          <v-row class="button-footer mt-12" no-gutters>
-            <xrd-button data-test="cancel-button" outlined @click="close">
-              {{ $t('action.cancel') }}
-            </xrd-button>
-
-            <xrd-button
-              data-test="next-button"
-              :disabled="nextButtonDisabled"
-              @click="step++"
-            >
-              {{ $t('action.next') }}
-            </xrd-button>
-          </v-row>
-        </v-stepper-content>
-        <v-stepper-content
-          data-test="create-api-key-step-2"
-          step="2"
-          class="pa-0"
-        >
-          <v-container class="wide-width mb-8">
-            <v-row class="mt-4">
-              <v-col
-                ><h3>
-                  {{ $t('apiKey.createApiKey.step.keyDetails.name') }}
-                </h3></v-col
-              >
-              <v-spacer></v-spacer>
-
-              <xrd-button
-                data-test="create-key-button"
-                :disabled="keyGenerated"
-                :loading="generatingKey"
-                @click="generateKey"
-              >
-                <xrd-icon-base class="xrd-large-button-icon"
-                  ><XrdIconAdd
-                /></xrd-icon-base>
-                {{ $t('apiKey.createApiKey.step.keyDetails.createKeyButton') }}
-              </xrd-button>
-            </v-row>
-          </v-container>
-          <v-container class="narrow-width">
-            <v-row class="underline">
-              <v-col cols="6" sm="3" class="api-key-label">
-                {{ $t('apiKey.createApiKey.step.keyDetails.apiKey') }}
-              </v-col>
-              <v-col cols="6" sm="9" class="action-row">
-                <div data-test="created-apikey">{{ apiKey.key }}</div>
-
-                <xrd-button
-                  v-if="apiKey.key"
-                  text
-                  :outlined="false"
-                  class="copy-button"
-                  data-test="copy-key-button"
-                  @click.prevent="copyKey()"
-                  ><v-icon class="xrd-large-button-icon">icon-Copy</v-icon
-                  >{{ $t('action.copy') }}</xrd-button
-                >
-              </v-col>
-            </v-row>
-            <v-row class="underline">
-              <v-col cols="6" sm="3" class="api-key-label">
-                {{ $t('apiKey.createApiKey.step.keyDetails.apiKeyID') }}
-              </v-col>
-              <v-col cols="6" sm="9" data-test="created-apikey-id">
-                {{ apiKey.id }}
-              </v-col>
-            </v-row>
-            <v-row class="underline">
-              <v-col cols="6" sm="3" class="api-key-label">
-                {{ $t('apiKey.createApiKey.step.keyDetails.assignedRoles') }}
-              </v-col>
-              <v-col cols="6" sm="9">
-                {{ translatedRoles | commaSeparate }}
-              </v-col>
-            </v-row>
-            <v-row class="mt-12">
-              <v-col>
-                {{ $t('apiKey.createApiKey.step.keyDetails.note') }}
-              </v-col>
-            </v-row>
-          </v-container>
-          <v-row class="button-footer mt-12" no-gutters>
-            <xrd-button
-              data-test="cancel-button"
-              outlined
-              :disabled="keyGenerated || generatingKey"
-              @click="close"
-            >
-              {{ $t('action.cancel') }}
-            </xrd-button>
-
-            <xrd-button
-              data-test="previous-button"
-              outlined
-              class="mr-5"
-              :disabled="keyGenerated || generatingKey"
-              @click="step--"
-            >
-              {{ $t('action.previous') }}
-            </xrd-button>
-            <xrd-button
-              data-test="finish-button"
-              :disabled="!keyGenerated"
-              @click="close"
-            >
-              {{ $t('action.finish') }}
-            </xrd-button>
-          </v-row>
-        </v-stepper-content>
-      </v-stepper-items>
-    </v-stepper>
-  </xrd-sub-view-container>
+  <XrdCreateApiKeyStepper :breadcrumbs="breadcrumbs" :handler="handler" :api-key-list-route-name="listViewName" />
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { Roles } from '@/global';
-import { ApiKey } from '@/api-types';
-import * as api from '@/util/api';
-import { toClipboard } from '@/util/helpers';
-import { mapActions } from 'pinia';
-import { notificationsStore } from '@/store/modules/notifications';
+<script lang="ts" setup>
+import { XrdCreateApiKeyStepper, ApiKey, ApiKeysHandler } from '@niis/shared-ui';
+import { computed } from 'vue';
+import { Roles, RouteName } from '@/global';
+import { useUser } from '@/store/modules/user';
+import { useApiKeys } from '@/store/modules/api-keys';
+import { useI18n } from 'vue-i18n';
 
-export default Vue.extend({
-  name: 'CreateApiKeyStepper',
-  data() {
-    return {
-      step: 1,
-      roles: Roles,
-      generatingKey: false,
-      selectedRoles: [] as string[],
-      apiKey: {} as ApiKey,
-    };
-  },
-  computed: {
-    nextButtonDisabled(): boolean {
-      return this.selectedRoles.length === 0;
-    },
-    translatedRoles(): string[] {
-      return !this.apiKey.roles
-        ? []
-        : this.apiKey.roles.map(
-            (role) => this.$t(`apiKey.role.${role}`) as string,
-          );
-    },
-    keyGenerated(): boolean {
-      return this.apiKey.key !== undefined;
-    },
-  },
-  methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
-    close(): void {
-      this.$router.back();
-    },
-    async generateKey() {
-      this.generatingKey = true;
-      api
-        .post<ApiKey>('/api-keys', this.selectedRoles)
-        .then((resp) => {
-          this.apiKey = resp.data;
-          this.showSuccess(this.$t('apiKey.createApiKey.success'));
-        })
-        .catch((error) => this.showError(error))
-        .finally(() => (this.generatingKey = false));
-    },
-    copyKey(): void {
-      const key = this.apiKey.key;
-      if (key) {
-        toClipboard(key);
-      }
+const { t } = useI18n();
+const { canAssignRole } = useUser();
+const { addApiKey } = useApiKeys();
+
+const listViewName = RouteName.ApiKeys;
+
+const handler = computed(
+  () =>
+    ({
+      addApiKey(roles: string[]): Promise<ApiKey> {
+        return addApiKey(roles);
+      },
+      canAssignRole(role: string): boolean {
+        return canAssignRole(role);
+      },
+      deleteApiKey(apiKeyId: number): Promise<number> {
+        throw new Error('Not needed here.');
+      },
+      fetchApiKeys(): Promise<ApiKey[]> {
+        throw new Error('Not needed here.');
+      },
+      updateApiKey(apiKeyId: number, roles: string[]): Promise<ApiKey> {
+        throw new Error('Not needed here.');
+      },
+      availableRoles() {
+        return Roles;
+      },
+    }) as ApiKeysHandler,
+);
+
+const breadcrumbs = computed(() => [
+  {
+    title: t('tab.main.settings'),
+    to: {
+      name: RouteName.Settings,
     },
   },
-});
+  {
+    title: t('tab.settings.apiKeys'),
+    to: {
+      name: RouteName.ApiKeys,
+    },
+  },
+  {
+    title: t('apiKey.createApiKey.title'),
+  },
+]);
 </script>
-
-<style lang="scss" scoped>
-@import '~styles/forms';
-@import '~styles/colors';
-
-.stepper {
-  box-shadow: unset;
-  box-shadow: $XRoad-DefaultShadow;
-}
-
-.stepper-header {
-  box-shadow: unset;
-  width: 50%;
-  margin: auto;
-}
-
-.underline {
-  border-bottom: solid 1px $XRoad-WarmGrey30;
-}
-
-.api-key-label {
-  font-weight: 500;
-}
-
-.wide-width {
-  max-width: 1040px;
-}
-
-.narrow-width {
-  max-width: 840px;
-}
-
-h3 {
-  color: $XRoad-Black100;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-h4 {
-  color: $XRoad-Black100;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.action-row {
-  display: flex;
-  justify-content: space-between;
-
-  .copy-button {
-    margin-top: -10px;
-    margin-bottom: -10px;
-  }
-}
-</style>

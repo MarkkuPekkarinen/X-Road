@@ -3,8 +3,7 @@
 **NIIS®** Nordic Institute for Interoperability Solutions is a European Union Trade Mark (no 017625484) registered by
 the European Union Intellectual Property Office for NIIS.
 
-**X-Road®** is a European Union trademark (no 1025499) registered by the European Union Intellectual Property Office
-and an Estonian trademark (no M200900641) registered by the Estonian Patent Office for the Estonian Information System
+**X-Road®** is a European Union trademark (no 017918049) registered by the European Union Intellectual Property Office for the Estonian Information System
 Authority (RIA) and managed and sub-licensed by NIIS.
 
 For purposes of this document, references to trademarks or marks include all trade and service marks and logos owned or
@@ -18,7 +17,7 @@ form may be interpreted in the plural and vice versa.
 * [3 Correct and Incorrect Examples of Use](#3-correct-and-incorrect-examples-of-use)
 * [4 Questions and Comments](#4-questions-and-comments)
 * [5 Updates of Guidelines](#5-updates-of-guidelines)
-* [6 Q&A](#q&a)
+* [6 Q&A](#6-qa)
 
 ## 1 Trademark Usage Guidelines
 
@@ -87,10 +86,13 @@ is permitted only by a license agreement between X-ROAD and the aforementioned l
 - Correct: \<your product/company name\> plug-in for \<NIIS Trademarks and Logos\>
 - Correct: \<your product name\> compatible with \<NIIS Trademarks and Logos\>
 - Correct: \<your product name\> for use with \<NIIS Trademarks and Logos \>
-- Incorrect: \<NIIS Trademarks and Logos\> \<your product name\>
-- Incorrect: \<NIIS Trademarks and Logos\> by \<your company name\>
-- Incorrect: \<NIIS Trademarks and Logos\> – \<your product name\>
-- Incorrect: \<your product/company name\> – \<NIIS Trademarks and Logos\>
+- Incorrect: \<NIIS\> or \<NIIS Trademarks and Logos\> \<your product name\>
+- Incorrect: \<NIIS\> or \<NIIS Trademarks and Logos\> by \<your company name\>
+- Incorrect: \<NIIS\> or \<NIIS Trademarks and Logos\> – \<your product name\>
+- Incorrect: \<your product/company name\> – \<NIIS\> or \<NIIS Trademarks and Logos\>
+
+\<NIIS\> - NIIS as an organization, not a trademark; specify the exact NIIS trademark being referenced, such as NIIS®,
+X-Road® or Harmony eDelivery Access®.
 
 ### 2 Here are examples of correct logos (noting that any actual use must also comply with the other requirements described in CVI’s). For proper usage and how to determine clear space (logo safe area), ask for the logo’s CVI from NIIS (info@niis.org):
 

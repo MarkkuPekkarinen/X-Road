@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,24 +25,29 @@
  */
 package org.niis.xroad.cs.admin.core.service;
 
-import ee.ria.xroad.common.util.TokenPinPolicy;
+import ee.ria.xroad.common.util.PasswordPolicy;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.niis.xroad.common.exception.ValidationFailureException;
-import org.niis.xroad.cs.admin.api.exception.ErrorMessage;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.cs.admin.api.facade.SignerProxyFacade;
 import org.niis.xroad.cs.admin.core.util.DeviationTestUtils;
 import org.niis.xroad.restapi.exceptions.DeviationCodes;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.niis.xroad.common.core.exception.DeviationBuilder.TRANSLATABLE_PREFIX;
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_WEAK_PIN;
 
 /**
  * test token pin validator
  */
 @Slf4j
 class TokenPinValidatorImplTest {
-    private final TokenPinValidatorImpl tokenPinValidator = new TokenPinValidatorImpl();
+    private final SignerProxyFacade signerProxyFacade = mock(SignerProxyFacade.class);
+    private final TokenPinValidatorImpl tokenPinValidator = new TokenPinValidatorImpl(signerProxyFacade);
 
     private static final String SOFTWARE_TOKEN_PIN = "ABCdef123456.";
     private static final String SOFTWARE_TOKEN_WEAK_PIN = "a";
@@ -50,7 +55,7 @@ class TokenPinValidatorImplTest {
 
     @BeforeEach
     public void setup() {
-        tokenPinValidator.setTokenPinEnforced(true);
+        when(signerProxyFacade.isEnforcedTokenPinPolicy()).thenReturn(true);
     }
 
     @Test
@@ -60,24 +65,24 @@ class TokenPinValidatorImplTest {
 
     @Test
     void validateSoftwareTokenPinWeak() {
-        assertThatExceptionOfType(ValidationFailureException.class)
+        assertThatExceptionOfType(BadRequestException.class)
                 .isThrownBy(() -> tokenPinValidator.validateSoftwareTokenPin(SOFTWARE_TOKEN_WEAK_PIN.toCharArray()))
                 .satisfies(e -> DeviationTestUtils.assertErrorWithMetadata(
-                        ErrorMessage.TOKEN_WEAK_PIN.getCode(), e, DeviationCodes.ERROR_METADATA_PIN_MIN_LENGTH,
-                        String.valueOf(TokenPinPolicy.MIN_PASSWORD_LENGTH),
-                        DeviationCodes.ERROR_METADATA_PIN_MIN_CHAR_CLASSES,
-                        String.valueOf(TokenPinPolicy.MIN_CHARACTER_CLASS_COUNT)));
+                        TOKEN_WEAK_PIN.code(), e, TRANSLATABLE_PREFIX + DeviationCodes.ERROR_METADATA_PIN_MIN_LENGTH,
+                        String.valueOf(PasswordPolicy.MIN_PASSWORD_LENGTH),
+                        TRANSLATABLE_PREFIX + DeviationCodes.ERROR_METADATA_PIN_MIN_CHAR_CLASSES,
+                        String.valueOf(PasswordPolicy.MIN_CHARACTER_CLASS_COUNT)));
     }
 
     @Test
     void validateSoftwareTokenPinNotEnforcedSuccess() {
-        tokenPinValidator.setTokenPinEnforced(false);
+        when(signerProxyFacade.isEnforcedTokenPinPolicy()).thenReturn(false);
         tokenPinValidator.validateSoftwareTokenPin(SOFTWARE_TOKEN_WEAK_PIN.toCharArray());
     }
 
     @Test
     void validateSoftwareTokenPinInvalid() {
-        assertThatExceptionOfType(ValidationFailureException.class)
+        assertThatExceptionOfType(BadRequestException.class)
                 .isThrownBy(() -> tokenPinValidator.validateSoftwareTokenPin(SOFTWARE_TOKEN_INVALID_PIN.toCharArray()));
 
     }

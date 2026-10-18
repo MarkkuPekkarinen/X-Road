@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -35,5 +35,6 @@ public final class HostnameVerifiers {
 
     public static final HostnameVerifier ACCEPT_ALL = (hostname, session) -> true;
 
-    private HostnameVerifiers() { }
+    private HostnameVerifiers() {
+    }
 }

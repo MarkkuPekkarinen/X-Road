@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-@Profile({ "nontest", "audit-test" })
+@Profile({"nontest", "audit-test"})
 public class AuditEventHelper {
 
     private final RequestScopedAuditDataHolder requestScopedAuditDataHolder;

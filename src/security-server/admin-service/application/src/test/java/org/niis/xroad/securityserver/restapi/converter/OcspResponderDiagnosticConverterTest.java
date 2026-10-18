@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -26,21 +27,26 @@
 
 package org.niis.xroad.securityserver.restapi.converter;
 
-import ee.ria.xroad.common.DiagnosticsErrorCodes;
+import ee.ria.xroad.common.DiagnosticStatus;
 import ee.ria.xroad.common.DiagnosticsStatus;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.niis.xroad.common.CostType;
+import org.niis.xroad.common.core.exception.ErrorCode;
+import org.niis.xroad.globalconf.GlobalConfProvider;
 import org.niis.xroad.securityserver.restapi.dto.OcspResponderDiagnosticsStatus;
-import org.niis.xroad.securityserver.restapi.openapi.model.DiagnosticStatusClass;
-import org.niis.xroad.securityserver.restapi.openapi.model.OcspResponderDiagnostics;
-import org.niis.xroad.securityserver.restapi.openapi.model.OcspStatus;
+import org.niis.xroad.securityserver.restapi.openapi.model.CaOcspDiagnosticsDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CostTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.DiagnosticStatusClassDto;
 
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test CertificateAuthorityDiagnosticConverter
@@ -57,54 +63,58 @@ public class OcspResponderDiagnosticConverterTest {
 
     @Before
     public void setup() {
-        ocspResponderDiagnosticConverter = new OcspResponderDiagnosticConverter();
+        GlobalConfProvider globalConfProvider = mock(GlobalConfProvider.class);
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn("DEV");
+        when(globalConfProvider.getOcspResponderCostType("DEV", URL_1)).thenReturn(CostType.FREE);
+        when(globalConfProvider.getOcspResponderCostType("DEV", URL_2)).thenReturn(null);
+
+        ocspResponderDiagnosticConverter = new OcspResponderDiagnosticConverter(globalConfProvider);
     }
 
     @Test
     public void convertSingleCertificateAuthorityDiagnostics() {
         OcspResponderDiagnosticsStatus status = new OcspResponderDiagnosticsStatus(CA_NAME_1);
-        DiagnosticsStatus diagnosticsStatus = new DiagnosticsStatus(
-                DiagnosticsErrorCodes.RETURN_SUCCESS, PREVIOUS_UPDATE_1, NEXT_UPDATE_1);
+        DiagnosticsStatus diagnosticsStatus = new DiagnosticsStatus(DiagnosticStatus.OK, PREVIOUS_UPDATE_1, NEXT_UPDATE_1);
         diagnosticsStatus.setDescription(URL_1);
         status.setOcspResponderStatusMap(Arrays.asList(diagnosticsStatus));
 
-        OcspResponderDiagnostics caDiagnostics = ocspResponderDiagnosticConverter.convert(status);
+        CaOcspDiagnosticsDto caDiagnostics = ocspResponderDiagnosticConverter.convert(status);
 
         assertEquals(1, caDiagnostics.getOcspResponders().size());
 
         assertEquals(CA_NAME_1, caDiagnostics.getDistinguishedName());
-        assertEquals(OcspStatus.SUCCESS, caDiagnostics.getOcspResponders().get(0).getStatusCode());
-        assertEquals(DiagnosticStatusClass.OK, caDiagnostics.getOcspResponders().get(0).getStatusClass());
+        assertEquals(DiagnosticStatusClassDto.OK, caDiagnostics.getOcspResponders().get(0).getStatusClass());
         assertEquals(PREVIOUS_UPDATE_1, caDiagnostics.getOcspResponders().get(0).getPrevUpdateAt());
         assertEquals(NEXT_UPDATE_1, caDiagnostics.getOcspResponders().get(0).getNextUpdateAt());
         assertEquals(URL_1, caDiagnostics.getOcspResponders().get(0).getUrl());
+        assertEquals(CostTypeDto.FREE, caDiagnostics.getOcspResponders().get(0).getCostType());
     }
 
     @Test
     public void convertMultipleCertificateAuthorityDiagnostics() {
         OcspResponderDiagnosticsStatus status1 = new OcspResponderDiagnosticsStatus(CA_NAME_1);
         DiagnosticsStatus diagnosticsStatus1 = new DiagnosticsStatus(
-                DiagnosticsErrorCodes.ERROR_CODE_OCSP_RESPONSE_INVALID, PREVIOUS_UPDATE_1, NEXT_UPDATE_1);
+                DiagnosticStatus.ERROR, PREVIOUS_UPDATE_1, NEXT_UPDATE_1, ErrorCode.OCSP_FAILED);
         diagnosticsStatus1.setDescription(URL_1);
         status1.setOcspResponderStatusMap(Arrays.asList(diagnosticsStatus1));
 
         OcspResponderDiagnosticsStatus status2 = new OcspResponderDiagnosticsStatus(CA_NAME_2);
         DiagnosticsStatus diagnosticsStatus2 = new DiagnosticsStatus(
-                DiagnosticsErrorCodes.ERROR_CODE_OCSP_UNINITIALIZED, null, NEXT_UPDATE_2);
+                DiagnosticStatus.UNINITIALIZED, null, NEXT_UPDATE_2);
         diagnosticsStatus2.setDescription(URL_2);
         DiagnosticsStatus diagnosticsStatus3 = new DiagnosticsStatus(
-                DiagnosticsErrorCodes.ERROR_CODE_OCSP_RESPONSE_INVALID, PREVIOUS_UPDATE_1, NEXT_UPDATE_1);
+                DiagnosticStatus.ERROR, PREVIOUS_UPDATE_1, NEXT_UPDATE_1, ErrorCode.OCSP_RESPONSE_PARSING_FAILURE);
         diagnosticsStatus3.setDescription(URL_1);
         status2.setOcspResponderStatusMap(Arrays.asList(diagnosticsStatus2, diagnosticsStatus3));
 
-        Set<OcspResponderDiagnostics> diagnostics = ocspResponderDiagnosticConverter.convert(
+        Set<CaOcspDiagnosticsDto> diagnostics = ocspResponderDiagnosticConverter.convert(
                 Arrays.asList(status1, status2));
-        OcspResponderDiagnostics firstDiagnostic = diagnostics
+        CaOcspDiagnosticsDto firstDiagnostic = diagnostics
                 .stream()
                 .filter(item -> item.getDistinguishedName().equals(CA_NAME_1))
                 .findFirst()
                 .orElse(null);
-        OcspResponderDiagnostics secondDiagnostic = diagnostics
+        CaOcspDiagnosticsDto secondDiagnostic = diagnostics
                 .stream()
                 .filter(item -> item.getDistinguishedName().equals(CA_NAME_2))
                 .findFirst()
@@ -114,27 +124,27 @@ public class OcspResponderDiagnosticConverterTest {
         assertEquals(1, firstDiagnostic.getOcspResponders().size());
         assertEquals(2, secondDiagnostic.getOcspResponders().size());
 
-        assertEquals(OcspStatus.ERROR_CODE_OCSP_RESPONSE_INVALID, firstDiagnostic.getOcspResponders().get(0)
-                .getStatusCode());
-        assertEquals(DiagnosticStatusClass.FAIL, firstDiagnostic.getOcspResponders().get(0).getStatusClass());
+        assertEquals(ErrorCode.OCSP_FAILED.code(), firstDiagnostic.getOcspResponders().get(0).getError().getCode());
+        assertEquals(DiagnosticStatusClassDto.FAIL, firstDiagnostic.getOcspResponders().get(0).getStatusClass());
         assertEquals(PREVIOUS_UPDATE_1, firstDiagnostic.getOcspResponders().get(0).getPrevUpdateAt());
         assertEquals(NEXT_UPDATE_1, firstDiagnostic.getOcspResponders().get(0).getNextUpdateAt());
         assertEquals(URL_1, firstDiagnostic.getOcspResponders().get(0).getUrl());
+        assertEquals(CostTypeDto.FREE, firstDiagnostic.getOcspResponders().get(0).getCostType());
 
         assertEquals(CA_NAME_2, secondDiagnostic.getDistinguishedName());
 
-        assertEquals(OcspStatus.ERROR_CODE_OCSP_UNINITIALIZED, secondDiagnostic.getOcspResponders().get(0)
-                .getStatusCode());
-        assertEquals(DiagnosticStatusClass.WAITING, secondDiagnostic.getOcspResponders().get(0).getStatusClass());
+        assertEquals(DiagnosticStatusClassDto.WAITING, secondDiagnostic.getOcspResponders().get(0).getStatusClass());
         assertEquals(null, secondDiagnostic.getOcspResponders().get(0).getPrevUpdateAt());
         assertEquals(NEXT_UPDATE_2, secondDiagnostic.getOcspResponders().get(0).getNextUpdateAt());
         assertEquals(URL_2, secondDiagnostic.getOcspResponders().get(0).getUrl());
+        assertEquals(CostTypeDto.UNDEFINED, secondDiagnostic.getOcspResponders().get(0).getCostType());
 
-        assertEquals(OcspStatus.ERROR_CODE_OCSP_RESPONSE_INVALID, secondDiagnostic.getOcspResponders()
-                .get(1).getStatusCode());
-        assertEquals(DiagnosticStatusClass.FAIL, secondDiagnostic.getOcspResponders().get(1).getStatusClass());
+        assertEquals(ErrorCode.OCSP_RESPONSE_PARSING_FAILURE.code(), secondDiagnostic.getOcspResponders()
+                .get(1).getError().getCode());
+        assertEquals(DiagnosticStatusClassDto.FAIL, secondDiagnostic.getOcspResponders().get(1).getStatusClass());
         assertEquals(PREVIOUS_UPDATE_1, secondDiagnostic.getOcspResponders().get(1).getPrevUpdateAt());
         assertEquals(NEXT_UPDATE_1, secondDiagnostic.getOcspResponders().get(1).getNextUpdateAt());
         assertEquals(URL_1, secondDiagnostic.getOcspResponders().get(1).getUrl());
+        assertEquals(CostTypeDto.FREE, secondDiagnostic.getOcspResponders().get(1).getCostType());
     }
 }

@@ -25,16 +25,11 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-sub-view-container>
-    <router-view />
-  </xrd-sub-view-container>
+  <router-view />
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 /**
  * View for 'management requests' tab
  */
-import Vue from 'vue';
-
-export default Vue.extend({});
 </script>

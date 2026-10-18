@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,81 +25,47 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-simple-dialog
-    :dialog="dialog"
-    title="keys.registrationRequest"
-    :disable-save="!isValid"
-    @save="save"
-    @cancel="cancel"
-  >
-    <div slot="content">
-      <ValidationObserver ref="form" v-slot="{}">
-        <div class="dlg-edit-row">
-          <div class="dlg-row-title">{{ $t('keys.certRegistrationInfo') }}</div>
-
-          <ValidationProvider
-            v-slot="{ errors }"
-            rules="required"
-            name="dns"
-            class="validation-provider dlg-row-input"
-          >
-            <v-text-field
-              v-model="url"
-              single-line
-              name="dns"
-              :error-messages="errors"
-            ></v-text-field>
-          </ValidationProvider>
-        </div>
-      </ValidationObserver>
-    </div>
-  </xrd-simple-dialog>
+  <XrdSimpleDialog v-if="dialog" title="keys.registrationRequest" :disable-save="!meta.valid" @save="save" @cancel="cancel">
+    <template #content>
+      <XrdFormBlock>
+        <XrdFormBlockRow full-length>
+          <v-text-field v-model="address" class="xrd" autofocus :label="$t('keys.certRegistrationInfo')" :error-messages="errors" />
+        </XrdFormBlockRow>
+      </XrdFormBlock>
+    </template>
+  </XrdSimpleDialog>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { ValidationProvider, ValidationObserver } from 'vee-validate';
+import { defineComponent } from 'vue';
+import { useField } from 'vee-validate';
+import { XrdSimpleDialog, XrdFormBlock, XrdFormBlockRow } from '@niis/shared-ui';
 
-export default Vue.extend({
-  components: { ValidationProvider, ValidationObserver },
+export default defineComponent({
+  components: { XrdSimpleDialog, XrdFormBlockRow, XrdFormBlock },
   props: {
     dialog: {
       type: Boolean,
       required: true,
     },
   },
-  data() {
-    return {
-      url: '',
-    };
-  },
-  computed: {
-    isValid(): boolean {
-      if (this.url && this.url.length > 0) {
-        return true;
-      }
-
-      return false;
-    },
+  emits: ['cancel', 'save'],
+  setup() {
+    const { meta, errors, value, resetField } = useField('dns', 'required|address', { initialValue: '' });
+    return { meta, errors, address: value, resetField };
   },
   methods: {
     cancel(): void {
       this.$emit('cancel');
-
       this.clear();
     },
     save(): void {
-      this.$emit('save', this.url);
+      this.$emit('save', this.address);
       this.clear();
     },
     clear(): void {
-      this.url = '';
-      (this.$refs.form as InstanceType<typeof ValidationObserver>).reset();
+      this.resetField();
     },
   },
 });
 </script>
-
-<style lang="scss" scoped>
-@import '../../../assets/dialogs';
-</style>

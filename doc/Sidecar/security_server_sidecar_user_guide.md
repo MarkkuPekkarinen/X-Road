@@ -1,0 +1,657 @@
+# Security Server Sidecar User Guide <!-- omit in toc -->
+
+Version: 1.29
+Doc. ID: UG-SS-SIDECAR
+
+## Version history <!-- omit in toc -->
+
+| Date       | Version | Description                                             | Author                    |
+|------------|---------|---------------------------------------------------------|---------------------------|
+| 13.11.2020 | 1.0     | Initial version                                         | Alberto Fernandez Lorenzo |
+| 24.12.2020 | 1.1     | Add description of features of different image versions | Petteri Kivimäki          |
+| 21.01.2021 | 1.2     | Removal of kubernetes related sections                  | Alberto Fernandez Lorenzo |
+| 10.02.2021 | 1.3     | Modify description of different supported platforms     | Raul Martinez Lopez       |
+| 06.05.2021 | 1.4     | Updated X-Road version                                  | Raul Martinez Lopez       |
+| 12.07.2021 | 1.5     | Added 6.25.0 to 6.26.0 upgrade steps                    | Raul Martinez Lopez       |
+| 15.10.2021 | 1.6     | Minor documentation updates                             | Janne Mattila             |
+| 02.11.2021 | 1.7     | Updates for Sidecar 7.0.0                               | Jarkko Hyöty              |
+| 28.11.2021 | 1.8     | Add license info                                        | Petteri Kivimäki          |
+| 11.10.2022 | 1.9     | Minor documentation updates regarding upgrade process   | Monika Liutkute           |
+| 06.07.2023 | 1.10    | Sidecar repo migration                                  | Eneli Reimets             |
+| 22.02.2024 | 1.11    | Local database files mapping with docker volume         | Eneli Reimets             |
+| 13.05.2024 | 1.12    | Add additional upgrade details for Sidecar 7.5          | Ovidijus Narkevicius      |
+| 22.08.2024 | 1.13    | Add a section about enabling ACME support               | Eneli Reimets             |
+| 23.09.2024 | 1.14    | Changing System Parameter Values in Configuration Files | Eneli Reimets             |
+| 23.12.2024 | 1.15    | Minor documentation updates                             | Eneli Reimets             |
+| 18.02.2025 | 1.16    | Configuring memory allocation fo proxy service          | Ovidijus Narkevičius      |
+| 26.03.2025 | 1.17    | Syntax and styling                                      | Pauline Dimmek            |
+| 02.04.2025 | 1.18    | Added autologin paragraph                               | Mikk-Erik Bachmann        |
+| 28.08.2025 | 1.19    | Added paragraph about custom ACME challenge port number | Mikk-Erik Bachmann        |
+| 14.10.2025 | 1.20    | Document multiple token autologin support               | Raido Kaju                |
+| 18.12.2025 | 1.21    | Added hardware token installation paragraph             | Marc David                |
+| 02.03.2026 | 1.22    | Fix broken link                                         | Petteri Kivimäki          |
+| 03.09.2026 | 1.23    | Document the first-boot hook directory                 | Ričardas Bučiūnas         |
+| 03.09.2026 | 1.24    | Document building from tree-built DEBs                 | Ričardas Bučiūnas         |
+| 04.09.2026 | 1.25    | Document supplying a real DS-HTTPS certificate          | Ričardas Bučiūnas         |
+| 09.09.2026 | 1.26    | Remove the retired slim image                           | Ričardas Bučiūnas         |
+| 09.09.2026 | 1.27    | Remove the retired local.ini configuration instructions | Ričardas Bučiūnas         |
+| 10.09.2026 | 1.28    | Document hardware token configuration via `xroad.signer.modules` | Ričardas Bučiūnas         |
+| 14.09.2026 | 1.29    | Added health-check and external secret store network ports | Eneli Reimets             |
+
+## License
+
+This document is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License.
+To view a copy of this license, visit <https://creativecommons.org/licenses/by-sa/4.0/>
+
+## Table of Contents
+<!-- vim-markdown-toc GFM -->
+
+* [License](#license)
+* [1 Introduction](#1-introduction)
+  * [1.1 X-Road Security Server Sidecar images](#11-x-road-security-server-sidecar-images)
+  * [1.2 References](#12-references)
+* [2 Installation](#2-installation)
+  * [2.1 Prerequisites](#21-prerequisites)
+  * [2.2 Reference data](#22-reference-data)
+  * [2.3 Network](#23-network)
+  * [2.4 Running the Sidecar Container](#24-running-the-sidecar-container)
+    * [Verifying that the Sidecar is Running](#verifying-that-the-sidecar-is-running)
+  * [2.5 Using an External Database](#25-using-an-external-database)
+    * [Reconfiguring the external database address after initialization](#reconfiguring-the-external-database-address-after-initialization)
+  * [2.6 Changing the logging Level](#26-changing-the-logging-level)
+  * [2.7 Using Volumes](#27-using-volumes)
+  * [2.8 Automatic backups](#28-automatic-backups)
+  * [2.9 Message log archives](#29-message-log-archives)
+  * [2.10 Secret Store](#210-secret-store)
+  * [2.11 Health Checks](#211-health-checks)
+  * [2.12 First-Boot Hook Scripts](#212-first-boot-hook-scripts)
+* [3 Initial configuration](#3-initial-configuration)
+  * [3.1 Enabling ACME Support](#31-enabling-acme-support)
+  * [3.2 Configuring the memory allocation for the Proxy Service](#32-configuring-the-memory-allocation-for-the-proxy-service)
+  * [3.3 Installing Support for Hardware Tokens](#33-installing-support-for-hardware-tokens)
+  * [3.4 Autologin](#34-autologin)
+* [4 Upgrading](#4-upgrading)
+  * [4.1 Upgrading from version 6.26.0 to 7.0.0](#41-upgrading-from-version-6260-to-700)
+  * [4.2 Upgrading from version 7.4.2 to 7.5.x with local database](#42-Upgrading-from-version-742-to-75x-with-local-database)
+* [5 High Availability Setup](#5-high-availability-setup)
+
+<!-- vim-markdown-toc -->
+
+## 1 Introduction
+
+X-Road Security Server Sidecar is containerized, production ready, version of the X-Road Security Server. This document describes the installation and maintenance of the Sidecar, to the extent it differs from the X-Road Security Server for Ubuntu server. For additional details, see [IG-SS](#Ref_IG-SS) and [UG-SS](#Ref_UG-SS).
+
+### 1.1 X-Road Security Server Sidecar images
+
+The Security Server Sidecar has several images with alternative configurations:
+
+| **Image**                                                | **Description**                                                                             |
+|-----------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| niis/xroad-security-server-sidecar:\<version>            | Image with message logging, environmental monitoring, operational monitoring and dataspace services. |
+| niis/xroad-security-server-sidecar:\<version>-\<variant> | Same image but with the NIIS member/partner country variant (ee,fi,fo,is) configuration settings included. |
+
+All images can act as a provider or consumer Security Server. The images with a country code suffix (e.g., `-fi`) include NIIS member/partner -specific configuration.
+
+The `slim` image, which didn't include message logging or environmental and operational monitoring, was removed in X-Road 8. Instead, the additional modules can now be enabled and disabled using the Security Server admin UI or the management REST API.
+
+### 1.2 References
+
+1. <a id="Ref_IG-SS">[IG-SS]</a> [X-Road: Security Server Installation Guide](../Manuals/ig-ss_x-road_v6_security_server_installation_guide.md)
+2. <a id="Ref_IG-SS-Annex-D">[IG-SS-Annex-D]</a> [X-Road: Security Server Installation Guide](../Manuals/ig-ss_x-road_v6_security_server_installation_guide.md#annex-d-create-database-structure-manually)
+3. <a id="Ref_UG-SS">[UG-SS]</a> [X-Road: Security Server User Guide](../Manuals/ug-ss_x-road_6_security_server_user_guide.md)
+4. <a id="Ref_UG-SYSPAR">[UG-SYSPAR]</a> [X-Road: System Parameters User Guide](../Manuals/ug-syspar_x-road_v6_system_parameters.md)
+
+## 2 Installation
+
+### 2.1 Prerequisites
+
+The X-Road Security Server Sidecar can be deployed using Docker (Linux, x86-64 architecture) or [Kubernetes](kubernetes_security_server_sidecar_user_guide.md).
+Docker Desktop for Windows or macOS (x86-64) can be used in testing and development, but is not supported for production use.
+
+Minimum container resource limits for running the Security Server Sidecar container:
+* CPUs: 2
+* Memory: 4 GiB or more
+* 3 GiB free disk space
+
+### 2.2 Reference data
+
+The following parameters are used in example commands:
+
+| **Value**                           | **Explanation**                                                                                                                   |
+|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| \<container name>                   | Name of the Security Server Sidecar container                                                                                     |
+| \<admin port>                       | Port for admin user interface (default 4000)                                                                                      |
+| \<healthcheck port>                 | Port for service health check (default 5588)                                                                                      |
+| \<consumer information system port> | Consumer information system port (default 8080 (http), 8443 (https))                                                              |
+| \<admin user>                       | Admin username                                                                                                                    |
+| \<admin password>                   | Admin password                                                                                                                    |
+| \<database host>                    | (Optional) host for external database                                                                                             |
+| \<database port>                    | (Optional) port for external database, default 5432                                                                               |
+| \<database password>                | (Optional) External database super user password                                                                                  |
+| \<log level>                        | (Optional) Logging level, one of: TRACE, DEBUG, INFO, WARN, ERROR, ALL or OFF                                                     |
+| \<database name>                    | (Optional) Database name prefix ('serverconf' becomes '\<database-name>\_serverconf'), useful when using a shared database server |
+| \<config volume name>               | Name of the configuration volume                                                                                                  |
+| \<database volume name>             | Name of the local database volume                                                                                                 |
+| \<archive volume name>              | Name of the archive/backup volume                                                                                                 |
+
+### 2.3 Network
+
+The table below lists the required connections between different components.
+
+| Connection | Source                      | Target                      | Target Ports     | Protocol | Note                    |
+|------------|-----------------------------|-----------------------------|------------------|----------|-------------------------|
+| Inbound    | Other Security Servers      | Sidecar                     | 5500, 5577       | tcp      |                         |
+| Inbound    | Consumer Information System | Sidecar                     | 8080, 8443       | tcp      | From "internal" network |
+| Inbound    | Admin                       | Sidecar                     | 4000             | https    | From "internal" network |
+| Inbound    | Monitoring / orchestrator   | Sidecar                     | 5588             | http     | Health check, see [2.11 Health Checks](#211-health-checks) |
+| Inbound    | ACME Server                 | Sidecar                     | 80               | http     |                         |
+| Outbound   | Sidecar                     | Central Server              | 80, 443, 4001    | http(s)  |                         |
+| Outbound   | Sidecar                     | OCSP Service                | 80 / 443 / other | http(s)  |                         |
+| Outbound   | Sidecar                     | Timestamping Service        | 80 / 443 / other | http(s)  |                         |
+| Outbound   | Sidecar                     | Other Security Server(s)    | 5500, 5577       | tcp      |                         |
+| Outbound   | Sidecar                     | Producer Information System | 80, 443, other   | http(s)  | To "internal" network   |
+| Outbound   | Sidecar                     | ACME Server                 | 80 / 443         | http(s)  |                         |
+| Outbound   | Sidecar                     | Mail server                 | 587              | tcp      |                         |
+| Outbound   | Sidecar                     | External secret store       | 8200 (default)   | http(s)  | Only when `XROAD_SECRET_STORE_HOST` is set, see [2.10 Secret Store](#210-secret-store) |
+
+Notes:
+* Using a firewall to protect the Security Server is recommended. The firewall can be applied to both incoming and outgoing connections, depending on the security requirements of the environment where the Security Server will be deployed.
+* The inbound target ports are *container ports*. It necessary to publish (`docker run ... -p <host port>:<container port>` ..) those so that the container is accessible from the outside.
+* The inbound ports 5500/tcp and 5577/tcp for communicating with other Security Servers must be published to the same ports on the host (or the public interface if NAT/firewall is in use)
+  * If the Security Server is only consuming services, it is not necessary to publish ports 5500 and 5577.
+* 4000, 8080, 8443 should be only accessible to internal clients (can be mapped to other ports)
+
+See also [Docker Networking](https://docs.docker.com/network/)
+
+### 2.4 Running the Sidecar Container
+
+To run X-Road Security Server Sidecar, use one of the images published in [Docker Hub](https://hub.docker.com/r/niis/xroad-security-server-sidecar).
+
+Alternatively, build the images locally with the [docker-build.sh script](../../sidecar/docker-build.sh) (in the
+`sidecar/` directory of the source tree). By default it builds every image variant; pass `--target=full` to build
+only the main image:
+
+```bash
+./docker-build.sh --target=full
+```
+
+Packages are installed from an X-Road apt repository by default (the `REPO` positional argument selects it,
+defaulting to the development repository; see `docker-build.sh --help`). To build from a local directory of
+tree-built `.deb` packages instead (for example `deployment/native-packages/build/ubuntu26.04`), pass
+`--packages-path`; it builds the image with `PACKAGE_SOURCE=internal` and the given directory bind-mounted as
+the `packages` build context:
+
+```bash
+./docker-build.sh --target=full --packages-path=../deployment/native-packages/build/ubuntu26.04
+```
+
+`docker-build.sh` fails with a clear error if the given path does not exist or contains no files.
+
+```bash
+docker run --detach \
+  --name <container name> \
+  -p 127.0.0.1:<admin port>:4000 \
+  -p 127.0.0.1:<healthcheck port>:5588 \
+  -p <consumer information system port>:8443 \
+  -p 5500:5500 \
+  -p 5577:5577 \
+  -e XROAD_ADMIN_USER=<admin user> \
+  -e XROAD_ADMIN_PASSWORD=<admin password> \
+  # Alternatively a password hash for admin can be used
+  # -e XROAD_ADMIN_PWD_HASH=<admin password hash>
+  # Optional parameters - BEGIN
+  -v <config-volume>:/etc/xroad \
+  -v <archive-volume>:/var/lib/xroad \
+  -v <database-volume>:/var/lib/postgresql/18/main \
+  -e XROAD_LOG_LEVEL=INFO \
+  -e XROAD_DB_HOST=<database-host> \
+  -e XROAD_DB_PORT=<database-port> \
+  -e XROAD_DB_PWD=<postgres password> \
+  # Optional parameters - END
+  niis/xroad-security-server-sidecar:<version[-type[-variant]]>
+```
+
+Hash for admin user can be generated with multiple tools. Note that yescrypt ( `$y$xxxx` ) hash is not supported in older xroad images.
+A SHA512 hash can be generated with `mkpasswd -m SHA-512` or with docker command `docker run --rm -it docker.io/serversideup/mkpasswd -m SHA-512`
+
+Note! This command persists all configuration inside the Sidecar container which means that state is lost when the container is destroyed.
+In production use, either persistent volumes should be used. Using a separate database is recommended.
+
+#### Verifying that the Sidecar is Running
+
+1. Ensure from the command line that the container is running:
+
+    ```bash
+    docker ps --filter "name=<container name>"
+    CONTAINER ID   IMAGE                                            COMMAND                 CREATED             STATUS         PORTS     NAMES
+    b3031affa4b7   niis/xroad-security-server-sidecar:<image tag>   "/root/entrypoint.sh"   10 minutes ago      Up 10 minutes  ...       <container name>
+    ```
+
+2. Ensure from the command line that the X-Road services are running in the container:
+    ```bash
+    docker exec -t <container name> supervisorctl status
+    cron                                     RUNNING   pid 1137, uptime 0:00:45
+    openbao                                  RUNNING   pid 1133, uptime 0:00:45
+    postgres                                 RUNNING   pid 1135, uptime 0:00:45
+    xroad-opmonitor                          RUNNING   pid 1136, uptime 0:00:45
+    xroad-proxy-ui-api                       RUNNING   pid 1142, uptime 0:00:45
+    xroad-secret-store-gate                  EXITED    Sep 01 02:28 AM
+    xroad-services:xroad-auxiliary-service   RUNNING   pid 1325, uptime 0:00:43
+    xroad-services:xroad-confclient          RUNNING   pid 1323, uptime 0:00:43
+    xroad-services:xroad-ds-control-plane    RUNNING   pid 1326, uptime 0:00:43
+    xroad-services:xroad-ds-identity-hub     RUNNING   pid 1329, uptime 0:00:43
+    xroad-services:xroad-monitor             RUNNING   pid 1324, uptime 0:00:43
+    xroad-services:xroad-proxy               RUNNING   pid 1339, uptime 0:00:43
+    xroad-services:xroad-signer              RUNNING   pid 1335, uptime 0:00:43
+    ```
+
+    `xroad-secret-store-gate` is a one-shot program: it unseals the secret store and releases the gated
+    `xroad-services` group, then exits — `EXITED` with exit status `0` is its expected steady state, not a failure.
+    If it cannot confirm the store is unsealed, it leaves the `xroad-services` group stopped and exits nonzero;
+    supervisord re-runs it until the store becomes usable, and the container stays unhealthy meanwhile.
+
+3. Ensure that you can open the admin user interface URL `https://127.0.0.1:<admin port>` in a web browser. To log in, use the credentials you set during the installation (\<admin user>, \<admin password>). While the user interface is still starting up, the web browser may display a connection refused -error.
+
+4. Check that the container itself reports healthy — Docker's own `HEALTHCHECK` probes the proxy's liveness endpoint
+   and does not require the server to be initialized:
+    ```bash
+    docker ps --filter "name=<container name>"
+    CONTAINER ID   IMAGE                                            COMMAND                 CREATED         STATUS                   PORTS     NAMES
+    b3031affa4b7   niis/xroad-security-server-sidecar:<image tag>   "/root/entrypoint.sh"   10 minutes ago  Up 10 minutes (healthy)  ...       <container name>
+    ```
+   See [Health Checks](#211-health-checks) for what "healthy" means before the server has been initialized.
+
+### 2.5 Using an External Database
+
+For full compatibility, the external database must be PostgreSQL version 18 (for example backup and restore does not work if the version differs).
+When starting the container, provide the external database server hostname, server port, and superuser credentials (for creating the necessary users and tables) as parameters. 
+For example:
+
+```bash
+# Create a network for the container(s)
+docker network create -d bridge xroad-network
+
+# Start a postgresql server for the external database
+docker run -d \
+-v postgres-data:/var/lib/postgresql/data \
+-e POSTGRES_PASSWORD=<postgres password> \
+--name remote-db \
+--network xroad-network \
+postgres:18
+
+# Run sidecar
+docker run -d \
+-v <config volume name>:/etc/xroad \
+-p 127.0.0.1:<admin port>:4000 \
+-p 127.0.0.1:<healthcheck port>:5588 \
+-p <consumer information system port>:8443 \
+-p 5500:5500 \
+-p 5577:5577 \
+--network xroad-network \
+-e XROAD_ADMIN_USER=<admin user> \
+-e XROAD_ADMIN_PASSWORD=<admin password> \
+-e XROAD_DB_HOST=remote-db \
+-e XROAD_DB_PWD=<postgres password> \
+--name <container name> \
+niis/xroad-security-server-sidecar:<version[-type[-variant]>
+```
+
+X-Road Security Server supports a variety of cloud databases including AWS RDS and Azure Database for PostgreSQL. 
+See [IG-SS](#Ref_IG-SS) for more information about using remote database.
+
+#### Reconfiguring the external database address after initialization
+
+It is possible to change the external database host after the initialization while the Sidecar container is running. This will not recreate the database, so make sure that you have already created the database(s) and a users. See [IG-SS](#Ref_IG-SS) for details about creating the database structure.
+
+To change the database host, you need to:
+
+1. Edit db.properties inside the container
+
+    ```bash
+    docker exec -it <sidecar container name> nano-tiny /etc/xroad/db.properties
+    ```
+2. Replace the connection host, the username and password with the properties of the new database:
+
+    ```bash
+    [...]
+    # db.properties
+    serverconf.hibernate.connection.url = jdbc:postgresql://<new host ip>:5432/serverconf
+    serverconf.hibernate.connection.username = <new user>
+    serverconf.hibernate.connection.password = <new password>
+    [...]
+    ```
+
+    If other database like `messagelog` or `op-monitor` are also configured in the `/etc/xroad/db.properties`, you must change their properties in the same way as in the example above.
+
+3. Update the admin users by editing `/etc/xroad.properties` file and replace the admin users and passwords with the new ones:
+
+    ```bash
+    [...]
+    docker exec -it <sidecar container name> nano /etc/xroad.properties
+    # xroad.properties
+    serverconf.database.admin_user = <new serverconf admin>
+    serverconf.database.admin_password = <new serverconf password>
+    [...]
+    ```
+
+    If you are using the regular version of the Security Server Sidecar with the admin users for the `messagelog` and `op-monitor` databases, you must do the same for the admin users.
+
+4. After you have changed the properties, restart the container
+
+    ```bash
+    docker restart <sidecar container name>
+    ```
+
+### 2.6 Changing the logging Level
+
+It is possible to adjust the logging level. To do this, set the environment variable XROAD_LOG_LEVEL when starting the container. The value of this variable can be one of the case-sensitive string values: TRACE, DEBUG, INFO, WARN, ERROR, ALL or OFF. If the environment variable is not set, the logging level will be INFO by default.
+
+### 2.7 Using Volumes
+
+It is recommended to configure persistent [storage](https://docs.docker.com/storage) for the files in the following locations:
+
+| Mount point                 | Description                                               |
+|-----------------------------|-----------------------------------------------------------|
+| /etc/xroad                  | X-Road configuration; also holds the secret-store unseal keys, root token and client token (`/etc/xroad/secret-store/`, `/etc/xroad/secret-store-client-token`) |
+| /var/lib/xroad              | Backups and messagelog archives                           |
+| /var/lib/postgresql/18/main | Local database files, including the embedded OpenBao secret store's own storage database (not applicable to external database |
+
+*Note* Use docker volume instead of bind mount for local database files to avoid permissions issues. For more information see: [Volumes](https://docs.docker.com/storage/volumes/)
+
+For example, to run sidecar using volumes for each mount point execute the following command:
+```bash
+docker run --detach \
+  --name sss-8.0.0 \
+  -p 127.0.0.1:4170:4000 \
+  -p 127.0.0.1:5588:5588 \
+  -p 8443:8443 \
+  -p 5500:5500 \
+  -p 5577:5577 \
+  --network xroad-network \
+  -e XROAD_ADMIN_USER=xrd \
+  -e XROAD_ADMIN_PASSWORD=secret \
+  -v sidecar_config_volume:/etc/xroad \
+  -v sidecar_backup_volume:/var/lib/xroad \
+  -v sidecar_db_volume:/var/lib/postgresql/18/main \
+  niis/xroad-security-server-sidecar:8.0.0
+```
+
+### 2.8 Automatic backups
+
+The Security Server backs up its configuration automatically once every day, by default. It can be changed with system parameter `proxy-configuration-backup-cron`, see UG-SYSPAR(#Ref_UG-SYSPAR) for configuration details. Backups older than 30 days are automatically removed from the server.
+If needed, you can adjust the automatic backup deletion policies by editing the `/etc/cron.d/xroad-proxy` file.
+
+Automatic backups will be stored in the folder `/var/lib/xroad/backup/`.
+
+Backup archives deliberately exclude the secret-store key material (`/etc/xroad/secret-store/` — unseal keys and
+root token), even though they include a dump of the secret store's database: an archive that carried both the
+encrypted store and its unseal keys would hand every stored secret to anyone who obtains the archive. Restoring
+a backup on the same instance is unaffected — the live key files are preserved across a restore. Recovering onto
+a fresh configuration volume, however, requires the original key files: without them the restored secret store
+can never be unsealed and its contents are unrecoverable. Keep the `/etc/xroad` volume itself, or store a copy
+of `/etc/xroad/secret-store/` separately with the same care as the backup encryption keys.
+
+### 2.9 Message log archives
+
+The Security Server Sidecar periodically archives message log records in the folder `/var/lib/xroad/`.
+It is recommended to store the archives to a volume by adding a volume mapping for the archive directory.
+
+### 2.10 Secret Store
+
+The Security Server Sidecar needs a secret store for TLS material, token PINs and encryption keys. By default it
+runs an embedded [OpenBao](https://openbao.org/) instance under supervisord; no configuration is needed to use it.
+
+On first boot, before any X-Road service starts, the container initializes the embedded store: it starts OpenBao,
+initializes and unseals it, creates the `xrd-pki`, `xrd-secret` and `xrd-ds-secret` mounts, and mints a client
+token used by signer, proxy, configuration-client and (in the `full` image) monitor, auxiliary-service and the
+dataspace services. On every later boot the store is only re-unsealed, using the keys generated on first boot; it
+is never re-initialized. The unseal keys, root token and client token live under `/etc/xroad/secret-store/` and
+`/etc/xroad/secret-store-client-token`, and the store's own data lives in the embedded PostgreSQL database — both
+already covered by the volumes in [2.7 Using Volumes](#27-using-volumes), so no extra volume is needed to persist
+the secret store across restarts.
+
+To use an external secret store instead of the embedded one, set:
+
+| Variable                      | Description                                             |
+|--------------------------------|---------------------------------------------------------|
+| `XROAD_SECRET_STORE_HOST`      | External secret store hostname                          |
+| `XROAD_SECRET_STORE_PORT`      | (Optional) External secret store port, default 8200      |
+| `XROAD_SECRET_STORE_SCHEME`    | (Optional) `http` or `https`, default `https`             |
+| `XROAD_SECRET_STORE_TOKEN`     | Access token the X-Road services use against the external store |
+
+When `XROAD_SECRET_STORE_HOST` is set, the embedded OpenBao program does not start and the container does not
+attempt to initialize it; the X-Road services connect to the external store using the values provided.
+
+The `full` image's dataspace services (ds-control-plane, ds-identity-hub) also need a TLS certificate for their
+HTTPS listeners. The sidecar handles this the same way as every other deployment mode: the services start with the
+certificate slot empty and wait until one is provisioned through the admin API — either by uploading a certificate
+signed against a CSR downloaded from the server, or by ACME enrollment from an approved CA. Self-signed
+certificates are not accepted by peers: outbound dataspace connections validate the peer's certificate against the
+approved CAs designated in the global configuration only.
+
+### 2.11 Health Checks
+
+The image's Docker `HEALTHCHECK` targets the proxy's **liveness** endpoint (`/q/health/live` on the
+`<healthcheck port>`), not its readiness or aggregate health endpoint. A container reports `healthy` in `docker ps`
+/ `docker inspect` as soon as the proxy JVM itself is up — deadlock and heap checks only — regardless of whether
+the server has been initialized.
+
+Readiness (`/q/health/ready`) additionally includes global-configuration and serverconf checks, which are
+legitimately `DOWN` until an anchor has been imported and the server configured. A freshly started, uninitialized
+container is therefore expected to be Docker-`healthy` while its readiness endpoint still reports `DOWN` — this is
+not a fault, and orchestrators must not use readiness to decide whether to restart the container.
+
+### 2.12 First-Boot Hook Scripts
+
+Executable scripts mounted into `/etc/xroad/entrypoint.d/` run once, on the container's first boot, as the last
+provisioning step: after the image's own database provisioning, configuration seeding and secret-store setup, and
+before supervisord starts any X-Road service. The database (embedded or external) is up and reachable at that
+point, and the secret store is initialized, so a hook can call the native configuration tool to seed rows the
+operator needs in place before services start, for example:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+/usr/share/xroad/scripts/db_property.sh set xroad.some.property some-value --yes
+```
+
+Rules:
+
+* Scripts run in lexical filename order (`10-...` before `20-...`); a numeric prefix controls ordering when more
+  than one script is mounted.
+* Only regular, executable files run. Symlinks to regular files count, which is how Kubernetes delivers every file
+  of a ConfigMap or Secret mount. A file that is not executable is skipped with a log line naming it;
+  subdirectories and symlinks without a target are skipped silently.
+* A script that exits non-zero fails the boot: the entrypoint logs the failing script and its exit status and the
+  container stops without starting supervisord. Such a boot is not recorded as provisioned, so the hooks stay
+  pending — fix the script and start the container again (`docker start`), and the entrypoint reconfigures the
+  packages and runs the hooks again from the beginning.
+* After a boot that completed, hooks do not run again on a later restart of the same container: they share the
+  reconfiguration marker that guards the image's own seeding, `/.xroad-reconfigured`, which is written only once
+  every hook has succeeded. To run them again, recreate the container with `-e RECONFIG_REQUIRED=true` —
+  `docker restart` cannot add an environment variable to an existing container.
+* Nothing is mounted into `/etc/xroad/entrypoint.d/` by default, so a container with no hook volume behaves exactly
+  as one without this feature.
+
+Example compose mount:
+
+```yaml
+services:
+  sidecar:
+    image: niis/xroad-security-server-sidecar:8.0.0
+    volumes:
+      - ./entrypoint.d:/etc/xroad/entrypoint.d:ro
+```
+
+with `./entrypoint.d/10-seed-config.sh` executable on the host and containing the script shown above.
+
+## 3 Initial configuration
+
+To configure the X-Road Security Server Sidecar, open a browser to `https://127.0.0.1:<admin port>` (assuming the container admin port 4000 is published to localhost) and log in using the admin credentials.
+See [IG-SS](#Ref_IG-SS) for configuration details.
+
+### 3.1 Enabling ACME Support
+
+Automated Certificate Management Environment (ACME) protocol enables partly automated certificate management of the authentication and sign
+certificates on the Security Server. More information about the required configuration is available in the [Security Server User Guide](../Manuals/ug-ss_x-road_6_security_server_user_guide.md#24-configuring-acme).
+
+For Sidecar, it is possible to use a different ACME challenge port from the default 80. For this, set the environment variable `XROAD_PROXY_UI_API_ACME_CHALLENGE_PORT` to the desired port number and map it to a host port 80 when starting the container (ACME Servers always use port 80 for HTTP-01 challenge).
+
+### 3.2 Configuring the memory allocation for the Proxy Service
+
+The memory allocation for the Proxy Service can be configured using helper script `/usr/share/xroad/scripts/proxy_memory_helper.sh`. More information about the usage of this script is available in the [Security Server User Guide](../Manuals/ug-ss_x-road_6_security_server_user_guide.md#211-updating-proxy-services-memory-allocation-command-line-arguments).
+
+### 3.3 Installing Support for Hardware Tokens
+
+Security Server Sidecar provides built-in support for hardware security tokens, requiring only configuration.
+
+1. Make the PKCS\#11 provider library (and any required additional files) available in the sidecar container by mounting them as volumes.
+2. Set the `xroad.signer.modules` configuration property to a JSON document describing the module, using `db_property.sh` inside the container (note that the library path inside the JSON document should match the path inside the container you chose in the last step):
+
+    ```bash
+    docker exec <sidecar container name> /usr/share/xroad/scripts/db_property.sh set xroad.signer.modules '{"<module id>":{"library":"<path to PKCS#11 library>"}}' --yes
+    ```
+
+    * More information on the JSON document's fields can be found in the [Security Server Installation Guide](../Manuals/ig-ss_x-road_v6_security_server_installation_guide.md#210-installing-the-support-for-hardware-tokens).
+3. Restarting the Security Service Sidecar container might be required:
+
+    ```bash
+    docker restart <sidecar container name>
+    ```
+
+### 3.4 Autologin
+
+Autologin logs a token in to the signer automatically after the container starts or restarts, so unattended
+restarts do not require an operator to log the token in by hand. It is implemented inside the signer itself and is
+disabled by default; PINs are stored in OpenBao, the same secret store described in
+[2.10 Secret Store](#210-secret-store).
+
+To enable it, set on `docker run`:
+
+* `XROAD_SIGNER_AUTOLOGIN_ENABLED=true` — turns autologin on. Leaving this variable unset keeps it disabled and
+  writes nothing to the server's configuration.
+* `XROAD_SIGNER_AUTOLOGIN_TOKENS__<id>__PIN=<token pin>` — the PIN for token `<id>` (the first software token is
+  `0`). Set one variable per token, e.g. `-e XROAD_SIGNER_AUTOLOGIN_TOKENS__0__PIN=<token pin>` for a single-token
+  setup, plus `-e XROAD_SIGNER_AUTOLOGIN_TOKENS__1__PIN=<token pin>` for a second token, and so on.
+
+Example:
+
+```bash
+docker run --detach \
+  ... \
+  -e XROAD_SIGNER_AUTOLOGIN_ENABLED=true \
+  -e XROAD_SIGNER_AUTOLOGIN_TOKENS__0__PIN=<token pin> \
+  niis/xroad-security-server-sidecar:<version[-type[-variant]>
+```
+
+The enable flag is written into the server's own configuration only once — the first time the container
+reconfigures against a given config volume (normally its very first boot) — and an existing value is never
+overwritten. Setting the variable on that first start is enough; it does not need to be repeated on later
+`docker restart`s of the same container. Changing it afterward requires updating the server's configuration
+directly, the same way any other configuration property is changed after initialization.
+
+Since autologin only succeeds once the token has actually been initialized (created and given the same PIN through
+the admin UI or API) and the signer is running, the signer log shows retries against `token_not_initialized` until
+initialization happens; this is expected before the server has been set up, and the process keeps retrying rather
+than failing permanently. Once the token is initialized, the log shows the PIN being stored into the secret store
+and the token being logged in.
+
+## 4 Upgrading
+
+Upgrading to a new image is supported, provided that:
+
+* The new container image has the same or subsequent minor version of the X-Road Security Server.
+  * As an exception, upgrading from 6.26.0 to 7.0.x is supported despite the major version change.
+  * As an exception, upgrading from 7.4.2 to 7.5.x is supported using backup archive if local database is used.
+* A volume is used for `/etc/xroad`.
+* A remote database is used, or a volume is mapped to `/var/lib/postgresql/18/main`.
+* The `xroad.properties` file with `serverconf.database.admin_user` etc. credentials is either mapped to `/etc/xroad.properties` or present in `/etc/xroad/xroad.properties`.
+* The same variant (ee, fi, ...) is used for the new container.
+
+If the prerequisites are met, upgrading is straightforward:
+
+* Stop the old container.
+  ```
+  docker stop <container name>
+  docker rename <container name> <container name prev>
+  ```
+* Run a container using the new (or refreshed) image, using the volumes from the old container.
+  ```
+  docker run -d \
+  --volumes-from <container name prev> \
+  ... published ports and other parameters, e.g network ...
+  -e XROAD_ADMIN_USER=<admin user> \
+  -e XROAD_ADMIN_PASSWORD=<admin password> \
+  --name <container name> \
+  niis/xroad-security-server-sidecar:<new version[-type[-variant]>
+  ```
+
+Notes:
+* If the old container was ephemeral, it is necessary to manually map the volumes (can not use --volumes-from)
+* Admin user needs to be created every time since it is not part of the persistent configuration
+* If `xroad.properties` file containing the database administrator credentials will be missing during the upgrade, 
+then non admin user credentials from `db.properties` will be used, which might cause issues if those credentials won't have enough 
+permissions to execute database updates
+* If remote database is used, then upgrade it up to PostgreSQL 16 version when upgrading to 7.5.x.
+
+### 4.1 Upgrading from version 6.26.0 to 7.0.0
+
+Upgrading from 6.26.0 to 7.0.0 is supported, if the above prerequisites are met. However, due to a problem in installer scripts, 
+it is necessary to verify that the `/etc/xroad.properties` file has been correctly populated.
+(see [IG-SS, Annex D](#Ref_IG-SS-Annex-D) for details describing expected file content and manual creation instructions).
+Backups are not compatible between 6.26.0 and 7.0.0, so upgrading using a backup is not possible.
+
+In case the prerequisites are not fully met, it is possible to manually prepare an intermediate container for the upgrade:
+(this example assumes local database)
+
+* Create an image of the current container:
+  ```
+  docker commit <container name> sidecar-temp-image
+  docker stop <container name>
+  ```
+* Create a new container with volume mounts using the temporary image, and make a copy of the xroad.properties file
+  ```
+  docker run -v sidecar-config:/etc/xroad -v sidecar-db:/var/lib/postgresql/16/data ... -n <container-name-temp> sidecar-temp-image
+  ```
+  Copy `/etc/xroad.properties` into the volume unless it is a bind mounted file. If `/etc/xroad.properties` is a bind mounted file, verify that the `serverconf.database.admin_user` etc. credentials exist and are correct.
+  ```
+  docker exec sidecar-temp-image cp /etc/xroad.properties /etc/xroad/xroad.properties
+  docker stop <container-name-temp>
+  ```
+* Upgrade using the upgrade instructions above
+
+### 4.2 Upgrading from version 7.4.2 to 7.5.x with local database
+
+Upgrading from 7.4.2 to 7.5.x is supported, if the above prerequisites are met. 
+However, due to a newer PostgreSQL version (16, previously 12) used in new sidecar image, it isn't straightforward to upgrade using the same database volume.
+
+* Create a backup for the current sidecar instance using UI or command line and download it.
+* Stop the old container and rename it.
+  ``` bash
+  docker stop <container name>
+  docker rename <container name> <container name prev>
+  ```
+
+* start a new container using the new image and the old volumes, except the old database volume.
+  ``` bash
+  docker run -d \
+  -v sidecar_config_volume:/etc/xroad \
+  -v sidecar_backup_volume:/var/lib/xroad \
+  -v <new DB volume name>:/var/lib/postgresql/16/main
+  ... published ports and other parameters, e.g network ...
+  -e XROAD_ADMIN_USER=<admin user> \
+  -e XROAD_ADMIN_PASSWORD=<admin password> \
+  --name <container name> \
+  niis/xroad-security-server-sidecar:<new version[-type[-variant]>
+  ```
+  
+  * Restore from backup:
+  ``` bash
+    sudo -iu xroad /usr/share/xroad/scripts/restore_xroad_proxy_configuration.sh -F -f <backup file>
+  ```
+
+See [IG-SS](#Ref_IG-SS) for backup and restore details.
+
+## 5 High Availability Setup
+
+For a high availability setup, see [Running Sidecar in Kubernetes](kubernetes_security_server_sidecar_user_guide.md)

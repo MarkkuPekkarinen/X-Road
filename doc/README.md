@@ -6,6 +6,7 @@
 ## Architecture
 - [\[ARC-G\] X-Road Architecture](Architecture/arc-g_x-road_arhitecture.md)
 - [\[ARC-SEC\] X-Road Security Architecture](Architecture/arc-sec_x_road_security_architecture.md)
+- [\[ARC-TM\] X-Road Threat Model](Architecture/arc-tm_x-road_threat_model.md)
 - [\[ARC-SS\] Security Server Architecture](Architecture/arc-ss_x-road_security_server_architecture.md)
 - [\[ARC-CP\] Configuration Proxy Architecture](Architecture/arc-cp_x-road_configuration_proxy_architecture.md)
 - [\[ARC-CS\] Central Server Architecture](Architecture/arc-cs_x-road_central_server_architecture.md)
@@ -25,10 +26,7 @@
 - [\[PR-META\] Service Metadata Protocol](Protocols/pr-meta_x-road_service_metadata_protocol.md)
 - [\[PR-MREST\] Service Metadata Protocol for REST](Protocols/pr-mrest_x-road_service_metadata_protocol_for_rest.md)
 - [\[PR-GCONF\] Protocol for Downloading Configuration](Protocols/pr-gconf_x-road_protocol_for_downloading_configuration.md)
-- [\[PR-TARGETSS\] Security Server Targeting Extension for the X-Road Message Protocol](Protocols/SecurityServerExtension/pr-targetss_security_server_targeting_extension_for_the_x-road_protocol.md)
-- [\[PR-SECTOKEN\] Security Token Extension for the X-Road Message Protocol](Protocols/SecurityTokenExtension/pr-sectoken_security_token_extension_for_the_x-road_protocol.md)
 - [\[PR-OPMON\] Operational Monitoring Protocol](OperationalMonitoring/Protocols/pr-opmon_x-road_operational_monitoring_protocol_Y-1096-2.md)
-- [\[PR-OPMONJMX\] Operational Monitoring JMX Protocol](OperationalMonitoring/Protocols/pr-opmonjmx_x-road_operational_monitoring_jmx_protocol_Y-1096-3.md)
 - [\[PR-ENVMONMES\] Environmental Monitoring Messages](EnvironmentalMonitoring/Monitoring-messages.md)
 
 ## Manuals
@@ -36,6 +34,7 @@
 - [\[IG-SS\] Security Server Installation Guide](Manuals/ig-ss_x-road_v6_security_server_installation_guide.md)
 - [\[IG-SS-RHEL\] Security Server Installation Guide for RHEL](Manuals/ig-ss_x-road_v6_security_server_installation_guide_for_rhel.md)
 - [\[IG-CS\] Central Server Installation Guide](Manuals/ig-cs_x-road_6_central_server_installation_guide.md)
+- [\[UG-SEC\] Security Hardening Guide](Manuals/ug-sec_x_road_security_hardening.md)
 - [\[IG-CSHA\] HA Installation Guide](Manuals/ig-csha_x-road_6_ha_installation_guide.md)
 - [\[IG-XLB\] External Load Balancer Installation Guide](Manuals/LoadBalancing/ig-xlb_x-road_external_load_balancer_installation_guide.md)
 - [\[UG-SS\] Security Server User Guide](Manuals/ug-ss_x-road_6_security_server_user_guide.md)
@@ -45,7 +44,10 @@
 - [\[UG-CP\] Configuration Proxy Manual](Manuals/ug-cp_x-road_v6_configuration_proxy_manual.md)
 - [\[UG-SYSPAR\] System Parameters](Manuals/ug-syspar_x-road_v6_system_parameters.md)
 - [\[UG-OPMONSYSPAR\] Operational Monitoring System Parameters](OperationalMonitoring/Manuals/ug-opmonsyspar_x-road_operational_monitoring_system_parameters_Y-1099-1.md)
-
+- [\[UG-SS-SIDECAR\] Security Server Sidecar User Guide](Sidecar/security_server_sidecar_user_guide.md)
+- [\[UG-SS-SEC-SIDECAR\] Security Server Sidecar Security Guide](Sidecar/security_server_sidecar_security_guide.md)
+- [\[UG-K-SS-SIDECAR\] Kubernetes Security Server Sidecar User Guide](Sidecar/kubernetes_security_server_sidecar_user_guide.md)
+- [\[UG-K-SS-SEC-SIDECAR\] Kubernetes Security Server Sidecar Security User Guide](Sidecar/kubernetes_security_guide.md)
 
 ## Use Cases
 - [\[UC-SS\] Security Server Management](UseCases/uc-ss_x-road_use_case_model_for_security_server_management_1.4_Y-883-4.md)

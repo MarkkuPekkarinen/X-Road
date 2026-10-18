@@ -1,0 +1,236 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package org.niis.xroad.edc.extension.assetaccess.service;
+
+import org.eclipse.edc.spi.result.ServiceResult;
+import org.eclipse.edc.spi.types.domain.DataAddress;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+
+class AssetAccessStateStoreTest {
+
+    AssetAccessStateStore store;
+
+    @BeforeEach
+    void setUp() {
+        store = new AssetAccessStateStore();
+    }
+
+    @Test
+    void loadOrStartInFlightReturnsSameFutureForSameKey() {
+        var supplierCallCount = new AtomicInteger(0);
+
+        var future1 = store.loadOrStartInFlight("k", () -> {
+            supplierCallCount.incrementAndGet();
+            return new CompletableFuture<>();
+        });
+        var future2 = store.loadOrStartInFlight("k", () -> {
+            supplierCallCount.incrementAndGet();
+            return new CompletableFuture<>();
+        });
+
+        assertThat(future1).isSameAs(future2);
+        assertThat(supplierCallCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void loadOrStartInFlightRemovesEntryOnCompletion() throws Exception {
+        var inner = new CompletableFuture<ServiceResult<DataAddress>>();
+        var future = store.loadOrStartInFlight("k", () -> inner);
+
+        assertThat(future).isNotNull();
+
+        inner.complete(ServiceResult.success(DataAddress.Builder.newInstance().type("HttpData").build()));
+        future.get();
+
+        // After completion, a new call with the same key should invoke the supplier again
+        var supplierCalled = new AtomicInteger(0);
+        store.loadOrStartInFlight("k", () -> {
+            supplierCalled.incrementAndGet();
+            return new CompletableFuture<>();
+        });
+        assertThat(supplierCalled.get()).isEqualTo(1);
+    }
+
+    @Test
+    void loadOrStartInFlightDoesNotCacheFutureAlreadyCompletedByItsSupplier() {
+        var failed = CompletableFuture.<ServiceResult<DataAddress>>failedFuture(new RuntimeException("boom"));
+        var first = store.loadOrStartInFlight("k", () -> failed);
+        assertThat(first).isCompletedExceptionally();
+
+        var supplierCalled = new AtomicInteger(0);
+        var second = store.loadOrStartInFlight("k", () -> {
+            supplierCalled.incrementAndGet();
+            return new CompletableFuture<>();
+        });
+
+        assertThat(supplierCalled.get()).isEqualTo(1);
+        assertThat(second).isNotCompleted();
+    }
+
+    @Test
+    void loadOrStartInFlightDedupUnderConcurrency() throws Exception {
+        var latch = new CountDownLatch(1);
+        var supplierCallCount = new AtomicInteger(0);
+
+        Runnable task = () -> store.loadOrStartInFlight("concurrent-key", () -> {
+            supplierCallCount.incrementAndGet();
+            return new CompletableFuture<>();
+        });
+
+        var t1 = new Thread(() -> {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            task.run();
+        });
+        var t2 = new Thread(() -> {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            task.run();
+        });
+
+        t1.start();
+        t2.start();
+        latch.countDown();
+        t1.join();
+        t2.join();
+
+        assertThat(supplierCallCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void loadOrStartInFlightReturnsDifferentFuturesForDifferentKeys() {
+        var future1 = store.loadOrStartInFlight("key-a", CompletableFuture::new);
+        var future2 = store.loadOrStartInFlight("key-b", CompletableFuture::new);
+
+        assertThat(future1).isNotSameAs(future2);
+    }
+
+    @Test
+    void supplierBlockingForOneKeyDoesNotBlockAnotherKey() throws Exception {
+        var supplierStarted = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var addressA = DataAddress.Builder.newInstance().type("HttpData").build();
+            var taskA = executor.submit(() -> store.loadOrStartInFlight("key-a", () -> {
+                supplierStarted.countDown();
+                awaitLatch(release);
+                return CompletableFuture.completedFuture(ServiceResult.success(addressA));
+            }));
+
+            assertThat(supplierStarted.await(2, TimeUnit.SECONDS)).isTrue();
+
+            var addressB = DataAddress.Builder.newInstance().type("HttpData").build();
+            var futureB = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                    store.loadOrStartInFlight("key-b", () -> CompletableFuture.completedFuture(ServiceResult.success(addressB))));
+            assertThat(futureB.get(2, TimeUnit.SECONDS).getContent()).isEqualTo(addressB);
+
+            release.countDown();
+            var futureA = taskA.get(2, TimeUnit.SECONDS);
+            assertThat(futureA.get(2, TimeUnit.SECONDS).getContent()).isEqualTo(addressA);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void synchronouslyThrowingSupplierFailsFutureAndLeavesNoEntry() {
+        var cause = new IllegalStateException("boom");
+
+        var first = store.loadOrStartInFlight("k", () -> {
+            throw cause;
+        });
+
+        assertThat(first).isCompletedExceptionally();
+        assertThatThrownBy(first::get).hasCause(cause);
+
+        var supplierCalled = new AtomicInteger(0);
+        store.loadOrStartInFlight("k", () -> {
+            supplierCalled.incrementAndGet();
+            return new CompletableFuture<>();
+        });
+        assertThat(supplierCalled.get()).isEqualTo(1);
+    }
+
+    @Test
+    void secondCallerDuringBlockedSupplierSharesTheClaimedFuture() throws Exception {
+        var supplierStarted = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var address = DataAddress.Builder.newInstance().type("HttpData").build();
+            var taskA = executor.submit(() -> store.loadOrStartInFlight("key-a", () -> {
+                supplierStarted.countDown();
+                awaitLatch(release);
+                return CompletableFuture.completedFuture(ServiceResult.success(address));
+            }));
+
+            assertThat(supplierStarted.await(2, TimeUnit.SECONDS)).isTrue();
+
+            var second = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                    store.loadOrStartInFlight("key-a", () -> {
+                        throw new AssertionError("supplier must not run for a caller joining an in-flight request");
+                    }));
+
+            release.countDown();
+            var first = taskA.get(2, TimeUnit.SECONDS);
+
+            assertThat(second).isSameAs(first);
+            assertThat(first.get(2, TimeUnit.SECONDS).getContent()).isEqualTo(address);
+            assertThat(second.get(2, TimeUnit.SECONDS).getContent()).isEqualTo(address);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private static void awaitLatch(CountDownLatch latch) {
+        try {
+            assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+}

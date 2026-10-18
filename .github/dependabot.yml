@@ -1,0 +1,69 @@
+version: 2
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    groups:
+      spring-patch:
+        applies-to: version-updates
+        patterns:
+          - "org.springframework.boot*"
+          - "org.springframework.cloud*"
+          - "org.hibernate*"
+          - "com.zaxxer:HikariCP"
+      opentelemetry-bundle:
+        applies-to: version-updates
+        patterns:
+          - "io.opentelemetry.instrumentation*"
+          - "io.opentelemetry.javaagent*"
+      grpc-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+        patterns:
+          - "io.grpc*"
+          - "com.google.protobuf*"
+      java-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "io.grpc*"
+          - "com.google.protobuf*"
+          - "org.springframework.boot*"
+          - "org.springframework.cloud*"
+          - "io.opentelemetry.instrumentation*"
+          - "io.opentelemetry.javaagent*"
+          - "org.hibernate*"
+          - "com.zaxxer:HikariCP"
+          - "org.eclipse.dataplane-core*"
+          - "org.eclipse.edc*"
+  - package-ecosystem: "npm"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    groups:
+      javascript-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "github-actions"
+    directory: "/.github/workflows"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"

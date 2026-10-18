@@ -1,0 +1,359 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.securityserver.restapi.service;
+
+import ee.ria.xroad.common.DiagnosticStatus;
+import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.SecurityServerId;
+
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.core.exception.ErrorCode;
+import org.niis.xroad.common.core.exception.ErrorDeviation;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.core.exception.XrdRuntimeExceptionBuilder;
+import org.niis.xroad.confclient.proto.CheckAndGetConnectionStatusRequest;
+import org.niis.xroad.confclient.proto.CheckAndGetConnectionStatusResponse;
+import org.niis.xroad.confclient.rpc.ConfClientRpcClient;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.securityserver.restapi.config.AdminServiceProperties;
+import org.niis.xroad.securityserver.restapi.dto.DownloadUrlConnectionStatus;
+import org.niis.xroad.securityserver.restapi.dto.ServiceProtocolType;
+import org.niis.xroad.securityserver.restapi.util.AuthCertVerifier;
+import org.niis.xroad.serverconf.ServerConfProvider;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
+
+import java.nio.channels.UnresolvedAddressException;
+import java.util.List;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForClassTypes.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.niis.xroad.common.core.exception.ErrorCode.INTERNAL_ERROR;
+import static org.niis.xroad.common.core.exception.ErrorCode.INVALID_REQUEST;
+
+@ExtendWith(MockitoExtension.class)
+class DiagnosticConnectionServiceTest {
+
+    private static final ClientId CLIENT_ID = ClientId.Conf.create("DEV", "COM", "4321");
+    private static final ClientId TARGET_CLIENT_ID = ClientId.Conf.create("DEV", "COM", "1234", "MANAGEMENT");
+    private static final SecurityServerId SECURITY_SERVER_ID = SecurityServerId.Conf.create("DEV", "COM", "1234", "SS0");
+
+    @Mock
+    GlobalConfProvider globalConfProvider;
+    @Mock
+    TokenService tokenService;
+    @Mock
+    AuthCertVerifier authCertVerifier;
+    @Mock
+    ManagementRequestSenderService managementRequestSenderService;
+    @Mock
+    ConfClientRpcClient confClientRpcClient;
+    @Mock
+    ServerConfProvider serverConfProvider;
+    @Mock
+    AdminServiceProperties adminServiceProperties;
+
+    DiagnosticConnectionService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new DiagnosticConnectionService(globalConfProvider, tokenService, authCertVerifier, managementRequestSenderService,
+                confClientRpcClient, serverConfProvider, adminServiceProperties);
+    }
+
+
+    @Test
+    void getGlobalConfStatusThenReturnHttp200() {
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn("DEV");
+        when(globalConfProvider.getSourceAddresses("DEV")).thenReturn(Set.of("valid-host"));
+        var request = CheckAndGetConnectionStatusRequest.newBuilder()
+                .setLocalInstance("DEV")
+                .setInstance("DEV")
+                .setAddress("valid-host")
+                .setDirectory("internalconf")
+                .build();
+        var status1 = org.niis.xroad.rpc.common.DownloadUrlConnectionStatus.newBuilder()
+                .setDownloadUrl("http://valid-host:80/internalconf")
+                .build();
+        var status2 = org.niis.xroad.rpc.common.DownloadUrlConnectionStatus.newBuilder()
+                .setDownloadUrl("https://valid-host:443/internalconf")
+                .build();
+        var response = CheckAndGetConnectionStatusResponse.newBuilder()
+                .addConnectionStatuses(status1)
+                .addConnectionStatuses(status2)
+                .build();
+        when(confClientRpcClient.checkAndGetConnectionStatus(request)).thenReturn(response);
+
+        var statuses = service.getGlobalConfStatus();
+
+        assertThat(statuses)
+                .hasSize(2)
+                .extracting(
+                        DownloadUrlConnectionStatus::getDownloadUrl,
+                        s -> s.getConnectionStatus().getStatus(),
+                        s -> s.getConnectionStatus().getErrorCode()
+                )
+                .containsExactlyInAnyOrder(
+                        tuple("http://valid-host:80/internalconf", DiagnosticStatus.OK, null),
+                        tuple("https://valid-host:443/internalconf", DiagnosticStatus.OK, null)
+                );
+    }
+
+    @Test
+    void getGlobalConfStatusThenReturnUnknownHostErrors() {
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn("DEV");
+        when(globalConfProvider.getSourceAddresses("DEV")).thenReturn(Set.of("unknown_host"));
+        var request = CheckAndGetConnectionStatusRequest.newBuilder()
+                .setLocalInstance("DEV")
+                .setInstance("DEV")
+                .setAddress("unknown_host")
+                .setDirectory("internalconf")
+                .build();
+        var status1 = org.niis.xroad.rpc.common.DownloadUrlConnectionStatus.newBuilder()
+                .setDownloadUrl("http://unknown-host:80/internalconf")
+                .setErrorCode("unknown_host")
+                .build();
+        var status2 = org.niis.xroad.rpc.common.DownloadUrlConnectionStatus.newBuilder()
+                .setDownloadUrl("https://unknown-host:443/internalconf")
+                .setErrorCode("unknown_host")
+                .build();
+        var response = CheckAndGetConnectionStatusResponse.newBuilder()
+                .addConnectionStatuses(status1)
+                .addConnectionStatuses(status2)
+                .build();
+        when(confClientRpcClient.checkAndGetConnectionStatus(request)).thenReturn(response);
+
+        var statuses = service.getGlobalConfStatus();
+
+        assertThat(statuses)
+                .hasSize(2)
+                .extracting(
+                        DownloadUrlConnectionStatus::getDownloadUrl,
+                        s -> s.getConnectionStatus().getStatus(),
+                        s -> s.getConnectionStatus().getErrorCode()
+                )
+                .containsExactlyInAnyOrder(
+                        tuple("http://unknown-host:80/internalconf", DiagnosticStatus.ERROR, "unknown_host"),
+                        tuple("https://unknown-host:443/internalconf", DiagnosticStatus.ERROR, "unknown_host")
+                );
+    }
+
+    @Test
+    void getAuthCertReqStatusThenReturnSystemErrorWhenCertOk() {
+        TokenInfo token = mock(TokenInfo.class);
+        KeyInfo key = mock(KeyInfo.class);
+        CertificateInfo cert = mock(CertificateInfo.class);
+        when(tokenService.getToken(PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID)).thenReturn(token);
+        when(token.getKeyInfo()).thenReturn(List.of(key));
+        when(key.getUsage()).thenReturn(KeyUsageInfo.AUTHENTICATION);
+        when(key.getCerts()).thenReturn(List.of(cert));
+        when(cert.getStatus()).thenReturn(CertificateInfo.STATUS_SAVED);
+        doNothing().when(authCertVerifier).verify(any());
+
+        when(managementRequestSenderService.sendAuthCertRegisterRequest(any(), any(), any(Boolean.class)))
+                .thenThrow(new XrdRuntimeExceptionBuilder(ErrorCode.withCode("management_service_error"))
+                        .build());
+
+        var status = service.getAuthCertReqStatus();
+
+        assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.ERROR);
+        assertThat(status.getErrorCode()).isEqualTo("management_service_error");
+        assertThat(status.getValidationErrors()).isEmpty();
+    }
+
+    @Test
+    void getAuthCertReqStatusThenReturnOkWhenInvalidRequestAndCertOk() {
+        TokenInfo token = mock(TokenInfo.class);
+        KeyInfo key = mock(KeyInfo.class);
+        CertificateInfo cert = mock(CertificateInfo.class);
+        when(tokenService.getToken(PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID)).thenReturn(token);
+        when(token.getKeyInfo()).thenReturn(List.of(key));
+        when(key.getUsage()).thenReturn(KeyUsageInfo.AUTHENTICATION);
+        when(key.getCerts()).thenReturn(List.of(cert));
+        when(cert.getStatus()).thenReturn(CertificateInfo.STATUS_SAVED);
+        doNothing().when(authCertVerifier).verify(any());
+
+        when(managementRequestSenderService.sendAuthCertRegisterRequest(any(), any(), any(Boolean.class)))
+                .thenThrow(XrdRuntimeException.systemException(INVALID_REQUEST, "InvalidRequest"));
+
+        var status = service.getAuthCertReqStatus();
+
+        assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.OK);
+        assertThat(status.getErrorCode()).isNull();
+    }
+
+    @Test
+    void getAuthCertReqStatusThenReturnInvalidCertificateDeviation() {
+        TokenInfo token = mock(TokenInfo.class);
+        KeyInfo key = mock(KeyInfo.class);
+        CertificateInfo cert = mock(CertificateInfo.class);
+        when(tokenService.getToken(PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID)).thenReturn(token);
+        when(token.getKeyInfo()).thenReturn(List.of(key));
+        when(key.getUsage()).thenReturn(KeyUsageInfo.AUTHENTICATION);
+        when(key.getCerts()).thenReturn(List.of(cert));
+        when(cert.getStatus()).thenReturn(CertificateInfo.STATUS_SAVED);
+        InvalidCertificateException invalid = mock(InvalidCertificateException.class);
+        when(invalid.getErrorDeviation()).thenReturn(new ErrorDeviation("certificate_not_found", List.of("No auth cert found")));
+        org.mockito.Mockito.doThrow(invalid).when(authCertVerifier).verify(any());
+
+        when(managementRequestSenderService.sendAuthCertRegisterRequest(any(), any(), any(Boolean.class)))
+                .thenThrow(XrdRuntimeException.systemException(INVALID_REQUEST).build());
+
+        var status = service.getAuthCertReqStatus();
+
+        assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.ERROR);
+        assertThat(status.getErrorCode()).isEqualTo("certificate_not_found");
+        assertThat(status.getErrorMetadata()).isEqualTo(List.of("No auth cert found"));
+        assertThat(status.getValidationErrors()).isEmpty();
+    }
+
+    @Test
+    void getAuthCertReqStatusThenReturnUnexpectedXrdRuntimeExceptionionMessageWhenCertOk() {
+        TokenInfo token = mock(TokenInfo.class);
+        KeyInfo key = mock(KeyInfo.class);
+        CertificateInfo cert = mock(CertificateInfo.class);
+        when(tokenService.getToken(PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID)).thenReturn(token);
+        when(token.getKeyInfo()).thenReturn(List.of(key));
+        when(key.getUsage()).thenReturn(KeyUsageInfo.AUTHENTICATION);
+        when(key.getCerts()).thenReturn(List.of(cert));
+        when(cert.getStatus()).thenReturn(CertificateInfo.STATUS_SAVED);
+        doNothing().when(authCertVerifier).verify(any());
+
+        when(managementRequestSenderService.sendAuthCertRegisterRequest(any(), any(), any(Boolean.class)))
+                .thenThrow(XrdRuntimeException.systemInternalError("random_message"));
+
+        var status = service.getAuthCertReqStatus();
+
+        assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.ERROR);
+        assertThat(status.getErrorCode()).isEqualTo("internal_error");
+        assertThat(status.getErrorMetadata()).isEqualTo(List.of("random_message"));
+        assertThat(status.getValidationErrors()).isEmpty();
+    }
+
+    @Test
+    void getAuthCertReqStatusThenReturnNetworkError() {
+        TokenInfo token = mock(TokenInfo.class);
+        when(tokenService.getToken(PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID)).thenReturn(token);
+        when(token.getKeyInfo()).thenReturn(List.of());
+        when(managementRequestSenderService.sendAuthCertRegisterRequest(any(), any(), any(Boolean.class)))
+                .thenThrow(new XrdRuntimeExceptionBuilder(ErrorCode.withCode("network_error"))
+                        .cause(new UnresolvedAddressException())
+                        .build());
+
+        var status = service.getAuthCertReqStatus();
+
+        assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.ERROR);
+        assertThat(status.getErrorCode()).isEqualTo("network_error");
+        assertThat(status.getValidationErrors()).containsEntry("certificate_not_found", List.of("No auth cert found"));
+    }
+
+    @Test
+    void getAuthCertReqStatusThenReturnInternalError() {
+        TokenInfo token = mock(TokenInfo.class);
+        when(tokenService.getToken(PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID)).thenReturn(token);
+        when(token.getKeyInfo()).thenReturn(List.of());
+        when(managementRequestSenderService.sendAuthCertRegisterRequest(any(), any(), any(Boolean.class)))
+                .thenThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).build());
+
+        var status = service.getAuthCertReqStatus();
+
+        assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.ERROR);
+        assertThat(status.getErrorCode()).isEqualTo("internal_error");
+        assertThat(status.getValidationErrors()).containsEntry("certificate_not_found", List.of("No auth cert found"));
+    }
+
+    @Test
+    void getAuthCertReqStatusThenReturnCertificateNotFoundError() {
+        TokenInfo token = mock(TokenInfo.class);
+        when(tokenService.getToken(PossibleActionsRuleEngine.SOFTWARE_TOKEN_ID)).thenReturn(token);
+        when(token.getKeyInfo()).thenReturn(List.of());
+        when(managementRequestSenderService.sendAuthCertRegisterRequest(any(), any(), any(Boolean.class)))
+                .thenThrow(XrdRuntimeException.systemException(INVALID_REQUEST).build());
+
+        var status = service.getAuthCertReqStatus();
+
+        assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.ERROR);
+        assertThat(status.getErrorCode()).isEqualTo("certificate_not_found");
+        assertThat(status.getErrorMetadata()).isEqualTo(List.of("No auth cert found"));
+        assertThat(status.getValidationErrors()).isEmpty();
+    }
+
+    @Test
+    void getOtherSecurityServerStatusWithRestThenReturnHttp200() throws Exception {
+        CloseableHttpClient httpClient = mock(CloseableHttpClient.class);
+        CloseableHttpResponse httpResponse = mock(CloseableHttpResponse.class);
+        StatusLine statusLine = mock(StatusLine.class);
+
+        when(statusLine.getStatusCode()).thenReturn(200);
+        when(httpResponse.getStatusLine()).thenReturn(statusLine);
+        when(httpClient.execute(any(HttpGet.class))).thenReturn(httpResponse);
+
+        try (MockedStatic<HttpClients> httpClientsMock = org.mockito.Mockito.mockStatic(HttpClients.class)) {
+            HttpClientBuilder builder = mock(HttpClientBuilder.class);
+            httpClientsMock.when(HttpClients::custom).thenReturn(builder);
+
+            doReturn(builder).when(builder).setSSLSocketFactory(any());
+            doReturn(builder).when(builder).setDefaultRequestConfig(any());
+            doReturn(builder).when(builder).disableAutomaticRetries();
+            doReturn(httpClient).when(builder).build();
+
+            var status = service.getOtherSecurityServerStatus(ServiceProtocolType.REST, CLIENT_ID, TARGET_CLIENT_ID, SECURITY_SERVER_ID);
+
+            assertThat(status.getStatus()).isEqualTo(DiagnosticStatus.OK);
+            assertThat(status.getErrorCode()).isNull();
+            assertThat(status.getErrorMetadata()).isEmpty();
+        }
+    }
+
+    @Test
+    void getOtherSecurityServerStatusWithWrongTypeThenReturnIllegalStateException() {
+        assertThatThrownBy(() ->
+                service.getOtherSecurityServerStatus(null, CLIENT_ID, TARGET_CLIENT_ID, SECURITY_SERVER_ID)
+        )
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Unsupported protocol type: null");
+    }
+}

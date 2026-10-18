@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,14 +25,7 @@
    THE SOFTWARE.
  -->
 <template>
-  <div class="xrd-sub-view-wrapper">
-    <v-container class="xrd-view-common mt-7">
-      <router-view />
-    </v-container>
-  </div>
+  <router-view />
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-export default Vue.extend({});
-</script>
+<script lang="ts" setup></script>

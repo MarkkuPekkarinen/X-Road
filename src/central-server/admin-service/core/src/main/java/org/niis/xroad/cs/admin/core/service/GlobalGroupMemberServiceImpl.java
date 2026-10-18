@@ -27,6 +27,9 @@
 
 package org.niis.xroad.cs.admin.core.service;
 
+import ee.ria.xroad.common.identifier.ClientId;
+
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.niis.xroad.common.exception.NotFoundException;
 import org.niis.xroad.cs.admin.api.domain.GlobalGroupMember;
@@ -51,8 +54,6 @@ import org.niis.xroad.cs.admin.core.repository.paging.StableSortHelper;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
 import org.springframework.stereotype.Service;
-
-import javax.transaction.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -113,7 +114,7 @@ public class GlobalGroupMemberServiceImpl implements GlobalGroupMemberService {
         final var globalGroupMemberEntity = globalGroup.getGlobalGroupMembers().stream()
                 .filter(groupMember -> groupMember.getIdentifier().asEncodedId().equals(memberId))
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException(MEMBER_NOT_FOUND, memberId));
+                .orElseThrow(() -> new NotFoundException(MEMBER_NOT_FOUND.build("memberId", memberId)));
 
         auditDataHelper.put(RestApiAuditProperty.CODE, globalGroup.getGroupCode());
         auditDataHelper.put(RestApiAuditProperty.DESCRIPTION, globalGroup.getDescription());
@@ -136,14 +137,20 @@ public class GlobalGroupMemberServiceImpl implements GlobalGroupMemberService {
         globalGroupMember.ifPresent(globalGroupMemberRepository::delete);
     }
 
+    @Override
+    public void removeClientFromGlobalGroups(ClientId clientId) {
+        globalGroupMemberRepository.findMemberGroups(clientId)
+                .forEach(globalGroupMemberRepository::delete);
+    }
+
     private XRoadMemberEntity getMemberIdEntity(MemberId memberId) {
         return xRoadMemberRepository.findMember(memberId)
-                .getOrElseThrow(() -> new NotFoundException(MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(MEMBER_NOT_FOUND.build()));
     }
 
     private GlobalGroupEntity getGlobalGroupEntity(String groupCode) {
         return globalGroupRepository.getByGroupCode(groupCode)
-                .orElseThrow(() -> new NotFoundException(GLOBAL_GROUP_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(GLOBAL_GROUP_NOT_FOUND.build()));
     }
 
     private boolean isMemberAlreadyInGroup(GlobalGroupEntity globalGroupEntity, XRoadMemberEntity memberEntity) {

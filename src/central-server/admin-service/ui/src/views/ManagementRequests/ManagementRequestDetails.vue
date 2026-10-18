@@ -25,186 +25,158 @@
    THE SOFTWARE.
  -->
 <template>
-  <details-view back-to="/management-requests">
-    <XrdEmptyPlaceholder
-      :loading="loading"
-      :data="managementRequest"
-      :no-items-text="$t('noData.noData')"
-      skeleton-type="table-heading"
-    />
-    <main v-if="managementRequest && !loading" id="management-request-view">
-      <header class="table-toolbar align-fix mt-0 pl-0">
-        <h1 class="xrd-view-title">{{ typeText }}</h1>
-        <div
-          v-if="managementRequest.status === 'WAITING'"
-          :data-test="`actions-for-MR-${managementRequest.id}`"
-        >
-          <xrd-button
-            outlined
-            class="mr-4"
-            data-test="approve-button"
-            @click="$refs.approveDialog.openDialog()"
-          >
-            {{ $t('action.approve') }}
-          </xrd-button>
-          <xrd-button
-            outlined
-            class="mr-4"
-            data-test="decline-button"
-            @click="$refs.declineDialog.openDialog()"
-          >
-            {{ $t('action.decline') }}
-          </xrd-button>
-        </div>
-      </header>
+  <XrdView translated-title :title="title" :breadcrumbs="breadcrumbs">
+    <template v-if="managementRequest?.status === 'WAITING'" #append-header>
+      <v-spacer />
+      <XrdBtn
+        data-test="decline-button"
+        class="mr-4"
+        variant="outlined"
+        text="action.decline"
+        color="primary"
+        @click="showDeclineDialog = true"
+      />
 
-      <mr-information :management-request="managementRequest" />
-      <div class="management-request-additional-details">
-        <mr-security-server-information
-          :management-request="managementRequest"
-        />
-        <mr-client-information
-          v-if="hasClientInfo"
-          :management-request="managementRequest"
-        />
-        <mr-certificate-information
-          v-if="hasCertificateInfo"
-          :management-request="managementRequest"
-        />
-      </div>
-      <mr-confirm-dialog
-        ref="approveDialog"
-        :request-id="managementRequest.id"
-        :security-server-id="managementRequest.security_server_id.encoded_id"
-        @approve="fetchData"
+      <XrdBtn
+        data-test="approve-button"
+        class="mr-4"
+        variant="flat"
+        text="action.approve"
+        color="primary"
+        @click="showApproveDialog = true"
       />
-      <mr-decline-dialog
-        ref="declineDialog"
-        :request-id="managementRequest.id"
-        :security-server-id="managementRequest.security_server_id.encoded_id"
-        @decline="fetchData"
-      />
-    </main>
-  </details-view>
+    </template>
+
+    <MrInformation :management-request="managementRequest" :loading />
+    <v-container fluid class="management-request-additional-details pa-0 mt-6">
+      <v-row class="justify-start ga-4">
+        <v-col>
+          <MrSecurityServerInformation class="h-100" :management-request="managementRequest" :loading />
+        </v-col>
+        <v-col v-if="hasClientInfo">
+          <MrClientInformation class="h-100" :management-request="managementRequest" :loading />
+        </v-col>
+        <v-col v-if="hasCertificateInfo">
+          <MrCertificateInformation class="h-100" :management-request="managementRequest" :loading />
+        </v-col>
+        <v-spacer v-if="onlyServerInfo" />
+      </v-row>
+    </v-container>
+    <MrConfirmDialog
+      v-if="showApproveDialog && managementRequest?.id && managementRequest.security_server_id.encoded_id"
+      :request-id="managementRequest.id"
+      :security-server-id="managementRequest.security_server_id.encoded_id"
+      :new-member="newMember"
+      @approve="approve"
+      @cancel="showApproveDialog = false"
+    />
+    <MrDeclineDialog
+      v-if="showDeclineDialog && managementRequest?.id && managementRequest.security_server_id.encoded_id"
+      :request-id="managementRequest.id"
+      :security-server-id="managementRequest.security_server_id.encoded_id"
+      @decline="decline"
+      @cancel="showDeclineDialog = false"
+    />
+  </XrdView>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { mapActions, mapStores } from 'pinia';
-import { managementRequestsStore } from '@/store/modules/managementRequestStore';
-import { managementTypeToText } from '@/util/helpers';
-import {
-  ManagementRequestDetailedView,
-  ManagementRequestType,
-} from '@/openapi-types';
-import MrDeclineDialog from '@/components/managementRequests/MrDeclineDialog.vue';
-import MrConfirmDialog from '@/components/managementRequests/MrConfirmDialog.vue';
-import MrCertificateInformation from '@/components/managementRequests/details/MrCertificateInformation.vue';
-import MrClientInformation from '@/components/managementRequests/details/MrClientInformation.vue';
-import MrSecurityServerInformation from '@/components/managementRequests/details/MrSecurityServerInformation.vue';
-import MrInformation from '@/components/managementRequests/details/MrInformation.vue';
-import { notificationsStore } from '@/store/modules/notifications';
-import DetailsView from '@/components/ui/DetailsView.vue';
+<script lang="ts" setup>
+import { computed, ref, watchEffect } from 'vue';
+import { useManagementRequests } from '@/store/modules/management-requests';
+import { ManagementRequestType } from '@/openapi-types';
+import MrDeclineDialog from './dialogs/MrDeclineDialog.vue';
+import MrConfirmDialog from './dialogs/MrConfirmDialog.vue';
+import MrCertificateInformation from './MrCertificateInformation.vue';
+import MrClientInformation from './MrClientInformation.vue';
+import MrSecurityServerInformation from './MrSecurityServerInformation.vue';
+import MrInformation from './MrInformation.vue';
+import { XrdView, XrdBtn, useNotifications } from '@niis/shared-ui';
+import { managementTypeToIconTextColor } from '@/util/helpers';
+import { RouteName } from '@/global';
 
-/**
- * Wrapper component for a certification service view
- */
-export default Vue.extend({
-  name: 'ManagementRequestDetails',
-  components: {
-    DetailsView,
-    MrInformation,
-    MrSecurityServerInformation,
-    MrClientInformation,
-    MrCertificateInformation,
-    MrConfirmDialog,
-    MrDeclineDialog,
-  },
-  props: {
-    requestId: {
-      type: Number,
-      required: true,
-    },
-  },
-  data() {
-    return {
-      loading: false,
-    };
-  },
-  computed: {
-    ...mapStores(managementRequestsStore),
+const WITH_CLIENT_INFO = [
+  ManagementRequestType.CLIENT_DELETION_REQUEST,
+  ManagementRequestType.CLIENT_REGISTRATION_REQUEST,
+  ManagementRequestType.CLIENT_DISABLE_REQUEST,
+  ManagementRequestType.CLIENT_ENABLE_REQUEST,
+  ManagementRequestType.OWNER_CHANGE_REQUEST,
+  ManagementRequestType.CLIENT_RENAME_REQUEST,
+] as ManagementRequestType[];
 
-    managementRequest(): ManagementRequestDetailedView | null {
-      return this.managementRequestsStore.currentManagementRequest;
-    },
-    typeText(): string {
-      return managementTypeToText(
-        this.managementRequestsStore.currentManagementRequest?.type,
-      );
-    },
-    hasCertificateInfo(): boolean {
-      if (!this.managementRequestsStore.currentManagementRequest) {
-        return false;
-      }
+const WITH_CERT_INFO = [
+  ManagementRequestType.AUTH_CERT_DELETION_REQUEST,
+  ManagementRequestType.AUTH_CERT_REGISTRATION_REQUEST,
+] as ManagementRequestType[];
 
-      return [
-        ManagementRequestType.AUTH_CERT_DELETION_REQUEST,
-        ManagementRequestType.AUTH_CERT_REGISTRATION_REQUEST,
-      ].includes(this.managementRequestsStore.currentManagementRequest.type);
-    },
-    hasClientInfo(): boolean {
-      if (!this.managementRequestsStore.currentManagementRequest) {
-        return false;
-      }
-
-      return [
-        ManagementRequestType.CLIENT_DELETION_REQUEST,
-        ManagementRequestType.CLIENT_REGISTRATION_REQUEST,
-        ManagementRequestType.OWNER_CHANGE_REQUEST,
-      ].includes(this.managementRequestsStore.currentManagementRequest.type);
-    },
-  },
-  created() {
-    this.fetchData();
-  },
-  methods: {
-    ...mapActions(notificationsStore, ['showError']),
-    fetchData: async function () {
-      this.loading = true;
-      try {
-        await this.managementRequestsStore.loadById(this.requestId);
-      } catch (error: unknown) {
-        this.showError(error);
-      } finally {
-        this.loading = false;
-      }
-    },
+const props = defineProps({
+  requestId: {
+    type: Number,
+    required: true,
   },
 });
-</script>
-<style lang="scss" scoped>
-@import '~styles/tables';
-@import '~styles/colors';
+const showApproveDialog = ref(false);
+const showDeclineDialog = ref(false);
+const managementRequests = useManagementRequests();
 
-.management-request-additional-details {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
+const { addError } = useNotifications();
 
-  margin-bottom: 24px;
+const managementRequest = computed(() => managementRequests.current);
+const loading = computed(() => managementRequests.loadingCurrent);
 
-  .details-block {
-    width: 100%;
+const title = computed(() => managementTypeToIconTextColor(managementRequest.value?.type)?.text || '');
+const breadcrumbs = computed(() => [
+  {
+    title: 'tab.main.managementRequests',
+    to: {
+      name: RouteName.ManagementRequests,
+    },
+  },
+]);
 
-    &:first-child {
-      margin-right: 30px;
-    }
-
-    &:last-child {
-      margin-left: 30px;
-    }
+const hasCertificateInfo = computed(() => {
+  if (!managementRequest.value) {
+    return false;
   }
+
+  return WITH_CERT_INFO.includes(managementRequest.value.type);
+});
+
+const hasClientInfo = computed(() => {
+  if (!managementRequest.value) {
+    return false;
+  }
+
+  return WITH_CLIENT_INFO.includes(managementRequest.value.type);
+});
+
+const newClientOwner = computed(() => {
+  const req = managementRequest.value;
+  return !!req && req.type === ManagementRequestType.CLIENT_REGISTRATION_REQUEST && !req.client_owner_name;
+});
+
+const newServerOwner = computed(() => {
+  const req = managementRequest.value;
+  return !!req && req.type === ManagementRequestType.AUTH_CERT_REGISTRATION_REQUEST && !req.security_server_owner;
+});
+
+const newMember = computed(() => newClientOwner.value || newServerOwner.value);
+const onlyServerInfo = computed(() => !hasCertificateInfo.value && !hasClientInfo.value);
+
+function approve() {
+  showApproveDialog.value = false;
+  fetchData();
 }
-</style>
+
+function decline() {
+  showDeclineDialog.value = false;
+  fetchData();
+}
+
+function fetchData() {
+  managementRequests.loadById(props.requestId).catch((err) => addError(err, { navigate: true }));
+}
+
+watchEffect(() => {
+  fetchData();
+});
+</script>

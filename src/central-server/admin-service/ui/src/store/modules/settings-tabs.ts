@@ -26,61 +26,85 @@
  */
 import { defineStore } from 'pinia';
 import { Permissions, RouteName } from '@/global';
-import { Tab } from '@/ui-types';
-import { userStore } from '@/store/modules/user';
+import { Tab } from '@niis/shared-ui';
+import { useUser } from '@/store/modules/user';
 
-export interface State {
-  allSettingsTabs: Tab[];
-}
+const tabs: Tab[] = [
+  {
+    key: 'globalresources-tab-button',
+    name: 'tab.settings.globalResources',
+    icon: 'group',
+    to: {
+      name: RouteName.GlobalGroups,
+    },
+    permissions: [Permissions.VIEW_GLOBAL_GROUPS, Permissions.VIEW_SECURITY_SERVERS],
+  },
+  {
+    key: 'systemsettings-tab-button',
+    name: 'tab.settings.systemSettings',
+    icon: 'page_info',
+    to: {
+      name: RouteName.SystemSettings,
+    },
+    permissions: [Permissions.VIEW_SYSTEM_SETTINGS],
+  },
+  {
+    key: 'systemparameters-tab-button',
+    name: 'tab.settings.systemParameters',
+    icon: 'tune',
+    to: {
+      name: RouteName.SystemParameters,
+    },
+    permissions: [Permissions.CHANGE_CONFIGURATION_PROPERTY],
+  },
+  {
+    key: 'backup-and-restore-tab-button',
+    name: 'tab.settings.backupAndRestore',
+    icon: 'cloud_upload',
+    to: {
+      name: RouteName.BackupAndRestore,
+    },
+    permissions: [Permissions.BACKUP_CONFIGURATION],
+  },
+  {
+    key: 'apikeys-tab-button',
+    name: 'tab.settings.apiKeys',
+    icon: 'key_vertical',
+    to: {
+      name: RouteName.ApiKeys,
+    },
+    permissions: [Permissions.VIEW_API_KEYS, Permissions.CREATE_API_KEY, Permissions.REVOKE_API_KEY],
+  },
+  {
+    key: 'tlscertificates-tab-button',
+    name: 'tab.settings.tlsCertificates',
+    icon: 'editor_choice',
+    to: {
+      name: RouteName.TlsCertificates,
+    },
+    permissions: [Permissions.VIEW_TLS_CERTIFICATES],
+  },
+  {
+    key: 'ds-tls-certificate-tab-button',
+    name: 'tab.settings.dsTlsCertificate',
+    icon: 'editor_choice',
+    to: {
+      name: RouteName.DsTlsCertificate,
+    },
+    permissions: [Permissions.VIEW_DS_TLS_CERT],
+  },
+];
 
-export const availableSettingsTabsStore = defineStore('settingsTabService', {
-  state: (): State => ({
-    allSettingsTabs: [
-      {
-        key: 'globalresources-tab-button',
-        name: 'tab.settings.globalResources',
-        to: {
-          name: RouteName.GlobalResources,
-        },
-        permissions: [
-          Permissions.VIEW_GLOBAL_GROUPS,
-          Permissions.VIEW_SECURITY_SERVERS,
-        ],
-      },
-      {
-        key: 'systemsettings-tab-button',
-        name: 'tab.settings.systemSettings',
-        to: {
-          name: RouteName.SystemSettings,
-        },
-        permissions: [Permissions.VIEW_SYSTEM_SETTINGS],
-      },
-      {
-        key: 'backupandrestore-tab-button',
-        name: 'tab.settings.backupAndRestore',
-        to: {
-          name: RouteName.BackupAndRestore,
-        },
-        permissions: [Permissions.BACKUP_CONFIGURATION],
-      },
-      {
-        key: 'apikeys-tab-button',
-        name: 'tab.settings.apiKeys',
-        to: {
-          name: RouteName.ApiKeys,
-        },
-        permissions: [
-          Permissions.VIEW_API_KEYS,
-          Permissions.CREATE_API_KEY,
-          Permissions.REVOKE_API_KEY,
-        ],
-      },
-    ],
-  }),
+export const useSettingsTabs = defineStore('settings-tabs', {
+  state: () => ({}),
   persist: false,
-  actions: {
-    getAvailableTabs() {
-      return userStore().getAllowedTabs(this.allSettingsTabs);
+  getters: {
+    availableTabs(): Tab[] {
+      return useUser().getAllowedTabs(tabs);
+    },
+    firstAllowedTab(): Tab {
+      return this.availableTabs[0];
     },
   },
+  actions: {},
 });

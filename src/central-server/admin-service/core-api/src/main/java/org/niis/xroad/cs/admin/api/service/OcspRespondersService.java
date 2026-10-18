@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,12 +25,12 @@
  */
 package org.niis.xroad.cs.admin.api.service;
 
-import org.niis.xroad.cs.admin.api.dto.CertificateDetails;
 import org.niis.xroad.cs.admin.api.dto.OcspResponder;
+import org.niis.xroad.cs.admin.api.dto.OcspResponderCertificateDetails;
 import org.niis.xroad.cs.admin.api.dto.OcspResponderRequest;
 
 public interface OcspRespondersService {
-    CertificateDetails getOcspResponderCertificateDetails(Integer id);
+    OcspResponderCertificateDetails getOcspResponderCertificateDetails(Integer id);
 
     OcspResponder update(OcspResponderRequest updateRequest);
 

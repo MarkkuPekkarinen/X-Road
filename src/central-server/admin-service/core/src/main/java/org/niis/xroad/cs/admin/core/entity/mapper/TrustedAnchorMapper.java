@@ -27,18 +27,17 @@
 package org.niis.xroad.cs.admin.core.entity.mapper;
 
 
-import ee.ria.xroad.common.conf.globalconf.ConfigurationAnchorV2;
-
 import org.mapstruct.Mapper;
 import org.niis.xroad.cs.admin.api.converter.GenericUniDirectionalMapper;
 import org.niis.xroad.cs.admin.api.domain.AnchorUrl;
 import org.niis.xroad.cs.admin.api.domain.AnchorUrlCert;
 import org.niis.xroad.cs.admin.api.domain.TrustedAnchor;
 import org.niis.xroad.cs.admin.core.entity.TrustedAnchorEntity;
+import org.niis.xroad.globalconf.model.ConfigurationAnchor;
 
 import java.util.Set;
 
-import static ee.ria.xroad.common.util.CryptoUtils.calculateAnchorHashDelimited;
+import static ee.ria.xroad.common.crypto.Digests.calculateAnchorHashDelimited;
 import static java.util.Arrays.copyOf;
 import static java.util.stream.Collectors.toSet;
 import static org.mapstruct.MappingConstants.ComponentModel.SPRING;
@@ -47,7 +46,7 @@ import static org.mapstruct.ReportingPolicy.ERROR;
 @Mapper(componentModel = SPRING, unmappedTargetPolicy = ERROR)
 public interface TrustedAnchorMapper extends GenericUniDirectionalMapper<TrustedAnchorEntity, TrustedAnchor> {
 
-    default TrustedAnchor map(ConfigurationAnchorV2 anchorV2, byte[] anchorBytes) {
+    default TrustedAnchor map(ConfigurationAnchor anchorV2, byte[] anchorBytes) {
         final TrustedAnchor trustedAnchor = new TrustedAnchor();
         trustedAnchor.setInstanceIdentifier(anchorV2.getInstanceIdentifier());
         trustedAnchor.setGeneratedAt(anchorV2.getGeneratedAt().toInstant());

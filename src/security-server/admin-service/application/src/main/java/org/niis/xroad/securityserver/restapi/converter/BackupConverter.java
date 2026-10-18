@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,11 +26,12 @@
  */
 package org.niis.xroad.securityserver.restapi.converter;
 
-import com.google.common.collect.Streams;
-import org.niis.xroad.restapi.common.backup.dto.BackupFile;
-import org.niis.xroad.securityserver.restapi.openapi.model.Backup;
+import org.niis.xroad.auxiliaryservice.proto.BackupInfo;
+import org.niis.xroad.securityserver.restapi.openapi.model.BackupDto;
 import org.springframework.stereotype.Component;
 
+import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -39,15 +41,12 @@ import java.util.stream.Collectors;
 @Component
 public class BackupConverter {
 
-    public Backup convert(BackupFile backupFile) {
-        Backup backup = new Backup();
-        backup.setFilename(backupFile.getFilename());
-        backup.setCreatedAt(backupFile.getCreatedAt());
-        return backup;
+    public BackupDto convert(BackupInfo backupInfo) {
+        return new BackupDto(backupInfo.name(), backupInfo.createdAt().atOffset(ZoneOffset.UTC), backupInfo.compatible());
     }
 
-    public Set<Backup> convert(Iterable<BackupFile> files)  {
-        return Streams.stream(files)
+    public Set<BackupDto> convert(Collection<BackupInfo> backupDto) {
+        return backupDto.stream()
                 .map(this::convert)
                 .collect(Collectors.toSet());
     }

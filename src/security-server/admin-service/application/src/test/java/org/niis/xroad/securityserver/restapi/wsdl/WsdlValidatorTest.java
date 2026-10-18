@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,70 +25,43 @@
  */
 package org.niis.xroad.securityserver.restapi.wsdl;
 
-import ee.ria.xroad.common.util.process.ExternalProcessRunner;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.serverconf.ServerConfProvider;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.niis.xroad.restapi.exceptions.DeviationCodes;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.ArrayList;
-import java.util.Collections;
+import java.security.GeneralSecurityException;
 import java.util.List;
 
-import static junit.framework.TestCase.fail;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/**
- * Test WSDLValidator
- * Tests external validator success and fail. This tests only one Spring component so instead of loading a whole
- * new Spring application context we are instantiating the tested component via it's constructor (WsdlValidator)
- */
+@ExtendWith(MockitoExtension.class)
 public class WsdlValidatorTest {
-    public static final String MOCK_VALIDATOR_WARNING = "WARNING: this can be ignored";
-    public static final String MOCK_VALIDATOR = "src/test/resources/validator/mock-wsdlvalidator.sh";
-    public static final String FOOBAR_VALIDATOR = "/bin/foobar-validator";
 
-    private WsdlValidator wsdlValidator = new WsdlValidator(new ExternalProcessRunner());
+    @Mock
+    private ServerConfProvider serverConfProvider;
 
-    @Before
-    public void setup() {
-        ReflectionTestUtils.setField(wsdlValidator, "wsdlValidatorCommand", MOCK_VALIDATOR);
+    @Test
+    void shouldFailValidation() {
+        assertThrows(WsdlValidator.WsdlValidationFailedException.class,
+                () -> new WsdlValidator(serverConfProvider).validate("src/test/resources/wsdl/error.wsdl"));
     }
 
     @Test
-    public void validatorNotExecutable() throws Exception {
-        ReflectionTestUtils.setField(wsdlValidator, "wsdlValidatorCommand", FOOBAR_VALIDATOR);
-        try {
-            wsdlValidator.executeValidator("src/test/resources/wsdl/error.wsdl");
-            fail("should have thrown WsdlValidationException");
-        } catch (WsdlValidator.WsdlValidatorNotExecutableException expected) {
-        }
+    void shouldProduceWarning() throws GeneralSecurityException {
+        var result = new WsdlValidator(serverConfProvider).validate("src/test/resources/wsdl/warning.wsdl");
+        assertThat(result).hasSize(4);
+        assertThat(result).isEqualTo(
+                List.of("", " Summary:  Failures: 0, Warnings: 1", " <<< WARNING! ",
+                        "Operation xroadGetRandom in PortType: {http://producer.x-road.eu}testServicePort has no output message")
+        );
+
     }
 
     @Test
-    public void shouldHandleWarnings() throws Exception {
-        List<String> warnings = wsdlValidator.executeValidator("src/test/resources/wsdl/warning.wsdl");
-        assertNotNull(warnings);
-        assertEquals(1, warnings.size());
-        assertEquals(Collections.singletonList(MOCK_VALIDATOR_WARNING), warnings);
-    }
-
-    @Test
-    public void shouldFailValidation() throws Exception {
-        try {
-            wsdlValidator.executeValidator("src/test/resources/wsdl/error.wsdl");
-            fail("should have thrown WsdlValidationException");
-        } catch (WsdlValidator.WsdlValidationFailedException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().getCode());
-        }
-    }
-
-    @Test
-    public void shouldPassValidation() throws Exception {
-        List<String> warnings = wsdlValidator.executeValidator("src/test/resources/wsdl/testservice.wsdl");
-        assertEquals(new ArrayList(), warnings);
+    void shouldPassValidation() throws GeneralSecurityException {
+        assertThat(new WsdlValidator(serverConfProvider).validate("src/test/resources/wsdl/testservice.wsdl")).isEmpty();
     }
 }

@@ -1,16 +1,478 @@
 {
-  "locals_demo": "This is localised in library",
-  "type": "Type",
-  "warning": "Warning",
-  "fields": {
-    "password": "Password",
-    "username": "LIB-Username",
-    "shared": "sharedlib"
+  "403": {
+    "goBack": "Go back",
+    "text1": "Seems like you do not have the permission to view this page.",
+    "text2": "If you think this is a mistake, check if you are logged into the correct account or contact your administrator to inquire about your permissions.",
+    "title": "Permission denied",
+    "topTitle": "Forbidden"
+  },
+  "404": {
+    "returnToFront": "Return to front page",
+    "text1": "An error occurred while trying to navigate to the requested page",
+    "text2": "Let’s contact the mission control to recalculate the route.",
+    "title": "Navigation error",
+    "topTitle": "404 - page not found"
   },
   "action": {
-    "cancel": "Cancel",
+    "activate": "Activate",
     "add": "Add",
-    "yes": "Yes",
-    "upload": "Upload"
-  }
+    "addClient": "Add client",
+    "addMember": "Add member",
+    "addSubsystem": "Add subsystem",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "continue": "Continue",
+    "copy": "Copy",
+    "copyId": "Copy ID",
+    "deactivate": "Disable",
+    "delete": "Delete",
+    "done": "Done",
+    "download": "Download",
+    "edit": "Edit",
+    "emptySearch": "Your search for {msg} found no results.",
+    "export": "Export",
+    "finish": "Finish",
+    "generateCsr": "Generate CSR",
+    "goToFront": "Go to the front page",
+    "next": "Next",
+    "no": "No",
+    "noData": "No data",
+    "ok": "Ok",
+    "previous": "Previous",
+    "refresh": "Refresh",
+    "register": "Register",
+    "remove": "Remove",
+    "removeAll": "Remove All",
+    "restore": "Restore",
+    "save": "Save",
+    "search": "Search",
+    "searching": "Searching...",
+    "submit": "Submit",
+    "unregister": "Unregister",
+    "upload": "Upload",
+    "yes": "Yes"
+  },
+  "adminUsers": {
+    "addUser": {
+      "button": "Add user",
+      "step": {
+        "credentials": {
+          "username": "Username",
+          "password": "Password",
+          "passwordConfirm": "Confirm password",
+          "createKeyButton": "Create Key",
+          "name": "Credentials"
+        },
+        "roles": {
+          "description": "Please select the roles associated with the user. The roles define the permissions granted to the user.",
+          "name": "Roles",
+          "selectRoles": "Select roles"
+        }
+      },
+      "success": "User ({username}) successfully added",
+      "title": "Add admin user"
+    },
+    "table": {
+      "action": {
+        "changePassword": {
+          "dialog": {
+            "oldPassword": "Old password",
+            "newPassword": "New password",
+            "newPasswordConfirmation": "Confirm new password",
+            "title": "Change password for user ({username})"
+          },
+          "success": "User ({username}) password changed successfully"
+        },
+        "edit": {
+          "dialog": {
+            "message": "Roles associated with the user:",
+            "title": "Edit user ({username})"
+          },
+          "success": "User ({username}) edited successfully"
+        },
+        "delete": {
+          "button": "Delete user",
+          "confirmationDialog": {
+            "message": "Are you sure you want to delete user ({username})?",
+            "title": "Are you sure?"
+          },
+          "success": "User ({username}) deleted successfully"
+        }
+      },
+      "header": {
+        "username": "Username",
+        "roles": "Roles"
+      }
+    },
+    "role": {
+      "XROAD_REGISTRATION_OFFICER": "Registration Officer",
+      "XROAD_SECURITY_OFFICER": "Security Officer",
+      "XROAD_SYSTEM_ADMINISTRATOR": "System Administrator"
+    }
+  },
+  "alert": {
+    "count": "Amount of same errors:",
+    "id": "ID"
+  },
+  "apiKey": {
+    "createApiKey": {
+      "button": "Create API key",
+      "step": {
+        "keyDetails": {
+          "apiKey": "API key",
+          "apiKeyID": "API key ID",
+          "assignedRoles": "Roles assigned",
+          "createKeyButton": "Create Key",
+          "name": "Key Details",
+          "note": "NOTE: save the API key in a secure place.",
+          "noteDetail": "The API key is visible only at the time of key generation. It will not be presented again and cannot be retrieved later."
+        },
+        "roles": {
+          "description": "Please select the roles associated with the API key. The roles define the permissions granted to the API key.",
+          "name": "Roles",
+          "selectRoles": "Select roles"
+        }
+      },
+      "success": "API key successfully created",
+      "title": "Create API key"
+    },
+    "edit": {
+      "roleRemoveOnly": "(remove only)"
+    },
+    "role": {
+      "XROAD_REGISTRATION_OFFICER": "Registration Officer",
+      "XROAD_SECURITY_OFFICER": "Security Officer",
+      "XROAD_SYSTEM_ADMINISTRATOR": "System Administrator"
+    },
+    "table": {
+      "action": {
+        "edit": {
+          "button": "Edit",
+          "dialog": {
+            "message": "Roles associated with the API key:",
+            "title": "Edit API Key (ID: {id})"
+          },
+          "success": "API key with ID {id} saved"
+        },
+        "revoke": {
+          "button": "Revoke key",
+          "confirmationDialog": {
+            "message": "Are you sure you want to revoke the API key with ID {id}?",
+            "title": "Are you sure?"
+          },
+          "success": "API key with ID {id} successfully revoked"
+        }
+      },
+      "header": {
+        "id": "ID",
+        "roles": "Roles"
+      }
+    }
+  },
+  "backup": {
+    "createBackup": {
+      "button": "Back up config.",
+      "messages": {
+        "localConfWarning": "Warning! The file “/etc/xroad/services/local.conf” used for configuration overrides is deprecated and not included in the backups anymore. The file “/etc/xroad/services/local.properties” should be used instead.",
+        "success": "Backup {file} successfully created"
+      }
+    },
+    "deleteBackup": {
+      "dialog": {
+        "confirmation": "Are you sure you want to delete backup {file}?",
+        "title": "Are you sure?"
+      },
+      "success": "Backup {file} deleted"
+    },
+    "restoreFromBackup": {
+      "dialog": {
+        "confirmation": "Are you sure you want to restore from {file}?",
+        "title": "Are you sure?"
+      },
+      "incompatibleTooltip": "This backup's format is not compatible with this server's backup format",
+      "success": "Configuration restored from {file}",
+      "restarting": {
+        "message": "Configuration has been restored. The service is restarting. You will be redirected to the login page when the service is available."
+      }
+    },
+    "uploadBackup": {
+      "button": "Upload backup",
+      "confirmationDialog": {
+        "confirmation": "File {name} already exists, are you sure you want to overwrite it?",
+        "title": "File already exists"
+      },
+      "success": "Backup {file} uploaded successfully"
+    }
+  },
+  "cert": {
+    "certificate": "Certificate",
+    "ecParameters": "EC Public Key Parameters",
+    "ecPoint": "EC Public Key Point",
+    "hashInfo": "Hash (SHA-256)",
+    "issuerDistinguishedName": "Issuer Distinguished Name",
+    "keyUsage": {
+      "CRL_SIGN": "CRL Sign",
+      "DATA_ENCIPHERMENT": "Data Encipherment",
+      "DECIPHER_ONLY": "Decipher Only",
+      "DIGITAL_SIGNATURE": "Digital Signature",
+      "ENCIPHER_ONLY": "Encipher Only",
+      "KEY_AGREEMENT": "Key Agreement",
+      "KEY_CERT_SIGN": "Certificate Sign",
+      "KEY_ENCIPHERMENT": "Key Encipherment",
+      "NON_REPUDIATION": "Non Repudiation"
+    },
+    "keyUsages": "Key Usages",
+    "notAfter": "Not After",
+    "notBefore": "Not Before",
+    "publicKeyAlgorithm": "Public Key Algorithm",
+    "rsaExp": "RSA Public Key Exponent",
+    "rsaModulus": "RSA Public Key Modulus",
+    "serial": "Serial",
+    "signature": "Signature",
+    "signatureAlgorithm": "Signature Algorithm",
+    "subjectAlternativeNames": "Subject Alternative Names",
+    "subjectDistinguishedName": "Subject Distinguished Name",
+    "version": "Version"
+  },
+  "common": {
+    "false": "False",
+    "inParenthesis": "({0})",
+    "no": "No",
+    "restartingService": "Service is restarting",
+    "true": "True",
+    "yes": "Yes"
+  },
+  "configurableProperties": {
+    "title": "Configurable System Properties",
+    "search": "Search configurable properties",
+    "restartWarning": "The following services need to be restarted for the changes to take effect: {scopes}.",
+    "propertyRestartWarning": "Restart required for changes to take effect.",
+    "collapseAll": "Collapse All",
+    "updateSuccess": "Property updated successfully",
+    "editDialog": {
+      "title": "Edit Property Value"
+    },
+    "table": {
+      "header": {
+        "propertyName": "Property Name",
+        "currentValue": "Current Value",
+        "defaultValue": "Default Value",
+        "description": "Description"
+      }
+    }
+  },
+  "dataTables": {
+    "paginator": {
+      "allPerPage": "All",
+      "info": "{start}-{end} of {total}",
+      "rowsPerPage": "Rows per page:"
+    }
+  },
+  "dsTlsCertificates": {
+    "automaticRenewal": "Automatic Renewal",
+    "downloadCertificate": "Download certificate",
+    "downloadSuccess": "Dataspace TLS certificate successfully downloaded",
+    "enrollmentStatus": {
+      "method": {
+        "none": "Not configured",
+        "manual": "Manual",
+        "acme": "ACME"
+      },
+      "unavailable": "Unavailable"
+    },
+    "generateCsr": {
+      "button": "Generate CSR",
+      "content": "First, provide a distinguished name and a subject alternative name. Then, generate a new CSR and save it into a safe place",
+      "distinguishedName": "Enter Distinguished name",
+      "subjectAltName": "Subject alternative name",
+      "title": "Generate Dataspace TLS Certificate Signing Request",
+      "tooltip": "The Distinguished Name (DN) uniquely identifies an entity in an X.509 certificate. The following attribute types are commonly found in the DN: CN = Common name, O = Organization name, C = Country code."
+    },
+    "generateKey": {
+      "button": "Re-create key"
+    },
+    "key": "Dataspace TLS Key and Certificate",
+    "keyGeneratedPending": "Dataspace TLS key generated - certificate signing pending",
+    "keyNotGenerated": "No Dataspace TLS key has been generated yet",
+    "keyText": "Dataspace TLS Key",
+    "orderCertificate": {
+      "button": "Order certificate",
+      "certificationAuthority": "Certification authority",
+      "distinguishedName": "Distinguished name",
+      "hint": "The prefilled names work as they are with public certificate authorities. For a private certificate authority you may add organisation attributes to the distinguished name.",
+      "subjectAltName": "Subject alternative name",
+      "success": "Dataspace TLS certificate ordered successfully",
+      "title": "Order Dataspace TLS Certificate"
+    },
+    "renewalStatus": {
+      "error": "Renewal error:",
+      "na": "N/A",
+      "nextRenewal": "Next planned renewal on"
+    },
+    "status": "Status",
+    "uploadCertificate": {
+      "button": "Upload certificate",
+      "label": "Upload the certificate file from your computer"
+    }
+  },
+  "error_code": {
+    "api_key_not_found": "API key not found",
+    "backup_file_not_found": "Backup was not found",
+    "backup_generation_failed": "Failed to generate backup",
+    "backup_restore_interrupted": "Backup restoration has been interrupted",
+    "core": {
+      "op_monitor": {
+        "network_error": "Network error: Operational Monitoring is not available"
+      },
+      "signer": {
+        "cert_not_found": "Certification is not found",
+        "key_not_found": "Key is not found",
+        "network_error": "Signer is not currently reachable.",
+        "pin_incorrect": "Invalid PIN",
+        "token_not_available": "Token is not available",
+        "token_not_found": "Token is not found",
+        "unknown_member": "X-Road core - signer: Unknown member"
+      }
+    },
+    "generate_backup_interrupted": "Backup generation has been interrupted",
+    "internal_error": "Internal error. See server logs for more details",
+    "invalid_backup_file": "Invalid backup file",
+    "invalid_certificate": "Invalid X.509 certificate",
+    "invalid_distinguished_name": "Distinguished name is invalid",
+    "invalid_filename": "Invalid filename",
+    "password_incorrect": "Password incorrect",
+    "resource_read_failed": "Failed to read resource",
+    "restore_process_failed": "Restore process failed",
+    "token_fetch_failed": "Error getting tokens.",
+    "token_not_found": "Token not found.",
+    "token_weak_pin": "The provided pin code was too weak",
+    "tr": {
+      "check_signer_logs": "Please check the signer log for details.",
+      "code": "Code: {0}",
+      "pin_min_char_classes_count": "PIN minimum character classes count: {0}",
+      "pin_min_length": "PIN minimum length: {0}"
+    },
+    "user_password_invalid_characters": "The provided password contains invalid characters",
+    "user_weak_password": "The provided password was too weak",
+    "validation_failure": "Validation failure"
+  },
+  "fields": {
+    "code": "Code",
+    "description": "Description",
+    "distinguishedName": "Distinguished Name",
+    "memberClass": "Member Class",
+    "newPassword": "New Password",
+    "newPasswordConfirmation": "Confirm New Password",
+    "oldPassword": "Old Password",
+    "password": "Password",
+    "passwordConfirm": "Confirm Password",
+    "securityServerCode": "Security Server Code",
+    "shared": "sharedlib",
+    "subsystemName": "Subsystem Name",
+    "username": "LIB-Username"
+  },
+  "footer": {
+    "copyright": {
+      "company": "Nordic Institute for Interoperability Solutions (NIIS)",
+      "domain": "niis.org",
+      "title": "Copyright"
+    },
+    "software": {
+      "feedback": "Feedback",
+      "title": "Software",
+      "versionPrefix": "X-Road"
+    }
+  },
+  "global": {
+    "all": "All",
+    "name": "Name"
+  },
+  "keys": {
+    "gotIt": "Got it",
+    "token": {
+      "label": "Token:"
+    }
+  },
+  "locals_demo": "This is localised in library",
+  "login": {
+    "errorMsg401": "Wrong username or password",
+    "generalError": "Login failed. Please try again.",
+    "logIn": "Log in",
+    "logOut": "Log out",
+    "changePassword": "Password"
+  },
+  "logout": {
+    "idleWarning": "You have been idle for 30 minutes and your session has expired. For security reasons, you will be logged out.",
+    "sessionExpired": "Session expired"
+  },
+  "noData": {
+    "loading": "Loading... Please wait",
+    "noBackups": "No backups yet",
+    "noCertificate": "No certificate",
+    "noCertificates": "No certificates",
+    "noConfigurableProperties": "No configurable properties",
+    "noData": "No data",
+    "noMatches": "No items matching criteria",
+    "noServices": "No services",
+    "noTokens": "No tokens"
+  },
+  "tlsCertificates": {
+    "downloadCertificate": "Download certificate",
+    "downloadSuccess": "Management service TLS certificate successfully downloaded",
+    "generateCsr": {
+      "button": "Generate CSR",
+      "content": "First, provide a distinguished name. Then, generate a new CSR and save it into a safe place",
+      "distinguishedName": "Enter Distinguished name",
+      "title": "Generate TLS Certificate Signing Request",
+      "tooltip": "The Distinguished Name (DN) uniquely identifies an entity in an X.509 certificate. The following attribute types are commonly found in the DN: CN = Common name, O = Organization name, C = Country code."
+    },
+    "generateKey": {
+      "button": "Re-create key"
+    },
+    "keyText": "Internal TLS Key",
+    "uploadCertificate": {
+      "button": "Upload certificate",
+      "label": "Upload the certificate file from your computer"
+    }
+  },
+  "type": "Type",
+  "validation": {
+    "messages": {
+      "address": "The {field} field contains invalid characters"
+    }
+  },
+  "validationError": {
+    "AssertFalse": "value should be 'false'",
+    "AssertTrue": "value should be 'true'",
+    "DecimalMax": "numeric value exceeds the maximum allowed",
+    "DecimalMin": "numeric value is under the minimum allowed",
+    "Digits": "value should contain only digits",
+    "Email": "value does not meet the email format",
+    "Future": "datetime value should be in the future",
+    "FutureOrPresent": "datetime value should be now or in the future",
+    "Max": "numeric value exceeds the maximum allowed",
+    "Min": "numeric value is under the minimum allowed",
+    "Negative": "numeric value should be less than zero",
+    "NegativeOrZero": "numeric value should be less or equal to zero",
+    "NoBackslashes": "value should not contain backslash (\\) symbols",
+    "NoColons": "value should not contain colon (:) symbols",
+    "NoForwardslashes": "value should not contain forward slash (/) symbols",
+    "NoPercents": "value should not contain percentage (%) symbols",
+    "NoSemicolons": "value should not contain semicolon (;) symbols",
+    "Normalized": "value should be normalized",
+    "NotBlank": "value should not be blank",
+    "NotEmpty": "value should not be empty",
+    "NotNull": "value is required",
+    "Null": "value should not be set",
+    "Past": "datetime value should be in the past",
+    "PastOrPresent": "datetime value should be now or in the past",
+    "Pattern": "value did not match the required format",
+    "Positive": "numeric value should be greater that zero",
+    "PositiveOrZero": "numeric value should be greater or equal to zero",
+    "Size": "value does not meet length requirements",
+    "ValidHostAddress": "Valid fully qualified domain name (e.g. host.example.org) or public IP address (eg. 192.168.123.123) needed",
+    "ValidHostAddressField": "Valid IP address or fully qualified domain name needed"
+  },
+  "warning": "Warning"
 }

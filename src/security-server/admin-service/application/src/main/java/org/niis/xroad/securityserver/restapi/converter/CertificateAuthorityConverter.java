@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -26,15 +27,24 @@
 package org.niis.xroad.securityserver.restapi.converter;
 
 import com.google.common.collect.Streams;
+import org.niis.xroad.common.CostType;
+import org.niis.xroad.globalconf.model.CsrFormat;
 import org.niis.xroad.securityserver.restapi.dto.ApprovedCaDto;
-import org.niis.xroad.securityserver.restapi.openapi.model.CertificateAuthority;
+import org.niis.xroad.securityserver.restapi.openapi.model.CertificateAuthorityDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CostTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CsrFormatDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.OcspResponderDto;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.util.Optional.ofNullable;
+
 /**
- * Converter for CertificateAuthority related data between openapi and service domain classes
+ * Converter for CertificateAuthorityDto related data between openapi and service domain classes
  */
 @Component
 public class CertificateAuthorityConverter {
@@ -44,10 +54,10 @@ public class CertificateAuthorityConverter {
      * @param approvedCaDto
      * @return
      */
-    public CertificateAuthority convert(ApprovedCaDto approvedCaDto) {
-        CertificateAuthority ca = new CertificateAuthority();
+    public CertificateAuthorityDto convert(ApprovedCaDto approvedCaDto) {
+        CertificateAuthorityDto ca = new CertificateAuthorityDto();
         ca.setName(approvedCaDto.getName());
-        ca.setAuthenticationOnly(Boolean.TRUE.equals(approvedCaDto.isAuthenticationOnly()));
+        ca.setAuthenticationOnly(approvedCaDto.isAuthenticationOnly());
         ca.setNotAfter(approvedCaDto.getNotAfter());
         ca.setIssuerDistinguishedName(approvedCaDto.getIssuerDistinguishedName());
         ca.setSubjectDistinguishedName(approvedCaDto.getSubjectDistinguishedName());
@@ -55,7 +65,29 @@ public class CertificateAuthorityConverter {
                 .orElse(null));
         ca.setPath(String.join(":", approvedCaDto.getSubjectDnPath()));
         ca.setTopCa(approvedCaDto.isTopCa());
+        ca.acmeCapable(approvedCaDto.isAcmeCapable());
+        ca.certificateProfileInfo(approvedCaDto.getCertificateProfileInfo());
+        ca.setDefaultCsrFormat(convertCsrFormat(approvedCaDto.getDefaultCsrFormat()));
+        ca.acmeServerIpAddresses(ofNullable(approvedCaDto.getAcmeServerIpAddress())
+                .map(ips -> ips.split(","))
+                .map(List::of)
+                .orElse(null));
+        ca.setOcspResponders(convertOcspResponders(approvedCaDto.getOcspUrlsAndCostTypes()));
         return ca;
+    }
+
+    private static CsrFormatDto convertCsrFormat(CsrFormat csrFormat) {
+        return csrFormat != null ? CsrFormatDto.valueOf(csrFormat.name()) : null;
+    }
+
+    private List<OcspResponderDto> convertOcspResponders(Map<String, CostType> ocspUrlsAndCostTypes) {
+        return ocspUrlsAndCostTypes.entrySet().stream()
+                .map(entry -> new OcspResponderDto(entry.getKey(), convertCostType(entry.getValue())))
+                .toList();
+    }
+
+    private static CostTypeDto convertCostType(CostType costType) {
+        return costType != null ? CostTypeDto.valueOf(costType.name()) : CostTypeDto.UNDEFINED;
     }
 
     /**
@@ -63,7 +95,7 @@ public class CertificateAuthorityConverter {
      * @param approvedCaDtos
      * @return
      */
-    public Set<CertificateAuthority> convert(Iterable<ApprovedCaDto> approvedCaDtos) {
+    public Set<CertificateAuthorityDto> convert(Iterable<ApprovedCaDto> approvedCaDtos) {
         return Streams.stream(approvedCaDtos)
                 .map(this::convert)
                 .collect(Collectors.toSet());

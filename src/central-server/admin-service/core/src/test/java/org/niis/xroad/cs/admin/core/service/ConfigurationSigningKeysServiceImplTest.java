@@ -1,21 +1,21 @@
 /*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,11 +26,10 @@
  */
 package org.niis.xroad.cs.admin.core.service;
 
+import ee.ria.xroad.common.crypto.identifier.KeyAlgorithm;
+import ee.ria.xroad.common.crypto.identifier.SignMechanism;
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenStatusInfo;
+import ee.ria.xroad.common.util.TimeUtils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,14 +37,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.common.exception.NotFoundException;
-import org.niis.xroad.common.exception.ValidationFailureException;
 import org.niis.xroad.cs.admin.api.domain.ConfigurationSigningKeyWithDetails;
 import org.niis.xroad.cs.admin.api.dto.HAConfigStatus;
 import org.niis.xroad.cs.admin.api.dto.KeyLabel;
 import org.niis.xroad.cs.admin.api.facade.SignerProxyFacade;
-import org.niis.xroad.cs.admin.api.service.ConfigurationAnchorService;
 import org.niis.xroad.cs.admin.api.service.SystemParameterService;
+import org.niis.xroad.cs.admin.core.config.KeyAlgorithmConfig;
 import org.niis.xroad.cs.admin.core.entity.ConfigurationSigningKeyEntity;
 import org.niis.xroad.cs.admin.core.entity.ConfigurationSourceEntity;
 import org.niis.xroad.cs.admin.core.entity.mapper.ConfigurationSigningKeyMapper;
@@ -58,18 +58,21 @@ import org.niis.xroad.cs.admin.core.repository.ConfigurationSourceRepository;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.config.audit.AuditEventHelper;
 import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.protocol.dto.KeyInfoProto;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
+import org.niis.xroad.signer.protocol.dto.TokenInfoProto;
 
 import java.time.Instant;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static ee.ria.xroad.signer.protocol.dto.TokenStatusInfo.OK;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
@@ -79,10 +82,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.niis.xroad.cs.admin.api.domain.ConfigurationSourceType.EXTERNAL;
-import static org.niis.xroad.cs.admin.api.domain.ConfigurationSourceType.INTERNAL;
+import static org.niis.xroad.common.core.exception.ErrorCode.INTERNAL_ERROR;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.DELETE_EXTERNAL_CONFIGURATION_SIGNING_KEY;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.DELETE_INTERNAL_CONFIGURATION_SIGNING_KEY;
+import static org.niis.xroad.signer.protocol.dto.TokenStatusInfo.OK;
 
 @ExtendWith(MockitoExtension.class)
 class ConfigurationSigningKeysServiceImplTest {
@@ -112,7 +115,7 @@ class ConfigurationSigningKeysServiceImplTest {
     @Mock
     private SystemParameterService systemParameterService;
     @Mock
-    private ConfigurationAnchorService configurationAnchorService;
+    private KeyAlgorithmConfig keyAlgorithmConfig;
     @Spy
     private final ConfigurationSigningKeyMapper configurationSigningKeyMapper = new ConfigurationSigningKeyMapperImpl();
     @Spy
@@ -124,11 +127,11 @@ class ConfigurationSigningKeysServiceImplTest {
     @BeforeEach
     void beforeEach() {
         configurationSigningKeysServiceImpl = new ConfigurationSigningKeysServiceImpl(systemParameterService,
-                configurationAnchorService,
                 configurationSigningKeyRepository,
                 configurationSourceRepository,
                 configurationSigningKeyMapper,
                 withDetailsMapper,
+                keyAlgorithmConfig,
                 signerProxyFacade,
                 tokenActionsResolver,
                 signingKeyActionsResolver,
@@ -141,51 +144,53 @@ class ConfigurationSigningKeysServiceImplTest {
     void deleteKeyNotFoundShouldThrowException() {
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.deleteKey("some_random_id"))
                 .isInstanceOf(NotFoundException.class)
-                .hasMessage("Signing key not found");
+                .hasMessage("Error[code=signing_key_not_found]");
     }
 
 
     @Test
-    void deleteActiveKeyShouldThrowException() throws Exception {
+    void deleteActiveKeyShouldThrowException() {
         ConfigurationSigningKeyEntity signingKeyEntity = createConfigurationSigningEntity("INTERNAL", true);
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(createToken(List.of()));
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
                 .thenReturn(Optional.of(signingKeyEntity));
 
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.deleteKey(signingKeyEntity.getKeyIdentifier()))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Signing key action not possible");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=signing_key_action_not_possible]");
     }
 
     @Test
-    void deleteKeyErrorGettingTokenFromSignerProxyShouldThrowException() throws Exception {
+    void deleteKeyErrorGettingTokenFromSignerProxyShouldThrowException() {
         ConfigurationSigningKeyEntity signingKeyEntity = createConfigurationSigningEntity("INTERNAL", false);
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
                 .thenReturn(Optional.of(signingKeyEntity));
-        when(signerProxyFacade.getToken(signingKeyEntity.getTokenIdentifier())).thenThrow(new Exception());
+        when(signerProxyFacade.getToken(signingKeyEntity.getTokenIdentifier()))
+                .thenThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).build());
 
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.deleteKey(signingKeyEntity.getKeyIdentifier()))
                 .isInstanceOf(SigningKeyException.class)
-                .hasMessage("Error deleting signing key");
+                .hasMessage("Error[code=error_deleting_signing_key]");
     }
 
     @Test
-    void deleteKeyErrorDeletingKeyThroughSignerShouldThrowException() throws Exception {
+    void deleteKeyErrorDeletingKeyThroughSignerShouldThrowException() {
         ConfigurationSigningKeyEntity signingKeyEntity = createConfigurationSigningEntity("INTERNAL", false);
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
                 .thenReturn(Optional.of(signingKeyEntity));
         when(signerProxyFacade.getToken(signingKeyEntity.getTokenIdentifier()))
                 .thenReturn(createTokenInfo(true, true, List.of()));
-        doThrow(new Exception()).when(signerProxyFacade).deleteKey(signingKeyEntity.getKeyIdentifier(), true);
+        doThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).build())
+                .when(signerProxyFacade).deleteKey(signingKeyEntity.getKeyIdentifier(), true);
 
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.deleteKey(signingKeyEntity.getKeyIdentifier()))
                 .isInstanceOf(SigningKeyException.class)
-                .hasMessage("Error deleting signing key");
+                .hasMessage("Error[code=error_deleting_signing_key]");
         verify(configurationSigningKeyRepository).deleteByKeyIdentifier(signingKeyEntity.getKeyIdentifier());
     }
 
     @Test
-    void deleteInternalConfigurationSigningKey() throws Exception {
+    void deleteInternalConfigurationSigningKey() {
         ConfigurationSigningKeyEntity signingKeyEntity = createConfigurationSigningEntity("INTERNAL", false);
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
                 .thenReturn(Optional.of(signingKeyEntity));
@@ -201,11 +206,10 @@ class ConfigurationSigningKeysServiceImplTest {
         verify(auditDataHelper).put(RestApiAuditProperty.TOKEN_FRIENDLY_NAME, tokenInfo.getFriendlyName());
         verify(configurationSigningKeyRepository).deleteByKeyIdentifier(signingKeyEntity.getKeyIdentifier());
         verify(signerProxyFacade).deleteKey(signingKeyEntity.getKeyIdentifier(), true);
-        verify(configurationAnchorService).recreateAnchor(INTERNAL, false);
     }
 
     @Test
-    void deleteExternalConfigurationSigningKey() throws Exception {
+    void deleteExternalConfigurationSigningKey() {
         ConfigurationSigningKeyEntity signingKeyEntity = createConfigurationSigningEntity("EXTERNAL", false);
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
                 .thenReturn(Optional.of(signingKeyEntity));
@@ -221,22 +225,22 @@ class ConfigurationSigningKeysServiceImplTest {
         verify(auditDataHelper).put(RestApiAuditProperty.TOKEN_FRIENDLY_NAME, tokenInfo.getFriendlyName());
         verify(configurationSigningKeyRepository).deleteByKeyIdentifier(signingKeyEntity.getKeyIdentifier());
         verify(signerProxyFacade).deleteKey(signingKeyEntity.getKeyIdentifier(), true);
-        verify(configurationAnchorService).recreateAnchor(EXTERNAL, false);
     }
 
     @Test
-    void shouldAddSigningKey() throws Exception {
+    void shouldAddSigningKey() {
         when(configurationSourceRepository.findBySourceTypeOrCreate(INTERNAL_CONFIGURATION, haConfigStatus))
                 .thenReturn(configurationSourceEntity);
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(createToken(List.of()));
-        when(signerProxyFacade.generateKey(TOKEN_ID, KEY_LABEL)).thenReturn(createKeyInfo("keyId"));
+        when(signerProxyFacade.generateKey(TOKEN_ID, KEY_LABEL, KeyAlgorithm.RSA)).thenReturn(createKeyInfo("keyId"));
         when(signerProxyFacade.generateSelfSignedCert(eq(KEY_ID), isA(ClientId.Conf.class),
                 eq(KeyUsageInfo.SIGNING),
-                eq("N/A"),
+                eq("internalSigningKey"),
                 eq(SIGNING_KEY_CERT_NOT_BEFORE),
                 eq(SIGNING_KEY_CERT_NOT_AFTER))
         ).thenReturn(new byte[0]);
         when(systemParameterService.getInstanceIdentifier()).thenReturn(INSTANCE);
+        when(keyAlgorithmConfig.getInternalKeyAlgorithm()).thenReturn(KeyAlgorithm.RSA);
 
         var result = configurationSigningKeysServiceImpl.addKey(INTERNAL_CONFIGURATION,
                 TOKEN_ID, KEY_LABEL);
@@ -251,7 +255,7 @@ class ConfigurationSigningKeysServiceImplTest {
     }
 
     @Test
-    void shouldNotAddMoreThanTwoSigningKeys() throws Exception {
+    void shouldNotAddMoreThanTwoSigningKeys() {
         ConfigurationSigningKeyEntity key1 = createConfigurationSigningEntity(INTERNAL_CONFIGURATION, true);
         ConfigurationSigningKeyEntity key2 = createConfigurationSigningEntity(INTERNAL_CONFIGURATION, false);
         when(configurationSourceRepository.findBySourceTypeOrCreate(INTERNAL_CONFIGURATION, haConfigStatus))
@@ -260,43 +264,51 @@ class ConfigurationSigningKeysServiceImplTest {
         when(signerProxyFacade.getToken(TOKEN_ID)).thenReturn(createToken(List.of(createKeyInfo("keyId"))));
 
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.addKey(INTERNAL_CONFIGURATION, TOKEN_ID, KEY_LABEL))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Token action not possible");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=token_action_not_possible]");
 
         verify(signerProxyFacade).getToken(TOKEN_ID);
         verifyNoMoreInteractions(signerProxyFacade);
     }
 
     private TokenInfo createToken(List<KeyInfo> keys) {
-        return new TokenInfo(null, "tokenName", TOKEN_ID,
-                true, true, true, "serialNumber", "tokenLabel",
-                1, TokenStatusInfo.OK, keys, new HashMap<>()
-        );
+        final TokenInfoProto.Builder builder = TokenInfoProto.newBuilder()
+                .setFriendlyName("tokenName")
+                .setId(TOKEN_ID)
+                .setReadOnly(true)
+                .setAvailable(true)
+                .setActive(true)
+                .setSerialNumber("serialNumber")
+                .setLabel("tokenLabel")
+                .setStatus(OK);
+        if (!keys.isEmpty()) {
+            builder.addAllKeyInfo(keys.stream().map(KeyInfo::getMessage).collect(toList()));
+        }
+        return new TokenInfo(builder.build());
     }
 
     @Test
     void activateKeyShouldFailWhenKeyNotFound() {
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.activateKey("some_random_id"))
                 .isInstanceOf(NotFoundException.class)
-                .hasMessage("Signing key not found");
+                .hasMessage("Error[code=signing_key_not_found]");
     }
 
     @Test
-    void activateKeyShouldFailWhenTokenNotLoggedIn() throws Exception {
+    void activateKeyShouldFailWhenTokenNotLoggedIn() {
         final var tokenInfo = createTokenInfo(FALSE, TRUE, List.of());
         final var signingKeyEntity = createConfigurationSigningEntity("EXTERNAL", TRUE);
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
                 .thenReturn(Optional.of(signingKeyEntity));
         when(signerProxyFacade.getToken(signingKeyEntity.getTokenIdentifier())).thenReturn(tokenInfo);
 
-
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.activateKey(signingKeyEntity.getKeyIdentifier()))
-                .isInstanceOf(ValidationFailureException.class)
-                .hasMessage("Signing key action not possible");
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Error[code=signing_key_action_not_possible]");
     }
 
     @Test
-    void activateKeyShouldSucceed() throws Exception {
+    void activateKeyShouldSucceed() {
         final var tokenInfo = createTokenInfo(TRUE, TRUE, List.of());
         final var signingKeyEntity = createConfigurationSigningEntity("EXTERNAL", FALSE);
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
@@ -311,15 +323,16 @@ class ConfigurationSigningKeysServiceImplTest {
     }
 
     @Test
-    void activateKeyErrorGettingTokenFromSignerProxyShouldThrowException() throws Exception {
+    void activateKeyErrorGettingTokenFromSignerProxyShouldThrowException() {
         ConfigurationSigningKeyEntity signingKeyEntity = createConfigurationSigningEntity("INTERNAL", false);
         when(configurationSigningKeyRepository.findByKeyIdentifier(signingKeyEntity.getKeyIdentifier()))
                 .thenReturn(Optional.of(signingKeyEntity));
-        when(signerProxyFacade.getToken(signingKeyEntity.getTokenIdentifier())).thenThrow(new Exception());
+        when(signerProxyFacade.getToken(signingKeyEntity.getTokenIdentifier()))
+                .thenThrow(XrdRuntimeException.systemException(INTERNAL_ERROR).build());
 
         assertThatThrownBy(() -> configurationSigningKeysServiceImpl.activateKey(signingKeyEntity.getKeyIdentifier()))
                 .isInstanceOf(SigningKeyException.class)
-                .hasMessage("Error activating signing key");
+                .hasMessage("Error[code=error_activating_signing_key]");
     }
 
     @Test
@@ -328,8 +341,8 @@ class ConfigurationSigningKeysServiceImplTest {
 
         when(configurationSigningKeyRepository.findByKeyIdentifierIn(Set.of("keyId-1", "keyId-3")))
                 .thenReturn(List.of(
-                        new ConfigurationSigningKeyEntity("keyId-1", new byte[0], Instant.now(), TOKEN_ID),
-                        new ConfigurationSigningKeyEntity("keyId-3", new byte[0], Instant.now(), TOKEN_ID)
+                        new ConfigurationSigningKeyEntity("keyId-1", new byte[0], TimeUtils.now(), TOKEN_ID),
+                        new ConfigurationSigningKeyEntity("keyId-3", new byte[0], TimeUtils.now(), TOKEN_ID)
                 ));
 
         final List<ConfigurationSigningKeyWithDetails> keysWithDetails = configurationSigningKeysServiceImpl.findDetailedByToken(token);
@@ -339,15 +352,33 @@ class ConfigurationSigningKeysServiceImplTest {
     }
 
     private KeyInfo createKeyInfo(String keyIdentifier) {
-        return new ee.ria.xroad.signer.protocol.dto.KeyInfo(true, KeyUsageInfo.SIGNING, "keyFriendlyName",
-                keyIdentifier, "keyLabel", "keyPublicKey", List.of(), List.of(), "keySignMechanismName");
+        return new KeyInfo(KeyInfoProto.newBuilder()
+                .setAvailable(true)
+                .setUsage(KeyUsageInfo.SIGNING)
+                .setFriendlyName("keyFriendlyName")
+                .setId(keyIdentifier)
+                .setLabel("keyLabel")
+                .setPublicKey("keyPublicKey")
+                .setSignMechanismName(SignMechanism.CKM_RSA_PKCS.name())
+                .build());
     }
 
     private TokenInfo createTokenInfo(boolean active, boolean available, List<KeyInfo> keyInfos) {
-        return new TokenInfo(
-                "type", "TOKEN_FRIENDLY_NAME", "TOKEN_ID", false, available,
-                active, "TOKEN_SERIAL_NUMBER", "label", 13, OK, keyInfos, Map.of()
-        );
+        final TokenInfoProto.Builder builder = TokenInfoProto.newBuilder()
+                .setType("type")
+                .setFriendlyName("TOKEN_FRIENDLY_NAME")
+                .setId("TOKEN_ID")
+                .setReadOnly(false)
+                .setAvailable(available)
+                .setActive(active)
+                .setSerialNumber("TOKEN_SERIAL_NUMBER")
+                .setLabel("label")
+                .setStatus(OK);
+        if (!keyInfos.isEmpty()) {
+            builder.addAllKeyInfo(keyInfos.stream().map(KeyInfo::getMessage).collect(toList()));
+        }
+        return new TokenInfo(builder
+                .build());
     }
 
     private ConfigurationSigningKeyEntity createConfigurationSigningEntity(
@@ -355,7 +386,7 @@ class ConfigurationSigningKeysServiceImplTest {
         ConfigurationSigningKeyEntity configurationSigningKey = new ConfigurationSigningKeyEntity();
         configurationSigningKey.setKeyIdentifier("keyIdentifier");
         configurationSigningKey.setCert("keyCert".getBytes());
-        configurationSigningKey.setKeyGeneratedAt(Instant.now());
+        configurationSigningKey.setKeyGeneratedAt(TimeUtils.now());
         configurationSigningKey.setTokenIdentifier(TOKEN_ID);
 
         ConfigurationSourceEntity configurationSource = new ConfigurationSourceEntity();

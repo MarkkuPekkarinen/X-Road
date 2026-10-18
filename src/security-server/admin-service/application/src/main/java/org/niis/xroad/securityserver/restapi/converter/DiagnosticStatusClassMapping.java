@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,56 +26,43 @@
  */
 package org.niis.xroad.securityserver.restapi.converter;
 
-import ee.ria.xroad.common.DiagnosticsErrorCodes;
+import ee.ria.xroad.common.DiagnosticStatus;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.niis.xroad.securityserver.restapi.openapi.model.DiagnosticStatusClass;
+import org.niis.xroad.securityserver.restapi.openapi.model.DiagnosticStatusClassDto;
 
 import java.util.Arrays;
-import java.util.Optional;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * Mapping between DiagnosticStatusClass in api (enum) and model (DiagnosticsErrorCode)
+ * Mapping between DiagnosticStatusClassDto in api (enum) and model (DiagnosticsErrorCode)
  */
 @Getter
 @RequiredArgsConstructor
 public enum DiagnosticStatusClassMapping {
-    RETURN_SUCCESS(DiagnosticsErrorCodes.RETURN_SUCCESS, DiagnosticStatusClass.OK),
-    ERROR_CODE_UNINITIALIZED(DiagnosticsErrorCodes.ERROR_CODE_UNINITIALIZED,
-            DiagnosticStatusClass.WAITING),
-    ERROR_CODE_TIMESTAMP_UNINITIALIZED(DiagnosticsErrorCodes.ERROR_CODE_TIMESTAMP_UNINITIALIZED,
-            DiagnosticStatusClass.WAITING),
-    ERROR_CODE_OCSP_UNINITIALIZED(DiagnosticsErrorCodes.ERROR_CODE_OCSP_UNINITIALIZED,
-            DiagnosticStatusClass.WAITING),
-    UNKNOWN(-1, DiagnosticStatusClass.FAIL);
+    RETURN_SUCCESS(DiagnosticStatus.OK, DiagnosticStatusClassDto.OK),
+    UNINITIALIZED(DiagnosticStatus.UNINITIALIZED, DiagnosticStatusClassDto.WAITING),
+    ERROR(DiagnosticStatus.ERROR, DiagnosticStatusClassDto.FAIL),
+    UNKNOWN(DiagnosticStatus.UNKNOWN, DiagnosticStatusClassDto.FAIL);
 
-    private static final int DIAGNOSTICS_ERROR_CODE_FAIL = -1;
-    private final Integer diagnosticsErrorCode;
-    private final DiagnosticStatusClass diagnosticStatusClass;
+    private final DiagnosticStatus diagnosticStatus;
+    private final DiagnosticStatusClassDto diagnosticStatusClassDto;
 
-    /**
-     * Return matching DiagnosticStatusClass, if any
-     * @param diagnosticsErrorCode
-     * @return
-     */
-    public static Optional<DiagnosticStatusClass> map(Integer diagnosticsErrorCode) {
-        return getFor(diagnosticsErrorCode).map(DiagnosticStatusClassMapping::getDiagnosticStatusClass);
+    private static final Map<DiagnosticStatus, DiagnosticStatusClassMapping> STATUS_MAP =
+            Arrays.stream(values())
+                    .collect(Collectors.toMap(
+                            DiagnosticStatusClassMapping::getDiagnosticStatus,
+                            Function.identity()
+                    ));
+
+    public static DiagnosticStatusClassMapping getFor(DiagnosticStatus diagnosticStatus) {
+        return STATUS_MAP.get(diagnosticStatus);
     }
 
-    /**
-     * return DiagnosticStatusClassMapping matching the given DiagnosticsErrorCode, if any
-     * @param diagnosticsErrorCode
-     * @return
-     */
-    public static Optional<DiagnosticStatusClassMapping> getFor(Integer diagnosticsErrorCode) {
-        Optional<DiagnosticStatusClassMapping> result = Arrays.stream(values())
-                .filter(mapping -> mapping.diagnosticsErrorCode.equals(diagnosticsErrorCode))
-                .findFirst();
-        if (result.isPresent()) {
-            return result;
-        }  else {
-            return getFor(DIAGNOSTICS_ERROR_CODE_FAIL);
-        }
+    public static DiagnosticStatusClassDto map(DiagnosticStatus diagnosticStatus) {
+        return getFor(diagnosticStatus).getDiagnosticStatusClassDto();
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,8 +25,6 @@
  */
 package org.niis.xroad.restapi.auth;
 
-import ee.ria.xroad.common.SystemProperties;
-
 import com.google.common.base.Splitter;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -37,11 +35,13 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 /**
  * Object that knows an IP whitelist and can validate authentication requests against the whitelist.
- * Whitelist can contain individial IP addresses such as 192.168.1.1, or CIDR notation representations
+ * Whitelist can contain individual IP addresses such as 192.168.1.1, or CIDR notation representations
  * such as 192.168.1.0/24.
  * Whitelist can contain ipv4 or ipv6 items, for example 127.0.0.0/8 and ::1
  **/
@@ -78,7 +78,7 @@ public class AuthenticationIpWhitelist {
     }
 
     /**
-     * Sets whitelisted ips from an interable containing whitelist entries.
+     * Sets whitelisted ips from an iterable containing whitelist entries.
      * Entries are not trimmed for whitespace.
      * @param entries
      * @throws IllegalArgumentException if entries contains invalid entries
@@ -90,16 +90,16 @@ public class AuthenticationIpWhitelist {
     }
 
     @Bean(KEY_MANAGEMENT_API_WHITELIST)
-    public AuthenticationIpWhitelist keyManagementWhitelist() {
+    public AuthenticationIpWhitelist keyManagementWhitelist(AllowListConfig allowListConfig) {
         AuthenticationIpWhitelist authenticationIpWhitelist = new AuthenticationIpWhitelist();
-        authenticationIpWhitelist.setWhitelistEntriesProperty(SystemProperties.getKeyManagementApiWhitelist());
+        authenticationIpWhitelist.setWhitelistEntriesProperty(allowListConfig.getKeyManagementApiWhitelist());
         return authenticationIpWhitelist;
     }
 
     @Bean(REGULAR_API_WHITELIST)
-    public AuthenticationIpWhitelist regularWhitelist() {
+    public AuthenticationIpWhitelist regularWhitelist(AllowListConfig allowListConfig) {
         AuthenticationIpWhitelist authenticationIpWhitelist = new AuthenticationIpWhitelist();
-        authenticationIpWhitelist.setWhitelistEntriesProperty(SystemProperties.getRegularApiWhitelist());
+        authenticationIpWhitelist.setWhitelistEntriesProperty(allowListConfig.getRegularApiWhitelist());
         return authenticationIpWhitelist;
     }
 
@@ -109,7 +109,7 @@ public class AuthenticationIpWhitelist {
      */
     private void validateWhitelistEntries(Iterable<String> entries) {
         entries.forEach(entry -> new IpAddressMatcher(entry).matches(VALID_IP_ADDRESS));
-        for (String entry: entries) {
+        for (String entry : entries) {
             new IpAddressMatcher(entry).matches(VALID_IP_ADDRESS);
         }
     }
@@ -136,11 +136,29 @@ public class AuthenticationIpWhitelist {
      */
     void validateIpAddress(String ipAddress) {
         for (String whitelistEntry : whitelistEntries) {
-            if (new IpAddressMatcher(whitelistEntry).matches(ipAddress)) {
+            if (sameAddressFamily(whitelistEntry, ipAddress) && new IpAddressMatcher(whitelistEntry).matches(ipAddress)) {
                 return;
             }
         }
         throw new BadRemoteAddressException("Invalid IP Address " + ipAddress);
+    }
+
+    /**
+     * Spring Security 7.1's IpAddressMatcher (now backed by IpInetAddressMatcher) dropped the
+     * address-family check its own class Javadoc still promises: a whitelist entry with a /0 mask,
+     * e.g. "0.0.0.0/0", now matches any address regardless of IPv4/IPv6. Enforce the documented,
+     * family-strict contract here so an operator-configured IPv4-only (or IPv6-only) entry cannot
+     * silently widen to also admit the other address family.
+     */
+    private static boolean sameAddressFamily(String whitelistEntry, String ipAddress) {
+        String entryAddress = whitelistEntry.contains("/")
+                ? whitelistEntry.substring(0, whitelistEntry.indexOf('/'))
+                : whitelistEntry;
+        try {
+            return InetAddress.getByName(entryAddress).getClass().equals(InetAddress.getByName(ipAddress).getClass());
+        } catch (UnknownHostException e) {
+            return false;
+        }
     }
 
     public static class BadRemoteAddressException extends AuthenticationException {

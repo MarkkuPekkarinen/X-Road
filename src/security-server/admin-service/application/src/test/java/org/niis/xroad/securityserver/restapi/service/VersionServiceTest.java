@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -28,23 +28,19 @@ package org.niis.xroad.securityserver.restapi.service;
 import ee.ria.xroad.common.Version;
 
 import org.junit.jupiter.api.Test;
-import org.niis.xroad.securityserver.restapi.dto.VersionInfoDto;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.niis.xroad.securityserver.restapi.dto.VersionInfo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest
-@WithMockUser
 class VersionServiceTest {
 
     VersionService versionService = new VersionService();
 
     @Test
     void readVersionInfo() {
-        VersionInfoDto versionInfo = versionService.getVersionInfo();
+        VersionInfo versionInfo = versionService.getVersionInfo();
         assertTrue(versionInfo.isUsingSupportedJavaVersion());
     }
 
@@ -53,7 +49,7 @@ class VersionServiceTest {
         String original = System.getProperty(Version.JAVA_VERSION_PROPERTY);
         System.setProperty(Version.JAVA_VERSION_PROPERTY, "10");
         try {
-            VersionInfoDto versionInfo = versionService.getVersionInfo();
+            VersionInfo versionInfo = versionService.getVersionInfo();
             assertEquals(10, versionInfo.getJavaVersion());
             assertFalse(versionInfo.isUsingSupportedJavaVersion());
         } finally {
@@ -64,10 +60,10 @@ class VersionServiceTest {
     @Test
     void tooNewJavaVersion() {
         String original = System.getProperty(Version.JAVA_VERSION_PROPERTY);
-        System.setProperty(Version.JAVA_VERSION_PROPERTY, "12");
+        System.setProperty(Version.JAVA_VERSION_PROPERTY, "26");
         try {
-            VersionInfoDto versionInfo = versionService.getVersionInfo();
-            assertEquals(12, versionInfo.getJavaVersion());
+            VersionInfo versionInfo = versionService.getVersionInfo();
+            assertEquals(26, versionInfo.getJavaVersion());
             assertFalse(versionInfo.isUsingSupportedJavaVersion());
         } finally {
             System.setProperty(Version.JAVA_VERSION_PROPERTY, original);

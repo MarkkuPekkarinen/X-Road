@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,27 +27,35 @@ package org.niis.xroad.securityserver.restapi.service;
 
 import ee.ria.xroad.common.util.CertUtils;
 import ee.ria.xroad.common.util.CryptoUtils;
-import ee.ria.xroad.signer.protocol.dto.CertRequestInfo;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.securityserver.restapi.config.AdminServiceProperties;
+import org.niis.xroad.signer.api.dto.CertRequestInfo;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
 import org.springframework.stereotype.Component;
 
 import java.security.cert.X509Certificate;
 import java.util.EnumSet;
+
+import static org.niis.xroad.signer.client.SignerRpcClient.SSL_TOKEN_ID;
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 /**
  * Validation logic for possible actions done on tokens, keys, certs and csrs
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class PossibleActionsRuleEngine {
 
     // duplicate definition, since we dont want add direct dependency on signer
     public static final String SOFTWARE_TOKEN_ID = "0";
+
+    private final AdminServiceProperties adminServiceProperties;
 
     /**
      * Get possible actions for a token
@@ -57,14 +65,13 @@ public class PossibleActionsRuleEngine {
 
         if (tokenInfo.isActive()) {
             actions.add(PossibleActionEnum.GENERATE_KEY);
-        }
-
-        if (tokenInfo.isActive()) {
             actions.add(PossibleActionEnum.TOKEN_DEACTIVATE);
             actions.add(PossibleActionEnum.TOKEN_CHANGE_PIN);
         } else {
             if (tokenInfo.isAvailable()) {
                 actions.add(PossibleActionEnum.TOKEN_ACTIVATE);
+            } else if (!isSslTokenId(tokenInfo)) { // we can't delete initialized software token id
+                actions.add(PossibleActionEnum.TOKEN_DELETE);
             }
         }
 
@@ -75,20 +82,23 @@ public class PossibleActionsRuleEngine {
         return actions;
     }
 
+    private static boolean isSslTokenId(TokenInfo tokenInfo) {
+        return SSL_TOKEN_ID.equals(tokenInfo.getId());
+    }
+
     /**
      * key is "not supported" if it's an auth key inside other than softtoken (id 0)
      */
     public boolean isKeyUnsupported(TokenInfo tokenInfo, KeyInfo keyInfo) {
         return (!SOFTWARE_TOKEN_ID.equals(tokenInfo.getId()))
                 && keyInfo.getUsage() == KeyUsageInfo.AUTHENTICATION;
-
     }
 
     /**
      * Get possible actions for a key
      */
     public EnumSet<PossibleActionEnum> getPossibleKeyActions(TokenInfo tokenInfo,
-            KeyInfo keyInfo) {
+                                                             KeyInfo keyInfo) {
         EnumSet<PossibleActionEnum> actions = EnumSet.noneOf(PossibleActionEnum.class);
 
         // DELETE
@@ -107,12 +117,14 @@ public class PossibleActionsRuleEngine {
         // keys.js#35
         if (SOFTWARE_TOKEN_ID.equals(tokenInfo.getId())
                 && (keyInfo.getUsage() == null || keyInfo.getUsage() == KeyUsageInfo.AUTHENTICATION)
-                && !(!keyInfo.isAvailable() || !tokenInfo.isActive() || keyNotSupported)) {
+                && !(!keyInfo.isAvailable() || !tokenInfo.isActive() || keyNotSupported)
+                && keyHasNoCertificatesOrGenerateCsrAllowedInProperties(keyInfo)) {
             actions.add(PossibleActionEnum.GENERATE_AUTH_CSR);
         }
         // GENERATE_SIGN_CSR
         if ((keyInfo.getUsage() == null || keyInfo.getUsage() == KeyUsageInfo.SIGNING)
-                && !(!keyInfo.isAvailable() || !tokenInfo.isActive() || keyNotSupported)) {
+                && !(!keyInfo.isAvailable() || !tokenInfo.isActive() || keyNotSupported)
+                && keyHasNoCertificatesOrGenerateCsrAllowedInProperties(keyInfo)) {
             actions.add(PossibleActionEnum.GENERATE_SIGN_CSR);
         }
         // EDIT_FRIENDLY_NAME
@@ -121,12 +133,16 @@ public class PossibleActionsRuleEngine {
         return actions;
     }
 
+    private boolean keyHasNoCertificatesOrGenerateCsrAllowedInProperties(KeyInfo keyInfo) {
+        return isEmpty(keyInfo.getCerts()) || adminServiceProperties.isAllowCsrForKeyWithCertificate();
+    }
+
     /**
      * get possible actions for a certificate
      */
     public EnumSet<PossibleActionEnum> getPossibleCertificateActions(TokenInfo tokenInfo,
-            KeyInfo keyInfo,
-            CertificateInfo certificateInfo) {
+                                                                     KeyInfo keyInfo,
+                                                                     CertificateInfo certificateInfo) {
         EnumSet<PossibleActionEnum> actions = EnumSet.noneOf(PossibleActionEnum.class);
         boolean canUnregister = keyInfo.getUsage() == KeyUsageInfo.AUTHENTICATION
                 && (CertificateInfo.STATUS_REGINPROG.equals(certificateInfo.getStatus())
@@ -187,33 +203,21 @@ public class PossibleActionsRuleEngine {
         return actions;
     }
 
-    /**
-     * combined logic from keys.js and token_renderer.rb
-     */
     private boolean canDeleteCertOrCsr(TokenInfo tokenInfo,
-            boolean savedToConfiguration,
-            boolean canUnregister) {
+                                       boolean savedToConfiguration,
+                                       boolean canUnregister) {
 
-        // token_renderer.rb#230
         boolean canDeleteCertFromTokenRenderer;
-        if (tokenInfo.isReadOnly() && !savedToConfiguration) {
-            canDeleteCertFromTokenRenderer = false;
-        } else {
-            canDeleteCertFromTokenRenderer = true;
-        }
+        canDeleteCertFromTokenRenderer = !tokenInfo.isReadOnly() || savedToConfiguration;
 
-        // keys.js#77
-        if (!canUnregister
+        return !canUnregister
                 && canDeleteCertFromTokenRenderer
-                && (savedToConfiguration || tokenInfo.isActive())) {
-            return true;
-        } else {
-            return false;
-        }
+                && (savedToConfiguration || tokenInfo.isActive());
     }
 
     /**
      * Shortcut helper method for verifying required action
+     *
      * @throws ActionNotPossibleException if given action is not in possibleActions
      */
     public void requirePossibleAction(PossibleActionEnum action, EnumSet<PossibleActionEnum> possibleActions)
@@ -225,6 +229,7 @@ public class PossibleActionsRuleEngine {
 
     /**
      * Shortcut helper method for verifying required action
+     *
      * @throws ActionNotPossibleException if given token action is not possible
      */
     public void requirePossibleTokenAction(PossibleActionEnum action, TokenInfo tokenInfo)
@@ -234,6 +239,7 @@ public class PossibleActionsRuleEngine {
 
     /**
      * Shortcut helper method for verifying required action
+     *
      * @throws ActionNotPossibleException if given key action is not possible
      */
     public void requirePossibleKeyAction(PossibleActionEnum action, TokenInfo tokenInfo, KeyInfo keyInfo)
@@ -243,48 +249,43 @@ public class PossibleActionsRuleEngine {
 
     /**
      * Shortcut helper method for verifying required action
+     *
      * @throws ActionNotPossibleException if given certificate action is not possible
      */
     public void requirePossibleCertificateAction(PossibleActionEnum action, TokenInfo tokenInfo, KeyInfo keyInfo,
-            CertificateInfo certificateInfo)
+                                                 CertificateInfo certificateInfo)
             throws ActionNotPossibleException {
         requirePossibleAction(action, ActionTargetType.CERTIFICATE, tokenInfo, keyInfo, certificateInfo, null);
     }
 
     /**
      * Shortcut helper method for verifying required action
+     *
      * @throws ActionNotPossibleException if given csr action is not possible
      */
     public void requirePossibleCsrAction(PossibleActionEnum action, TokenInfo tokenInfo, KeyInfo keyInfo,
-            CertRequestInfo certRequestInfo)
+                                         CertRequestInfo certRequestInfo)
             throws ActionNotPossibleException {
         requirePossibleAction(action, ActionTargetType.CSR, tokenInfo, keyInfo, null, certRequestInfo);
     }
 
     /**
      * Shortcut helper method for verifying required action
+     *
      * @throws ActionNotPossibleException if given action is not possible for give target type
      */
-    public void requirePossibleAction(PossibleActionEnum action, ActionTargetType target,
-            TokenInfo tokenInfo, KeyInfo keyInfo, CertificateInfo certificateInfo, CertRequestInfo certRequestInfo)
-            throws ActionNotPossibleException {
-        EnumSet<PossibleActionEnum> possibleActions;
-        switch (target) {
-            case TOKEN:
-                possibleActions = getPossibleTokenActions(tokenInfo);
-                break;
-            case KEY:
-                possibleActions = getPossibleKeyActions(tokenInfo, keyInfo);
-                break;
-            case CERTIFICATE:
-                possibleActions = getPossibleCertificateActions(tokenInfo, keyInfo, certificateInfo);
-                break;
-            case CSR:
-                possibleActions = getPossibleCsrActions(tokenInfo);
-                break;
-            default:
-                throw new IllegalStateException("bad target: " + target);
-        }
+    public void requirePossibleAction(PossibleActionEnum action,
+                                      ActionTargetType target,
+                                      TokenInfo tokenInfo,
+                                      KeyInfo keyInfo,
+                                      CertificateInfo certificateInfo,
+                                      CertRequestInfo certRequestInfo) throws ActionNotPossibleException {
+        EnumSet<PossibleActionEnum> possibleActions = switch (target) {
+            case TOKEN -> getPossibleTokenActions(tokenInfo);
+            case KEY -> getPossibleKeyActions(tokenInfo, keyInfo);
+            case CERTIFICATE -> getPossibleCertificateActions(tokenInfo, keyInfo, certificateInfo);
+            case CSR -> getPossibleCsrActions(tokenInfo);
+        };
         if (!possibleActions.contains(action)) {
             throw new ActionNotPossibleException(action + " is not possible");
         }

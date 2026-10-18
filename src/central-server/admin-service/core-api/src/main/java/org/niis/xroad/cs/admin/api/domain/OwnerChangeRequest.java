@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -38,7 +38,7 @@ import java.beans.Transient;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class OwnerChangeRequest extends RequestWithProcessing {
+public final class OwnerChangeRequest extends RequestWithProcessing {
     private ClientId clientId;
 
     public OwnerChangeRequest(Origin origin, ee.ria.xroad.common.identifier.SecurityServerId serverId,

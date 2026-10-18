@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,14 +27,16 @@ package org.niis.xroad.restapi.auth;
 
 import lombok.extern.slf4j.Slf4j;
 import org.niis.xroad.restapi.domain.PersistentApiKeyType;
+import org.niis.xroad.restapi.mapper.ApiKeyMapper;
 import org.niis.xroad.restapi.repository.ApiKeyRepository;
 import org.niis.xroad.restapi.service.ApiKeyService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import static org.niis.xroad.restapi.auth.PasswordEncoderConfig.API_KEY_ENCODER;
 
 /**
  * AuthenticationHelper class.
@@ -46,11 +48,15 @@ import java.util.List;
 public class ApiKeyAuthenticationHelper {
     private final PasswordEncoder passwordEncoder;
     private final ApiKeyRepository apiKeyRepository;
+    private final ApiKeyMapper apiKeyMapper;
 
     @Autowired
-    public ApiKeyAuthenticationHelper(PasswordEncoder passwordEncoder, ApiKeyRepository apiKeyRepository) {
+    public ApiKeyAuthenticationHelper(@Qualifier(API_KEY_ENCODER) PasswordEncoder passwordEncoder,
+                                      ApiKeyRepository apiKeyRepository,
+                                      ApiKeyMapper apiKeyMapper) {
         this.passwordEncoder = passwordEncoder;
         this.apiKeyRepository = apiKeyRepository;
+        this.apiKeyMapper = apiKeyMapper;
     }
 
     /**
@@ -61,10 +67,10 @@ public class ApiKeyAuthenticationHelper {
      */
     public PersistentApiKeyType getForPlaintextKey(String key) throws ApiKeyService.ApiKeyNotFoundException {
         String encodedKey = passwordEncoder.encode(key);
-        List<PersistentApiKeyType> keys = apiKeyRepository.getAllApiKeys();
-        for (PersistentApiKeyType apiKeyType : keys) {
+        var keys = apiKeyRepository.getAllApiKeys();
+        for (var apiKeyType : keys) {
             if (apiKeyType.getEncodedKey().equals(encodedKey)) {
-                return apiKeyType;
+                return apiKeyMapper.toDTO(apiKeyType);
             }
         }
         throw new ApiKeyService.ApiKeyNotFoundException();

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -63,18 +63,15 @@ public abstract class ClientId extends XRoadId implements ee.ria.xroad.common.id
         return Optional.of(identifier)
                 .filter(ClientId.class::isInstance)
                 .map(ClientId.class::cast)
-                .orElseGet(() -> {
-                    XRoadObjectType objectType = identifier.getObjectType();
-                    if (objectType != null) {
-                        switch (objectType) {
-                            case MEMBER:
-                                return MemberId.create(identifier);
-                            case SUBSYSTEM:
-                                return SubsystemId.create(identifier);
-                        }
-                    }
-                    throw new IllegalArgumentException("illegal object type: " + objectType);
+                .orElseGet(() -> switch (identifier.getObjectType()) {
+                    case MEMBER -> MemberId.create(identifier);
+                    case SUBSYSTEM -> SubsystemId.create(identifier);
+                    case null, default -> throwIllegalObjectType(identifier);
                 });
+    }
+
+    private static ClientId throwIllegalObjectType(ee.ria.xroad.common.identifier.ClientId identifier) {
+        throw new IllegalArgumentException("illegal object type: " + identifier.getObjectType());
     }
 
 }

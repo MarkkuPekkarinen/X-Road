@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,113 +25,94 @@
    THE SOFTWARE.
  -->
 <template>
-  <div class="step-content-wrapper">
-    <ValidationObserver ref="form1" v-slot="{ invalid }">
-      <div class="wizard-step-form-content">
-        {{ $t('initialConfiguration.pin.info1') }}
-        <div class="mt-6 mb-4">
-          <ValidationProvider
-            v-slot="{ errors }"
-            name="pin"
-            rules="required|password:@confirmPin"
-          >
-            <v-text-field
-              v-model="pin"
-              class="wizard-form-input"
-              name="pin"
-              autofocus
-              :label="$t('initialConfiguration.pin.pin')"
-              type="password"
-              :error-messages="errors"
-              data-test="pin-input"
-            ></v-text-field>
-          </ValidationProvider>
-        </div>
+  <XrdWizardStep sub-title="initialConfiguration.pin.info1">
+    <v-alert
+      v-if="true"
+      data-test="alert-token-policy-enabled"
+      class="mt-6 mb-6 body-regular"
+      variant="outlined"
+      border="start"
+      density="compact"
+      type="info"
+    >
+      <p class="font-weight-bold">{{ $t('token.tokenPinPolicyHeader') }}</p>
+      <p class="">{{ $t('token.tokenPinPolicy') }}</p>
+    </v-alert>
 
-        <div class="mb-6">
-          <ValidationProvider
-            v-slot="{ errors }"
-            name="confirmPin"
-            rules="required"
-          >
-            <v-text-field
-              v-model="pinConfirm"
-              class="wizard-form-input"
-              name="confirmPin"
-              :label="$t('initialConfiguration.pin.confirmPin')"
-              type="password"
-              :error-messages="errors"
-              data-test="confirm-pin-input"
-            ></v-text-field>
-          </ValidationProvider>
-        </div>
-        {{ $t('initialConfiguration.pin.info2') }}
-        <br />
-        <br />
-        {{ $t('initialConfiguration.pin.info3') }}
-      </div>
-      <div class="button-footer">
-        <v-spacer></v-spacer>
-        <div>
-          <xrd-button
-            outlined
-            class="previous-button"
-            data-test="previous-button"
-            @click="previous"
-            >{{ $t('action.previous') }}</xrd-button
-          >
-          <xrd-button
-            :disabled="invalid"
-            :loading="saveBusy"
-            data-test="save-button"
-            @click="done"
-            >{{ $t('action.submit') }}</xrd-button
-          >
-        </div>
-      </div>
-    </ValidationObserver>
-  </div>
+    <XrdFormBlock>
+      <XrdFormBlockRow>
+        <v-text-field
+          v-model="pinMdl"
+          v-bind="pinRef"
+          data-test="pin-input"
+          class="xrd"
+          autofocus
+          type="password"
+          :label="$t('initialConfiguration.pin.pin')"
+        />
+      </XrdFormBlockRow>
+      <XrdFormBlockRow>
+        <v-text-field
+          v-model="confirmPinMdl"
+          v-bind="confirmPinRef"
+          class="xrd"
+          :label="$t('initialConfiguration.pin.confirmPin')"
+          type="password"
+          data-test="confirm-pin-input"
+        />
+      </XrdFormBlockRow>
+      <v-checkbox
+        v-model="enableAutologin"
+        data-test="enable-autologin-checkbox"
+        :label="$t('initialConfiguration.pin.enableAutologin')"
+        hide-details
+      />
+    </XrdFormBlock>
+
+    <template #footer>
+      <v-spacer />
+
+      <XrdBtn variant="outlined" data-test="previous-button" class="previous-button mr-4" text="action.previous" @click="previous" />
+      <XrdBtn data-test="token-pin-save-button" text="action.submit" :disabled="!meta.valid" :loading="saveBusy" @click="done" />
+    </template>
+  </XrdWizardStep>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { ValidationProvider, ValidationObserver } from 'vee-validate';
-import { extend } from 'vee-validate';
-import i18n from '@/i18n';
+import { defineComponent, ref } from 'vue';
+import { useForm } from 'vee-validate';
+import { mapState } from 'pinia';
+import { useUser } from '@/store/modules/user';
+import { XrdWizardStep, XrdBtn, XrdFormBlock, XrdFormBlockRow, veeDefaultFieldConfig } from '@niis/shared-ui';
 
-const PASSWORD_MATCH_ERROR: string = i18n.t(
-  'initialConfiguration.pin.pinMatchError',
-) as string;
-
-extend('password', {
-  params: ['target'],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  validate(value, { target }: Record<string, any>) {
-    return value === target;
-  },
-  message: PASSWORD_MATCH_ERROR,
-});
-
-export default Vue.extend({
-  components: {
-    ValidationObserver,
-    ValidationProvider,
-  },
+export default defineComponent({
+  components: { XrdWizardStep, XrdFormBlock, XrdFormBlockRow, XrdBtn },
   props: {
     saveBusy: {
       type: Boolean,
     },
   },
-  data() {
-    return {
-      pin: '' as string,
-      pinConfirm: '' as string,
-    };
+  emits: ['done', 'previous'],
+  setup() {
+    const { meta, values, defineField } = useForm({
+      validationSchema: {
+        pin: 'required',
+        confirmPin: 'required|confirmed:@pin',
+      },
+    });
+    const componentConfig = veeDefaultFieldConfig();
+    const [pinMdl, pinRef] = defineField('pin', componentConfig);
+    const [confirmPinMdl, confirmPinRef] = defineField('confirmPin', componentConfig);
+    const userStore = useUser();
+    const enableAutologin = ref(Boolean(userStore.initializationStatus?.software_token_autologin_enabled));
+    return { meta, values, pinRef, pinMdl, confirmPinRef, confirmPinMdl, enableAutologin };
   },
-
+  computed: {
+    ...mapState(useUser, ['isEnforceTokenPolicyEnabled']),
+  },
   methods: {
     done(): void {
-      this.$emit('done', this.pin);
+      this.$emit('done', { pin: this.values.pin, enableAutologin: this.enableAutologin });
     },
     previous(): void {
       this.$emit('previous');
@@ -139,6 +121,4 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" scoped>
-@import '../../assets/wizards';
-</style>
+<style lang="scss" scoped></style>

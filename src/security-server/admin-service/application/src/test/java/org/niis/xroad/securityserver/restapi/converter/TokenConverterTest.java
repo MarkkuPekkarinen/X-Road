@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,23 +26,20 @@
  */
 package org.niis.xroad.securityserver.restapi.converter;
 
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenStatusInfo;
-
 import org.junit.Before;
 import org.junit.Test;
-import org.niis.xroad.securityserver.restapi.openapi.model.Key;
-import org.niis.xroad.securityserver.restapi.openapi.model.KeyValuePair;
-import org.niis.xroad.securityserver.restapi.openapi.model.Token;
-import org.niis.xroad.securityserver.restapi.openapi.model.TokenStatus;
-import org.niis.xroad.securityserver.restapi.openapi.model.TokenType;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyValuePairDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.TokenDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.TokenStatusDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.TokenTypeDto;
 import org.niis.xroad.securityserver.restapi.util.TokenTestUtils;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.protocol.dto.TokenStatusInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -56,31 +54,24 @@ public class TokenConverterTest extends AbstractConverterTestContext {
 
     @Before
     public void setup() {
-        doReturn(Collections.singletonList(new Key())).when(keyConverter).convert(any(Iterable.class));
+        doReturn(Collections.singletonList(new KeyDto())).when(keyConverter).convert(any(Iterable.class));
     }
 
     @Test
     public void convert() throws Exception {
-        Map<String, String> tokenInfos = new HashMap<>();
-        tokenInfos.put("key1", "value1");
-        tokenInfos.put("key2", "value2");
         // keyinfo not used, keyConverter mocked
         KeyInfo dummyKeyInfo = new TokenTestUtils.KeyInfoBuilder().build();
 
-        TokenInfo tokenInfo = new TokenInfo(TokenInfo.SOFTWARE_MODULE_TYPE,
-                "friendly-name",
-                "id",
-                false,
-                true,
-                true,
-                "serial-number",
-                "label",
-                123,
-                TokenStatusInfo.OK,
-                Collections.singletonList(dummyKeyInfo),
-                tokenInfos);
+        TokenInfo tokenInfo = new TokenTestUtils.TokenInfoBuilder()
+                .readOnly(false)
+                .available(true)
+                .active(true)
+                .key(dummyKeyInfo)
+                .tokenInfo("key1", "value1")
+                .tokenInfo("key2", "value2")
+                .build();
 
-        Token token = tokenConverter.convert(tokenInfo);
+        TokenDto token = tokenConverter.convert(tokenInfo);
 
         assertEquals(true, token.getLoggedIn());
         assertEquals(true, token.getAvailable());
@@ -91,61 +82,56 @@ public class TokenConverterTest extends AbstractConverterTestContext {
         assertEquals(false, token.getReadOnly());
         assertEquals(false, token.getSavedToConfiguration());
         assertEquals("serial-number", token.getSerialNumber());
-        assertEquals(TokenStatus.OK, token.getStatus());
-        assertEquals(TokenType.SOFTWARE, token.getType());
+        assertEquals(TokenStatusDto.OK, token.getStatus());
+        assertEquals(TokenTypeDto.SOFTWARE, token.getType());
         assertNotNull(token.getTokenInfos());
         assertEquals(2, token.getTokenInfos().size());
-        assertTrue(token.getTokenInfos().contains(new KeyValuePair().key("key1").value("value1")));
-        assertTrue(token.getTokenInfos().contains(new KeyValuePair().key("key2").value("value2")));
+        assertTrue(token.getTokenInfos().contains(new KeyValuePairDto().key("key1").value("value1")));
+        assertTrue(token.getTokenInfos().contains(new KeyValuePairDto().key("key2").value("value2")));
 
         // hsm
-        tokenInfo = new TokenInfo("hsm-uid-1234",
-                "friendly-name",
-                "id",
-                false,
-                true,
-                true,
-                "serial-number",
-                "label",
-                123,
-                TokenStatusInfo.USER_PIN_COUNT_LOW,
-                Collections.singletonList(dummyKeyInfo),
-                tokenInfos);
+        tokenInfo = new TokenTestUtils.TokenInfoBuilder()
+                .type("hsm-uid-1234")
+                .readOnly(false)
+                .available(true)
+                .active(true)
+                .status(TokenStatusInfo.USER_PIN_COUNT_LOW)
+                .key(dummyKeyInfo)
+                .tokenInfo("key1", "value1")
+                .tokenInfo("key2", "value2")
+                .build();
+
         token = tokenConverter.convert(tokenInfo);
-        assertEquals(TokenType.HARDWARE, token.getType());
-        assertEquals(TokenStatus.USER_PIN_COUNT_LOW, token.getStatus());
+        assertEquals(TokenTypeDto.HARDWARE, token.getType());
+        assertEquals(TokenStatusDto.USER_PIN_COUNT_LOW, token.getStatus());
     }
 
     @Test
-    public void isSavedToConfiguration() throws Exception {
+    public void isSavedToConfiguration() {
         // test different combinations of saved and unsaved keys and the logic for isSavedToConfiguration
-        KeyInfo savedKey = new TokenTestUtils.KeyInfoBuilder().build();
+        KeyInfo savedKey = new TokenTestUtils.KeyInfoBuilder()
+                .csr(KeyConverterTest.createTestCsr())
+                .build();
         KeyInfo unsavedKey = new TokenTestUtils.KeyInfoBuilder().build();
 
-        savedKey.getCerts().clear();
-        savedKey.getCertRequests().clear();
-        savedKey.getCertRequests().add(KeyConverterTest.createTestCsr());
-
-        unsavedKey.getCerts().clear();
-        unsavedKey.getCertRequests().clear();
-
         TokenInfo tokenInfo = new TokenTestUtils.TokenInfoBuilder().build();
-
-        tokenInfo.getKeyInfo().clear();
         assertEquals(false, tokenConverter.convert(tokenInfo).getSavedToConfiguration());
 
-        tokenInfo.getKeyInfo().clear();
-        tokenInfo.getKeyInfo().add(unsavedKey);
+        tokenInfo = new TokenTestUtils.TokenInfoBuilder()
+                .key(unsavedKey)
+                .build();
         assertEquals(false, tokenConverter.convert(tokenInfo).getSavedToConfiguration());
 
-        tokenInfo.getKeyInfo().clear();
-        tokenInfo.getKeyInfo().add(savedKey);
+        tokenInfo = new TokenTestUtils.TokenInfoBuilder()
+                .key(savedKey)
+                .build();
         assertEquals(true, tokenConverter.convert(tokenInfo).getSavedToConfiguration());
 
-        tokenInfo.getKeyInfo().clear();
-        tokenInfo.getKeyInfo().add(unsavedKey);
-        tokenInfo.getKeyInfo().add(savedKey);
-        tokenInfo.getKeyInfo().add(unsavedKey);
+        tokenInfo = new TokenTestUtils.TokenInfoBuilder()
+                .key(unsavedKey)
+                .key(savedKey)
+                .key(unsavedKey)
+                .build();
         assertEquals(true, tokenConverter.convert(tokenInfo).getSavedToConfiguration());
     }
 

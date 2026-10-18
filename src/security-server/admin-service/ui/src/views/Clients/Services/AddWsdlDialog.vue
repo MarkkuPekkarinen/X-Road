@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,83 +25,107 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-simple-dialog
-    :dialog="dialog"
+  <XrdSimpleDialog
     title="services.addWsdl"
-    :disable-save="!isValid"
-    width="620"
+    submittable
+    :disable-save="!meta.valid"
+    :width="840"
+    :loading="saving"
     @save="save"
     @cancel="cancel"
   >
-    <div slot="content">
-      <div class="pt-4 dlg-input-width">
-        <ValidationProvider
-          ref="serviceUrl"
-          v-slot="{ errors }"
-          rules="required|wsdlUrl"
-          name="serviceUrl"
-          class="validation-provider"
-        >
+    <template #content>
+      <XrdFormBlock>
+        <XrdFormBlockRow full-length>
           <v-text-field
-            v-model="url"
-            :label="$t('services.url')"
+            v-model="value"
+            data-test="service-url-text-field"
+            class="xrd"
             autofocus
-            outlined
-            class="dlg-row-input"
-            name="serviceUrl"
+            :label="$t('services.url')"
             :error-messages="errors"
-          ></v-text-field>
-        </ValidationProvider>
-      </div>
-    </div>
-  </xrd-simple-dialog>
+          />
+        </XrdFormBlockRow>
+      </XrdFormBlock>
+    </template>
+  </XrdSimpleDialog>
+  <!-- Accept "save WSDL" warnings -->
+  <ServiceWarningDialog v-if="warningDialog" :warnings="warningInfo" @cancel="warningDialog = false" @accept="saveWithWarning" />
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { ValidationProvider } from 'vee-validate';
-import { isValidWsdlURL } from '@/util/helpers';
+<script lang="ts" setup>
+import { useField } from 'vee-validate';
+import { useNotifications, DialogSaveHandler, XrdFormBlock, XrdFormBlockRow, XrdSimpleDialog } from '@niis/shared-ui';
+import { ref } from 'vue';
+import { CodeWithDetails } from '@/openapi-types';
+import ServiceWarningDialog from '@/components/service/ServiceWarningDialog.vue';
+import { useServiceDescriptions } from '@/store/modules/service-descriptions';
 
-export default Vue.extend({
-  components: { ValidationProvider },
-  props: {
-    dialog: {
-      type: Boolean,
-      required: true,
-    },
-  },
-
-  data() {
-    return {
-      url: '',
-    };
-  },
-
-  computed: {
-    isValid(): boolean {
-      return isValidWsdlURL(this.url);
-    },
-  },
-
-  methods: {
-    cancel(): void {
-      this.$emit('cancel');
-      this.clear();
-    },
-    save(): void {
-      this.$emit('save', this.url);
-      this.clear();
-    },
-    clear(): void {
-      this.url = '';
-      (
-        this.$refs.serviceUrl as InstanceType<typeof ValidationProvider>
-      ).reset();
-    },
+const props = defineProps({
+  clientId: {
+    type: String,
+    required: true,
   },
 });
+
+const emit = defineEmits(['cancel', 'save']);
+
+const { addSuccessMessage } = useNotifications();
+const { saveWsdl } = useServiceDescriptions();
+
+const { value, meta, errors, resetField } = useField(
+  'serviceUrl',
+  {
+    required: true,
+    wsdlUrl: true,
+    max: 255,
+  },
+  { initialValue: '' },
+);
+
+const warningDialog = ref(false);
+const saving = ref(false);
+const warningInfo = ref<CodeWithDetails[]>([]);
+const dialogHandler = ref<DialogSaveHandler | undefined>(undefined);
+
+function cancel(): void {
+  emit('cancel');
+  clear();
+}
+
+function save(evt: Event, handler: DialogSaveHandler): void {
+  warningDialog.value = false;
+  saving.value = true;
+  dialogHandler.value = handler;
+  saveWsdl(props.clientId, value.value)
+    .then(() => addSuccessMessage('services.wsdlAdded'))
+    .then(() => emit('save'))
+    .then(() => clear())
+    .catch((error) => {
+      if (error?.response?.data?.warnings) {
+        warningInfo.value = error.response.data.warnings;
+        warningDialog.value = true;
+      } else {
+        handler.addError(error);
+      }
+    })
+    .finally(() => (saving.value = false));
+}
+
+function saveWithWarning(): void {
+  warningDialog.value = false;
+  saving.value = true;
+  saveWsdl(props.clientId, value.value, true)
+    .then(() => addSuccessMessage('services.wsdlAdded'))
+    .then(() => emit('save'))
+    .then(() => clear())
+    .catch((error) => dialogHandler.value?.addError(error))
+    .finally(() => (saving.value = false));
+}
+
+function clear(): void {
+  resetField();
+}
 </script>
 
-<style lang="scss" scoped>
-@import '../../../assets/dialogs';
-</style>
+<style lang="scss" scoped></style>

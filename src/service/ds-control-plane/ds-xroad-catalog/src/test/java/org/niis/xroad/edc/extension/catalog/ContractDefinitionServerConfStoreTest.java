@@ -1,0 +1,859 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.edc.extension.catalog;
+
+import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.GlobalGroupId;
+import ee.ria.xroad.common.identifier.SecurityServerId;
+import ee.ria.xroad.common.identifier.ServiceId;
+import ee.ria.xroad.common.identifier.XRoadId;
+
+import org.eclipse.edc.connector.controlplane.contract.spi.types.offer.ContractDefinition;
+import org.eclipse.edc.participantcontext.spi.service.ParticipantContextService;
+import org.eclipse.edc.spi.query.Criterion;
+import org.eclipse.edc.spi.query.QuerySpec;
+import org.eclipse.edc.spi.result.ServiceResult;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.core.BuiltinServiceCodes;
+import org.niis.xroad.common.core.ManagementServiceCodes;
+import org.niis.xroad.ds.identity.ParticipantIdentifierScheme;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.serverconf.ServerConfProvider;
+import org.niis.xroad.serverconf.model.AccessRight;
+import org.niis.xroad.serverconf.model.Endpoint;
+
+import java.util.Date;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.niis.xroad.edc.extension.catalog.ParticipantContextTestFixtures.participantContext;
+
+@ExtendWith(MockitoExtension.class)
+class ContractDefinitionServerConfStoreTest {
+
+    private static final String SYSTEM_PARTICIPANT_CTX = ParticipantIdentifierScheme.SYSTEM_SEGMENT;
+    private static final StoreEnumerationCache<ContractDefinition> DISABLED_CACHE =
+            new StoreEnumerationCache<>(false, 60, 1000, "test");
+
+    private static final ClientId.Conf MEMBER_1 = ClientId.Conf.create("DEV", "GOV", "1234", "SubSys");
+    private static final ClientId.Conf MEMBER_2 = ClientId.Conf.create("DEV", "GOV", "5678", "SubSys");
+    private static final ClientId.Conf MGMT_CLIENT = ClientId.Conf.create("DEV", "COM", "3333", "MANAGEMENT");
+    private static final String MEMBER_1_CTX = ParticipantIdentifierScheme.memberCtxId(ClientId.Conf.create("DEV", "GOV", "1234"));
+    private static final String MEMBER_2_CTX = ParticipantIdentifierScheme.memberCtxId(ClientId.Conf.create("DEV", "GOV", "5678"));
+
+    private static final ServiceId.Conf SERVICE_1 = ServiceId.Conf.create("DEV", "GOV", "1234", "SubSys", "svc1", "v1");
+    private static final ServiceId.Conf SERVICE_2 = ServiceId.Conf.create("DEV", "GOV", "5678", "SubSys", "svc2");
+    private static final ServiceId.Conf MGMT_SERVICE = ServiceId.Conf.create("DEV", "COM", "3333", "MANAGEMENT", "clientReg");
+
+    private static final ClientId.Conf SUBJECT_CLIENT = ClientId.Conf.create("DEV", "GOV", "9999", "Consumer");
+    private static final GlobalGroupId SUBJECT_GROUP = GlobalGroupId.Conf.create("DEV", "sec-owners");
+
+    @Mock
+    private ServerConfProvider serverConfProvider;
+
+    @Mock
+    private GlobalConfProvider globalConfProvider;
+
+    @Mock
+    private ParticipantContextService participantContextService;
+
+    private ServiceContextResolver serviceContextResolver;
+    private String participantContextId = MEMBER_1_CTX;
+
+    private ContractDefinitionServerConfStore store;
+
+    private static final SecurityServerId.Conf SS_ID = SecurityServerId.Conf.create("DEV", "GOV", "1234", "ss0");
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(participantContextService.search(any())).thenReturn(ServiceResult.success(List.of()));
+        lenient().when(participantContextService.getParticipantContext(any())).thenReturn(ServiceResult.notFound("no such context"));
+        serviceContextResolver = new ServiceContextResolver(
+                globalConfProvider, serverConfProvider, participantContextService);
+        store = new ContractDefinitionServerConfStore(
+                serverConfProvider, noBuiltins(), DISABLED_CACHE, serviceContextResolver);
+    }
+
+    private BuiltinServiceCatalog allBuiltins() {
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        return new BuiltinServiceCatalog(serverConfProvider, true, true, true,
+                BuiltinServiceCatalog.DEFAULT_SERVER_PROXY_URL);
+    }
+
+    private BuiltinServiceCatalog noBuiltins() {
+        return new BuiltinServiceCatalog(serverConfProvider, false, false, false,
+                BuiltinServiceCatalog.DEFAULT_SERVER_PROXY_URL);
+    }
+
+    @Test
+    void findAllReturnsOneDefinitionPerAssetSubjectPair() {
+        var ep1 = new Endpoint("svc1", "GET", "/api/data", false);
+        var ep2 = new Endpoint("svc1", "POST", "/api/data", false);
+        var ar1 = createAccessRight(SUBJECT_CLIENT, ep1);
+        var ar2 = createAccessRight(SUBJECT_CLIENT, ep2);
+
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(ar1, ar2));
+        when(participantContextService.search(any())).thenReturn(ServiceResult.success(List.of(participantContext(MEMBER_1_CTX))));
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).hasSize(1);
+        assertThat(result).noneSatisfy(d ->
+                assertThat(d.getAccessPolicyId()).endsWith(ContractDefinitionMapper.OWNER_ONLY_SUFFIX));
+    }
+
+    @Test
+    void findAllReturnsMultipleDefinitionsForMultipleSubjects() {
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        var arClient = createAccessRight(SUBJECT_CLIENT, ep);
+        var arGroup = createAccessRight(SUBJECT_GROUP, ep);
+
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(arClient, arGroup));
+        when(participantContextService.search(any())).thenReturn(ServiceResult.success(List.of(participantContext(MEMBER_1_CTX))));
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(ContractDefinition::getId)
+                .doesNotHaveDuplicates();
+        assertThat(result).noneSatisfy(d ->
+                assertThat(d.getAccessPolicyId()).endsWith(ContractDefinitionMapper.OWNER_ONLY_SUFFIX));
+    }
+
+    @Test
+    void findAllEmitsPerSubjectContractDefinitionsForDisabledServiceJustLikeEnabled() {
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        var ar = createAccessRight(SUBJECT_CLIENT, ep);
+
+        lenient().when(serverConfProvider.getDisabledNotice(SERVICE_1)).thenReturn("Maintenance");
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(ar));
+        when(participantContextService.search(any())).thenReturn(ServiceResult.success(List.of(participantContext(MEMBER_1_CTX))));
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getParticipantContextId()).isEqualTo(MEMBER_1_CTX);
+    }
+
+    @Test
+    void findAllPublishesDefinitionUnderMemberContextOnlyOnceProvisioned() {
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        var ar = createAccessRight(SUBJECT_CLIENT, ep);
+        var memberCtx = ParticipantIdentifierScheme.memberCtxId(ClientId.Conf.create("DEV", "GOV", "1234"));
+
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(ar));
+        when(participantContextService.search(any())).thenReturn(ServiceResult.success(List.of(participantContext(memberCtx))));
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getParticipantContextId()).isEqualTo(memberCtx);
+    }
+
+    @Test
+    void findByIdResolvesDefinitionUnderMemberContextOnlyOnceProvisioned() {
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        var ar = createAccessRight(SUBJECT_CLIENT, ep);
+        var memberCtx = ParticipantIdentifierScheme.memberCtxId(ClientId.Conf.create("DEV", "GOV", "1234"));
+
+        when(serverConfProvider.serviceExists(SERVICE_1)).thenReturn(true);
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(ar));
+        when(participantContextService.getParticipantContext(memberCtx))
+                .thenReturn(ServiceResult.success(participantContext(memberCtx)));
+
+        var contractId = AssetMapper.encodeAssetId(SERVICE_1)
+                + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getParticipantContextId()).isEqualTo(memberCtx);
+    }
+
+    @Test
+    void findByIdReturnsCorrectDefinition() {
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        var ar = createAccessRight(SUBJECT_CLIENT, ep);
+
+        when(serverConfProvider.serviceExists(SERVICE_1)).thenReturn(true);
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(ar));
+        when(participantContextService.getParticipantContext(MEMBER_1_CTX))
+                .thenReturn(ServiceResult.success(participantContext(MEMBER_1_CTX)));
+
+        var contractId = AssetMapper.encodeAssetId(SERVICE_1)
+                + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(contractId);
+        assertThat(result.getParticipantContextId()).isEqualTo(MEMBER_1_CTX);
+    }
+
+    @Test
+    void findByIdWithFivePartServiceId() {
+        var ep = new Endpoint("svc2", "*", "**", true);
+        var ar = createAccessRight(SUBJECT_CLIENT, ep);
+
+        // The store tries 6-part decode first; for a 5-part service ID the 6-part attempt decodes
+        // a different ServiceId (first 6 tokens include part of the subject), which won't exist.
+        // We need to allow that serviceExists call to return false so the store falls through to 5-part.
+        participantContextId = MEMBER_2_CTX;
+        var sixPartAttempt = ServiceId.Conf.create("DEV", "GOV", "5678", "SubSys", "svc2", "DEV");
+        when(serverConfProvider.serviceExists(sixPartAttempt)).thenReturn(false);
+        when(serverConfProvider.serviceExists(SERVICE_2)).thenReturn(true);
+        when(serverConfProvider.getServiceAccessRights(SERVICE_2)).thenReturn(List.of(ar));
+        when(participantContextService.getParticipantContext(MEMBER_2_CTX))
+                .thenReturn(ServiceResult.success(participantContext(MEMBER_2_CTX)));
+
+        var contractId = AssetMapper.encodeAssetId(SERVICE_2)
+                + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(contractId);
+    }
+
+    @Test
+    void findByIdWithUnknownServiceReturnsNull() {
+        when(serverConfProvider.serviceExists(SERVICE_1)).thenReturn(false);
+
+        var contractId = "DEV:GOV:1234:SubSys:svc1:v1:DEV:GOV:9999:Consumer-contract-definition";
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdWithMalformedIdReturnsNull() {
+        // "not:enough:parts-contract-definition" -> after suffix strip: "not:enough:parts" -> only 3 parts < 6
+        var result = store.findById(participantContextId, "not:enough:parts-contract-definition");
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdWithNoSuffixReturnsNull() {
+        // Valid policy ID format but missing -contract-definition suffix (D-11)
+        var result = store.findById(participantContextId, "DEV:GOV:1234:SubSys:svc1:v1:DEV:GOV:9999:Consumer");
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdWithNullReturnsNull() {
+        var result = store.findById(participantContextId, null);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdWithBlankReturnsNull() {
+        var result = store.findById(participantContextId, "  ");
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdReturnsNullForOwnerOnlySuffixedIdWhenNotSystemAddressed() {
+        var foreignSubsystem = ClientId.Conf.create("DEV", "COM", "9999", "Foreign");
+        var foreignService = ServiceId.Conf.create(foreignSubsystem, "noSuchService");
+
+        var contractId = foreignService.asEncodedId()
+                + ContractDefinitionMapper.OWNER_ONLY_SUFFIX
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findAllWithParticipantContextIdCriterionFilters() {
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        var ar = createAccessRight(SUBJECT_CLIENT, ep);
+
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(ar));
+        when(participantContextService.search(any())).thenReturn(ServiceResult.success(List.of(participantContext(MEMBER_1_CTX))));
+
+        var matchingSpec = QuerySpec.Builder.newInstance()
+                .filter(new Criterion("participantContextId", "=", MEMBER_1_CTX))
+                .build();
+        var matchResult = store.findAll(matchingSpec).toList();
+        assertThat(matchResult).hasSize(1);
+
+        var wrongSpec = QuerySpec.Builder.newInstance()
+                .filter(new Criterion("participantContextId", "=", "wrong-ctx"))
+                .build();
+        var wrongResult = store.findAll(wrongSpec).toList();
+        assertThat(wrongResult).isEmpty();
+    }
+
+    @Test
+    void saveReturnsAlreadyExists() {
+        var definition = ContractDefinition.Builder.newInstance()
+                .id("test")
+                .accessPolicyId("p")
+                .contractPolicyId("p")
+                .build();
+
+        var result = store.save(definition);
+
+        assertThat(result.failed()).isTrue();
+    }
+
+    @Test
+    void updateReturnsNotFound() {
+        var definition = ContractDefinition.Builder.newInstance()
+                .id("test")
+                .accessPolicyId("p")
+                .contractPolicyId("p")
+                .build();
+
+        var result = store.update(definition);
+
+        assertThat(result.failed()).isTrue();
+    }
+
+    @Test
+    void deleteByIdReturnsNotFound() {
+        var result = store.deleteById(participantContextId, "any-id");
+
+        assertThat(result.failed()).isTrue();
+    }
+
+    @Test
+    void findAllManagementOwnServiceEmitsNoDefinitionWhenMemberContextNotProvisioned() {
+        var epSvc1 = new Endpoint("svc1", "GET", "/api/data", false);
+        var arSvc1 = createAccessRight(SUBJECT_CLIENT, epSvc1);
+        var epMgmt = new Endpoint("clientReg", "*", "**", true);
+        var arMgmt = createAccessRight(SUBJECT_CLIENT, epMgmt);
+
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1, MGMT_CLIENT));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getAllServices(MGMT_CLIENT)).thenReturn(List.of(MGMT_SERVICE));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(arSvc1));
+        when(serverConfProvider.getServiceAccessRights(MGMT_SERVICE)).thenReturn(List.of(arMgmt));
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findAllManagementOwnServicePublishedUnderMemberContextLikeAnyOtherServiceOnceProvisioned() {
+        var epMgmt = new Endpoint("clientReg", "*", "**", true);
+        var arMgmt = createAccessRight(SUBJECT_CLIENT, epMgmt);
+        var mgmtMemberCtx = ParticipantIdentifierScheme.memberCtxId(ClientId.Conf.create("DEV", "COM", "3333"));
+
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MGMT_CLIENT));
+        when(serverConfProvider.getAllServices(MGMT_CLIENT)).thenReturn(List.of(MGMT_SERVICE));
+        when(serverConfProvider.getServiceAccessRights(MGMT_SERVICE)).thenReturn(List.of(arMgmt));
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(participantContextService.search(any()))
+                .thenReturn(ServiceResult.success(List.of(participantContext(mgmtMemberCtx))));
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        var mgmtPerSubject = result.stream()
+                .filter(d -> d.getId().startsWith(MGMT_SERVICE.asEncodedId()))
+                .findFirst().orElseThrow();
+        assertThat(mgmtPerSubject.getParticipantContextId()).isEqualTo(mgmtMemberCtx);
+        assertThat(mgmtPerSubject.getAccessPolicyId()).doesNotEndWith(ContractDefinitionMapper.OWNER_ONLY_SUFFIX);
+    }
+
+    @Test
+    void findAllRealManagementServiceUnderSystemUsesUnrestrictedNotOwnerOnlyAccessPolicy() {
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MGMT_CLIENT));
+        when(serverConfProvider.getAllServices(MGMT_CLIENT)).thenReturn(List.of(MGMT_SERVICE));
+        when(serverConfProvider.getDisabledNotice(MGMT_SERVICE)).thenReturn(null);
+        when(serverConfProvider.getServiceAccessRights(MGMT_SERVICE)).thenReturn(List.of());
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        var systemDefinition = result.stream()
+                .filter(d -> SYSTEM_PARTICIPANT_CTX.equals(d.getParticipantContextId()))
+                .findFirst().orElseThrow();
+        assertThat(systemDefinition.getAccessPolicyId()).isEqualTo(MGMT_SERVICE.asEncodedId());
+        assertThat(systemDefinition.getAccessPolicyId()).doesNotEndWith(ContractDefinitionMapper.OWNER_ONLY_SUFFIX);
+    }
+
+    @Test
+    void findAllRealManagementServiceUnderSystemRespectsConfiguredAccessRightsInsteadOfUnrestrictedGrant() {
+        var ep = new Endpoint("clientReg", "*", "**", true);
+        var arMgmt = createAccessRight(SUBJECT_CLIENT, ep);
+
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MGMT_CLIENT));
+        when(serverConfProvider.getAllServices(MGMT_CLIENT)).thenReturn(List.of(MGMT_SERVICE));
+        when(serverConfProvider.getServiceAccessRights(MGMT_SERVICE)).thenReturn(List.of(arMgmt));
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        var systemDefinitions = result.stream()
+                .filter(d -> SYSTEM_PARTICIPANT_CTX.equals(d.getParticipantContextId()))
+                .toList();
+        assertThat(systemDefinitions)
+                // No unrestricted (plain assetId) grant once access rights are configured.
+                .noneSatisfy(d -> assertThat(d.getAccessPolicyId()).isEqualTo(MGMT_SERVICE.asEncodedId()))
+                // The authorized subject still gets a SYSTEM-scoped, ACL-matching entry.
+                .anySatisfy(d -> assertThat(d.getAccessPolicyId()).isEqualTo(MGMT_SERVICE.asEncodedId()
+                        + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()));
+    }
+
+    @Test
+    void findAllEmitsSyntheticManagementCatalogUnderSystemExcludingAuthCertReg() {
+        when(serverConfProvider.getAllServices(MGMT_CLIENT)).thenReturn(List.of());
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        var systemCtx = result.stream().filter(d -> SYSTEM_PARTICIPANT_CTX.equals(d.getParticipantContextId())).toList();
+        assertThat(systemCtx)
+                .hasSize(ManagementServiceCodes.DSP_NEGOTIATED.size())
+                .noneSatisfy(d -> assertThat(d.getAccessPolicyId()).startsWith(MGMT_CLIENT.asEncodedId() + ":authCertReg"));
+    }
+
+    @Test
+    void findAllIncludesBuiltinContractDefinitions() {
+        var builtinStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, allBuiltins(), DISABLED_CACHE, serviceContextResolver);
+        when(serverConfProvider.getMembers()).thenReturn(List.of());
+
+        var result = builtinStore.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).hasSize(7);
+    }
+
+    @Test
+    void findAllBuiltinsTaggedWithSystemContextOnly() {
+        var builtinStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, allBuiltins(), DISABLED_CACHE, serviceContextResolver);
+        when(serverConfProvider.getMembers()).thenReturn(List.of());
+
+        var result = builtinStore.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).allSatisfy(def ->
+                assertThat(def.getParticipantContextId()).isEqualTo(SYSTEM_PARTICIPANT_CTX));
+        assertThat(result).hasSize(7);
+    }
+
+    @Test
+    void findByIdReturnsBuiltinContractDefinition() {
+        var builtinStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, allBuiltins(), DISABLED_CACHE, serviceContextResolver);
+        var builtinAssetId = "DEV:GOV:1234:" + BuiltinServiceCodes.GET_SECURITY_SERVER_METRICS;
+        var contractId = builtinAssetId + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        var result = builtinStore.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(contractId);
+        assertThat(result.getParticipantContextId()).isEqualTo(SYSTEM_PARTICIPANT_CTX);
+        assertThat(result.getAccessPolicyId()).isEqualTo(builtinAssetId);
+    }
+
+    @Test
+    void findByIdReturnsNullForUnknownBuiltinId() {
+        var builtinStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, allBuiltins(), DISABLED_CACHE, serviceContextResolver);
+
+        var result = builtinStore.findById(participantContextId, "DEV:GOV:1234:nonExistentService-contract-definition");
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findAllEmptyAclEmitsNoContractDefinition() {
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of());
+
+        var result = store.findAll(QuerySpec.max()).toList();
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findByIdOwnerOnlySuffixedIdNotFoundWhenServiceHasNoAcl() {
+        var contractId = AssetMapper.encodeAssetId(SERVICE_1)
+                + ContractDefinitionMapper.OWNER_ONLY_SUFFIX
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findAllBuiltinDefinitionsHaveAcceptAllPolicyId() {
+        var builtinStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, allBuiltins(), DISABLED_CACHE, serviceContextResolver);
+        when(serverConfProvider.getMembers()).thenReturn(List.of());
+
+        var result = builtinStore.findAll(QuerySpec.max()).toList();
+
+        result.forEach(def -> {
+            assertThat(def.getAccessPolicyId()).isNotBlank();
+            assertThat(def.getContractPolicyId()).isEqualTo(def.getAccessPolicyId());
+        });
+    }
+
+    @Test
+    void findAllCacheHitServesFromCache() {
+        var cache = new StoreEnumerationCache<ContractDefinition>(true, 3600, 1000, "test");
+        var cachedStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, noBuiltins(), cache, serviceContextResolver);
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(createAccessRight(SUBJECT_CLIENT, ep)));
+
+        cachedStore.findAll(QuerySpec.max()).count();
+        cachedStore.findAll(QuerySpec.max()).count();
+
+        verify(serverConfProvider, times(1)).getMembers();
+    }
+
+    @Test
+    void findAllCacheMissAfterInvalidate() {
+        var cache = new StoreEnumerationCache<ContractDefinition>(true, 3600, 1000, "test");
+        var cachedStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, noBuiltins(), cache, serviceContextResolver);
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        when(serverConfProvider.getMembers()).thenReturn(List.of(MEMBER_1));
+        when(serverConfProvider.getAllServices(MEMBER_1)).thenReturn(List.of(SERVICE_1));
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(createAccessRight(SUBJECT_CLIENT, ep)));
+
+        cachedStore.findAll(QuerySpec.max()).count();
+        cache.invalidate();
+        cachedStore.findAll(QuerySpec.max()).count();
+
+        verify(serverConfProvider, times(2)).getMembers();
+    }
+
+    @Test
+    void findByIdCacheHitServesFromCache() {
+        var cache = new StoreEnumerationCache<ContractDefinition>(true, 3600, 1000, "test");
+        var cachedStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, noBuiltins(), cache, serviceContextResolver);
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        when(serverConfProvider.serviceExists(SERVICE_1)).thenReturn(true);
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(createAccessRight(SUBJECT_CLIENT, ep)));
+        when(participantContextService.getParticipantContext(MEMBER_1_CTX))
+                .thenReturn(ServiceResult.success(participantContext(MEMBER_1_CTX)));
+
+        var contractId = AssetMapper.encodeAssetId(SERVICE_1)
+                + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        cachedStore.findById(participantContextId, contractId);
+        cachedStore.findById(participantContextId, contractId);
+
+        verify(serverConfProvider, times(1)).serviceExists(SERVICE_1);
+    }
+
+    @Test
+    void findByIdCacheDoesNotCacheNotFound() {
+        var cache = new StoreEnumerationCache<ContractDefinition>(true, 3600, 1000, "test");
+        var cachedStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, noBuiltins(), cache, serviceContextResolver);
+        when(serverConfProvider.serviceExists(SERVICE_1)).thenReturn(false);
+
+        var contractId = "DEV:GOV:1234:SubSys:svc1:v1:DEV:GOV:9999:Consumer-contract-definition";
+        var r1 = cachedStore.findById(participantContextId, contractId);
+        var r2 = cachedStore.findById(participantContextId, contractId);
+
+        assertThat(r1).isNull();
+        assertThat(r2).isNull();
+        verify(serverConfProvider, times(2)).serviceExists(SERVICE_1);
+    }
+
+    @Test
+    void findByIdBuiltinResolvesSystemContextWhenSystemRequested() {
+        var builtinStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, allBuiltins(), DISABLED_CACHE, serviceContextResolver);
+        var builtinAssetId = "DEV:GOV:1234:" + BuiltinServiceCodes.GET_SECURITY_SERVER_METRICS;
+        var contractId = builtinAssetId + ContractDefinitionMapper.getContractDefinitionSuffix();
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var result = builtinStore.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getParticipantContextId()).isEqualTo(SYSTEM_PARTICIPANT_CTX);
+    }
+
+    @Test
+    void findByIdMgmtServiceResolvesSystemContextWhenSystemRequestedAndEligible() {
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = MGMT_SERVICE.asEncodedId()
+                + ContractDefinitionMapper.OWNER_ONLY_SUFFIX
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getParticipantContextId()).isEqualTo(SYSTEM_PARTICIPANT_CTX);
+    }
+
+    @Test
+    void findByIdMgmtServicePlainIdUnderSystemUsesUnrestrictedNotOwnerOnlyAccessPolicy() {
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        when(serverConfProvider.serviceExists(MGMT_SERVICE)).thenReturn(true);
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = MGMT_SERVICE.asEncodedId() + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getParticipantContextId()).isEqualTo(SYSTEM_PARTICIPANT_CTX);
+        assertThat(result.getAccessPolicyId()).isEqualTo(MGMT_SERVICE.asEncodedId());
+        assertThat(result.getAccessPolicyId()).doesNotEndWith(ContractDefinitionMapper.OWNER_ONLY_SUFFIX);
+    }
+
+    @Test
+    void findByIdMgmtServicePlainIdNotGrantedUnderSystemWhenAccessRightsConfigured() {
+        var ep = new Endpoint("clientReg", "*", "**", true);
+        var arMgmt = createAccessRight(SUBJECT_CLIENT, ep);
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        when(serverConfProvider.serviceExists(MGMT_SERVICE)).thenReturn(true);
+        when(serverConfProvider.getServiceAccessRights(MGMT_SERVICE)).thenReturn(List.of(arMgmt));
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = MGMT_SERVICE.asEncodedId() + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdMgmtServicePlainIdNotFoundUnderSystemWhenNoRealServiceConfigured() {
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        when(serverConfProvider.serviceExists(MGMT_SERVICE)).thenReturn(false);
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = MGMT_SERVICE.asEncodedId() + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdMgmtServiceOwnerOnlyNotFoundUnderSystemWhenServiceIsReal() {
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        when(serverConfProvider.getAllServices(MGMT_CLIENT)).thenReturn(List.of(MGMT_SERVICE));
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = MGMT_SERVICE.asEncodedId()
+                + ContractDefinitionMapper.OWNER_ONLY_SUFFIX
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdUnconfiguredEligibleCodeOwnerOnlyNotFoundUnderSystemWhenSiblingCodeIsReal() {
+        // Partial migration: clientReg is real, so the whole subsystem no longer qualifies for the
+        // no-real-services synthetic fallback, but maintenanceModeEnable was never configured —
+        // findAll never enumerates it either, so findById must agree.
+        var unconfiguredService = ServiceId.Conf.create("DEV", "COM", "3333", "MANAGEMENT", "maintenanceModeEnable");
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        when(serverConfProvider.getAllServices(MGMT_CLIENT)).thenReturn(List.of(MGMT_SERVICE));
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var ownerOnlyContractId = unconfiguredService.asEncodedId()
+                + ContractDefinitionMapper.OWNER_ONLY_SUFFIX
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var plainContractId = unconfiguredService.asEncodedId() + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        assertThat(store.findById(participantContextId, ownerOnlyContractId)).isNull();
+        assertThat(store.findById(participantContextId, plainContractId)).isNull();
+    }
+
+    @Test
+    void findByIdOrdinaryServiceCompoundIdNotFoundUnderSystemContextEvenWithValidAcl() {
+        var ep = new Endpoint("svc1", "GET", "/api/data", false);
+        var ar = createAccessRight(SUBJECT_CLIENT, ep);
+        when(serverConfProvider.serviceExists(SERVICE_1)).thenReturn(true);
+        when(serverConfProvider.getServiceAccessRights(SERVICE_1)).thenReturn(List.of(ar));
+        when(participantContextService.getParticipantContext(MEMBER_1_CTX))
+                .thenReturn(ServiceResult.success(participantContext(MEMBER_1_CTX)));
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = AssetMapper.encodeAssetId(SERVICE_1)
+                + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdAuthorizedSubjectCompoundIdResolvesUnderSystemWhenAccessRightsConfigured() {
+        var ep = new Endpoint("clientReg", "*", "**", true);
+        var arMgmt = createAccessRight(SUBJECT_CLIENT, ep);
+        when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        when(serverConfProvider.serviceExists(MGMT_SERVICE)).thenReturn(true);
+        // The 6-part (WITH_VERSION) decode attempt runs first and "succeeds" by misreading the
+        // subject's leading segment as a version; force it to fall through to the 5-part attempt.
+        var sixPartAttempt = ServiceId.Conf.create("DEV", "COM", "3333", "MANAGEMENT", "clientReg", "DEV");
+        when(serverConfProvider.serviceExists(sixPartAttempt)).thenReturn(false);
+        when(serverConfProvider.getServiceAccessRights(MGMT_SERVICE)).thenReturn(List.of(arMgmt));
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = MGMT_SERVICE.asEncodedId() + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getParticipantContextId()).isEqualTo(SYSTEM_PARTICIPANT_CTX);
+    }
+
+    @Test
+    void findByIdAuthCertRegNotFoundUnderSystemContext() {
+        // authCertReg fails the cheap SYSTEM_SERVICE_CODES check before any globalconf/serverconf
+        // lookup runs, so no management-subsystem resolution needs to be stubbed here.
+        var authCertRegService = ServiceId.Conf.create("DEV", "COM", "3333", "MANAGEMENT", "authCertReg");
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = authCertRegService.asEncodedId()
+                + ContractDefinitionMapper.OWNER_ONLY_SUFFIX
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdRealServiceNotFoundUnderSystemContext() {
+        participantContextId = SYSTEM_PARTICIPANT_CTX;
+
+        var contractId = AssetMapper.encodeAssetId(SERVICE_1)
+                + ContractDefinitionMapper.OWNER_ONLY_SUFFIX
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+        var result = store.findById(participantContextId, contractId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findByIdResolvesNothingForNullParticipantContext() {
+        var ar = createAccessRight(SUBJECT_CLIENT, new Endpoint("svc2", "*", "**", true));
+        lenient().when(serverConfProvider.serviceExists(SERVICE_2)).thenReturn(true);
+        lenient().when(serverConfProvider.getServiceAccessRights(SERVICE_2)).thenReturn(List.of(ar));
+        lenient().when(participantContextService.getParticipantContext(MEMBER_2_CTX))
+                .thenReturn(ServiceResult.success(participantContext(MEMBER_2_CTX)));
+        var contractId = AssetMapper.encodeAssetId(SERVICE_2)
+                + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        assertThat(store.findById(MEMBER_2_CTX, contractId)).isNotNull();
+        assertThat(store.findById(null, contractId)).isNull();
+    }
+
+    @Test
+    void findByIdResolvesTheSameContractIdToEachContextsOwnDefinition() {
+        var mgmtMemberCtx = ParticipantIdentifierScheme.memberCtxId(ClientId.Conf.create("DEV", "COM", "3333"));
+        var arMgmt = createAccessRight(SUBJECT_CLIENT, new Endpoint("clientReg", "*", "**", true));
+        var sixPartAttempt = ServiceId.Conf.create("DEV", "COM", "3333", "MANAGEMENT", "clientReg", "DEV");
+        lenient().when(globalConfProvider.getManagementRequestService()).thenReturn(MGMT_CLIENT);
+        lenient().when(serverConfProvider.getIdentifier()).thenReturn(SS_ID);
+        lenient().when(globalConfProvider.isSecurityServerClient(MGMT_CLIENT, SS_ID)).thenReturn(true);
+        lenient().when(serverConfProvider.serviceExists(MGMT_SERVICE)).thenReturn(true);
+        lenient().when(serverConfProvider.serviceExists(sixPartAttempt)).thenReturn(false);
+        lenient().when(serverConfProvider.getServiceAccessRights(MGMT_SERVICE)).thenReturn(List.of(arMgmt));
+        lenient().when(participantContextService.getParticipantContext(mgmtMemberCtx))
+                .thenReturn(ServiceResult.success(participantContext(mgmtMemberCtx)));
+        var cachingStore = new ContractDefinitionServerConfStore(
+                serverConfProvider, noBuiltins(), new StoreEnumerationCache<>(true, 60, 1000, "test"), serviceContextResolver);
+        var contractId = MGMT_SERVICE.asEncodedId() + XRoadId.ENCODED_ID_SEPARATOR + SUBJECT_CLIENT.asEncodedId()
+                + ContractDefinitionMapper.getContractDefinitionSuffix();
+
+        var memberDefinition = cachingStore.findById(mgmtMemberCtx, contractId);
+        var systemDefinition = cachingStore.findById(SYSTEM_PARTICIPANT_CTX, contractId);
+        var otherMemberDefinition = cachingStore.findById(MEMBER_2_CTX, contractId);
+
+        assertThat(memberDefinition).isNotNull();
+        assertThat(memberDefinition.getParticipantContextId()).isEqualTo(mgmtMemberCtx);
+        assertThat(systemDefinition).isNotNull();
+        assertThat(systemDefinition.getParticipantContextId()).isEqualTo(SYSTEM_PARTICIPANT_CTX);
+        assertThat(otherMemberDefinition).isNull();
+    }
+
+    private static AccessRight createAccessRight(XRoadId subjectId, Endpoint endpoint) {
+        var ar = new AccessRight();
+        ar.setSubjectId(subjectId);
+        ar.setEndpoint(endpoint);
+        ar.setRightsGiven(new Date());
+        return ar;
+    }
+}

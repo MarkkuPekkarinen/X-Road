@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,19 +26,17 @@
  */
 package org.niis.xroad.cs.admin.core.service.managementrequest;
 
-import io.vavr.collection.Stream;
-import io.vavr.control.Option;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.niis.xroad.common.exception.DataIntegrityException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.common.exception.NotFoundException;
-import org.niis.xroad.common.exception.ServiceException;
-import org.niis.xroad.common.exception.ValidationFailureException;
 import org.niis.xroad.common.managementrequest.model.ManagementRequestType;
 import org.niis.xroad.cs.admin.api.domain.ManagementRequestStatus;
 import org.niis.xroad.cs.admin.api.domain.ManagementRequestView;
 import org.niis.xroad.cs.admin.api.domain.Origin;
 import org.niis.xroad.cs.admin.api.domain.Request;
-import org.niis.xroad.cs.admin.api.exception.ErrorMessage;
 import org.niis.xroad.cs.admin.api.paging.Page;
 import org.niis.xroad.cs.admin.api.paging.PageRequestDto;
 import org.niis.xroad.cs.admin.api.service.ManagementRequestService;
@@ -54,13 +52,12 @@ import org.niis.xroad.cs.admin.core.repository.paging.StableSortHelper;
 import org.niis.xroad.restapi.config.audit.AuditEventHelper;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
-
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MR_INVALID_STATE;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MR_NOT_FOUND;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MR_NOT_SUPPORTED;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.DECLINE_MANAGEMENT_REQUEST;
@@ -88,7 +85,6 @@ public class ManagementRequestServiceImpl implements ManagementRequestService {
 
     /**
      * Get a management request
-     *
      * @param id request id
      */
     @Override
@@ -101,14 +97,14 @@ public class ManagementRequestServiceImpl implements ManagementRequestService {
     public ManagementRequestView getRequestView(int requestId) {
         return managementRequestViewRepository.findById(requestId)
                 .map(viewMapper::toTarget)
-                .orElseThrow(() -> new NotFoundException(MR_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(MR_NOT_FOUND.build()));
     }
 
     @Override
     public ManagementRequestType getRequestType(int id) {
         return requests.findById(id)
                 .map(RequestEntity::getManagementRequestType)
-                .orElseThrow(() -> new NotFoundException(MR_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(MR_NOT_FOUND.build()));
     }
 
     /**
@@ -134,7 +130,6 @@ public class ManagementRequestServiceImpl implements ManagementRequestService {
 
     /**
      * Approve pending management request
-     *
      * @param requestId request id to approve
      */
     @Override
@@ -145,17 +140,16 @@ public class ManagementRequestServiceImpl implements ManagementRequestService {
 
     /**
      * Revoke (decline) pending management request
-     *
      * @param requestId request id to revoke
      */
     @Override
     public void revoke(Integer requestId) {
         var request = findRequest(requestId);
 
-        if (request instanceof RequestWithProcessingEntity) {
-            var processing = ((RequestWithProcessingEntity) request).getRequestProcessing();
+        if (request instanceof RequestWithProcessingEntity requestWithProcessingEntity) {
+            var processing = requestWithProcessingEntity.getRequestProcessing();
             if (!REVOCABLE_MR_STATUSES.contains(processing.getStatus())) {
-                throw new ValidationFailureException(ErrorMessage.MR_INVALID_STATE);
+                throw new BadRequestException(MR_INVALID_STATE.build());
             }
 
             if (processing.getRequests().size() == 1 && request.getOrigin() == Origin.CENTER) {
@@ -167,40 +161,38 @@ public class ManagementRequestServiceImpl implements ManagementRequestService {
             requests.save(request);
         } else {
             // should not happen since simple requests can not be pending
-            throw new DataIntegrityException(MR_NOT_SUPPORTED);
+            throw new ConflictException(MR_NOT_SUPPORTED.build());
         }
     }
 
     private <T extends RequestEntity> T findRequest(int requestId) {
         return (T) requests.findById(requestId)
-                .orElseThrow(() -> new NotFoundException(MR_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(MR_NOT_FOUND.build()));
     }
 
     /*
      * Dispatches request to handlers, returns the response of the first
      * handler that can handle the request.
      */
-    private <T extends Request> T dispatch(Function<RequestHandler<Request>, Option<T>> operation) {
-        return Stream.ofAll(handlers)
+    private <T extends Request> T dispatch(Function<RequestHandler<Request>, Optional<T>> operation) {
+        return handlers.stream()
                 .map(handler -> (RequestHandler<Request>) handler)
                 .map(operation)
-                .filter(Option::isDefined)
-                .map(Option::get)
-                .headOption()
-                .getOrElseThrow(() -> {
-                    throw new ServiceException(MR_NOT_SUPPORTED);
-                });
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst()
+                .orElseThrow(() -> new InternalServerErrorException(MR_NOT_SUPPORTED.build()));
     }
 
     /*
      * Some generics wrangling to work around type erasure,
      * and to refine wildcards to type parameters.
      */
-    private <T extends Request> Option<T> doApprove(RequestHandler<Request> handler, T request) {
+    private <T extends Request> Optional<T> doApprove(RequestHandler<Request> handler, T request) {
         return handler.narrow(request).map(handler::approve).map(r -> (T) r);
     }
 
-    private <T extends Request> Option<T> doAdd(RequestHandler<Request> handler, T request) {
+    private <T extends Request> Optional<T> doAdd(RequestHandler<Request> handler, T request) {
         return handler.narrow(request).map(r -> {
             T response = (T) handler.add((T) r);
             if (handler.canAutoApprove(response)) {

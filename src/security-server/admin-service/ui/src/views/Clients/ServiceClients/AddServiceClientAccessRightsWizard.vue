@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,81 +25,64 @@
    THE SOFTWARE.
  -->
 <template>
-  <div class="view-wrap" data-test="add-subject-view">
-    <xrd-sub-view-title
-      :title="$t('serviceClients.addServiceClientTitle')"
-      :show-close="false"
-      data-test="add-subject-title"
-      class="pa-4"
-    />
+  <XrdElevatedViewSimple data-test="add-subject-view" title="serviceClients.addServiceClientTitle" go-back-on-close>
+    <!-- eslint-disable-next-line vuetify/no-deprecated-components -->
+    <XrdWizard v-model="step">
+      <template #header-items>
+        <v-stepper-item :complete="step > 1" :value="1">
+          {{ $t('serviceClients.memberGroupStep') }}
+        </v-stepper-item>
+        <v-divider />
+        <v-stepper-item :complete="step > 2" :value="2">
+          {{ $t('serviceClients.servicesStep') }}
+        </v-stepper-item>
+      </template>
 
-    <v-stepper
-      v-model="step"
-      :alt-labels="true"
-      class="wizard-stepper wizard-noshadow"
-    >
-      <v-stepper-header class="wizard-noshadow stepper-header">
-        <v-stepper-step :complete="step > 1" step="1">{{
-          $t('serviceClients.memberGroupStep')
-        }}</v-stepper-step>
-        <v-divider></v-divider>
-        <v-stepper-step :complete="step > 2" step="2">{{
-          $t('serviceClients.servicesStep')
-        }}</v-stepper-step>
-      </v-stepper-header>
-
-      <v-stepper-items class="wizard-stepper-content">
-        <v-stepper-content step="1">
-          <MemberOrGroupSelectionStep
-            :id="id"
-            :service-clients="serviceClients"
-            @candidate-selection="candidateSelection"
-            @set-step="nextStep"
-          ></MemberOrGroupSelectionStep>
-        </v-stepper-content>
-        <v-stepper-content step="2">
-          <ServiceSelectionStep
-            v-if="serviceClientCandidateSelection"
-            :id="id"
-            :service-candidates="serviceCandidates"
-            :service-client-candidate-selection="
-              serviceClientCandidateSelection
-            "
-            @set-step="previousStep"
-          ></ServiceSelectionStep>
-        </v-stepper-content>
-      </v-stepper-items>
-    </v-stepper>
-  </div>
+      <v-stepper-window-item :value="1">
+        <MemberOrGroupSelectionStep :id="id" :service-clients="serviceClients" @set-step="nextStep" />
+      </v-stepper-window-item>
+      <v-stepper-window-item :value="2">
+        <ServiceSelectionStep
+          v-if="serviceClientCandidateSelection"
+          :id="id"
+          :service-candidates="serviceCandidates"
+          :service-client-candidate-selection="serviceClientCandidateSelection"
+          @set-step="previousStep"
+        />
+      </v-stepper-window-item>
+    </XrdWizard>
+  </XrdElevatedViewSimple>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
+import { defineComponent } from 'vue';
 import MemberOrGroupSelectionStep from '@/views/Clients/ServiceClients/MemberOrGroupSelectionStep.vue';
 import ServiceSelectionStep from '@/views/Clients/ServiceClients/ServiceSelectionStep.vue';
-import {
-  AccessRight,
-  Service,
-  ServiceClient,
-  ServiceDescription,
-} from '@/openapi-types';
-import * as api from '@/util/api';
+import { AccessRight, Service, ServiceClient } from '@/openapi-types';
 import { ServiceCandidate } from '@/ui-types';
 import { compareByServiceCode } from '@/util/sorting';
-import { encodePathParameter } from '@/util/api';
+import { XrdElevatedViewSimple, useNotifications, XrdWizard } from '@niis/shared-ui';
 import { mapActions } from 'pinia';
-import { useNotifications } from '@/store/modules/notifications';
+import { useServiceClients } from '@/store/modules/service-clients';
+import { useServices } from '@/store/modules/services';
+import { useServiceDescriptions } from '@/store/modules/service-descriptions';
 
-export default Vue.extend({
+export default defineComponent({
   components: {
     MemberOrGroupSelectionStep,
     ServiceSelectionStep,
+    XrdElevatedViewSimple,
+    XrdWizard,
   },
   props: {
     id: {
       type: String,
       required: true,
     },
+  },
+  setup() {
+    const { addError } = useNotifications();
+    return { addError };
   },
   data() {
     return {
@@ -113,29 +97,18 @@ export default Vue.extend({
     this.fetchData();
   },
   methods: {
-    ...mapActions(useNotifications, ['showError', 'showSuccess']),
-    candidateSelection(candidate: ServiceClient): void {
-      this.serviceClientCandidateSelection = candidate;
-    },
+    ...mapActions(useServiceClients, ['fetchServiceClients']),
+    ...mapActions(useServiceDescriptions, ['fetchServiceDescriptions']),
     fetchData: function (): void {
-      api
-        .get<ServiceClient[]>(
-          `/clients/${encodePathParameter(this.id)}/service-clients`,
-          {},
-        )
-        .then((response) => (this.serviceClients = response.data))
-        .catch((error) => this.showError(error));
+      this.fetchServiceClients(this.id)
+        .then((data) => (this.serviceClients = data))
+        .catch((error) => this.addError(error));
 
-      api
-        .get<ServiceDescription[]>(
-          `/clients/${encodePathParameter(this.id)}/service-descriptions`,
-        )
-        .then((response) => {
-          const serviceDescriptions = response.data;
-
+      this.fetchServiceDescriptions(this.id, false)
+        .then((data) => {
           // Parse all services for the current client and map them to ServiceCandidates (manually added type for
           // objects that are used to add and list services that can be granted access rights to).
-          this.serviceCandidates = serviceDescriptions
+          this.serviceCandidates = data
             .flatMap((serviceDescription) => serviceDescription.services)
             .sort(compareByServiceCode)
             .map((service: Service) => ({
@@ -144,34 +117,17 @@ export default Vue.extend({
               id: service.id,
             }));
         })
-        .catch((error) => this.showError(error));
+        .catch((error) => this.addError(error));
     },
     previousStep(): void {
       this.step -= 1;
     },
-    nextStep(): void {
+    nextStep(candidate: ServiceClient): void {
+      this.serviceClientCandidateSelection = candidate;
       this.step += 1;
     },
   },
 });
 </script>
 
-<style lang="scss" scoped>
-@import '../../../assets/wizards';
-
-/* Modify wizard import */
-.view-wrap {
-  max-width: 850px;
-  margin: 10px;
-}
-
-/* Modify wizard import */
-.wizard-stepper-content {
-  max-width: 900px;
-}
-
-.stepper-header {
-  width: 50%;
-  margin: 0 auto;
-}
-</style>
+<style lang="scss" scoped></style>

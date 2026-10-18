@@ -1,21 +1,21 @@
 /*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,23 +27,24 @@
 
 package org.niis.xroad.cs.admin.core.service.managementrequest;
 
-import ee.ria.xroad.common.SystemProperties;
 import ee.ria.xroad.common.identifier.ClientId;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.niis.xroad.common.exception.DataIntegrityException;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.MemberIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.SecurityServerIdEntity;
 import org.niis.xroad.cs.admin.api.domain.ManagementRequestStatus;
 import org.niis.xroad.cs.admin.api.domain.MemberId;
 import org.niis.xroad.cs.admin.api.domain.OwnerChangeRequest;
 import org.niis.xroad.cs.admin.api.domain.SecurityServerId;
 import org.niis.xroad.cs.admin.api.service.GlobalGroupMemberService;
-import org.niis.xroad.cs.admin.core.entity.ClientIdEntity;
-import org.niis.xroad.cs.admin.core.entity.MemberIdEntity;
+import org.niis.xroad.cs.admin.core.config.ManagementServiceConfigProperties;
 import org.niis.xroad.cs.admin.core.entity.OwnerChangeRequestEntity;
 import org.niis.xroad.cs.admin.core.entity.SecurityServerEntity;
-import org.niis.xroad.cs.admin.core.entity.SecurityServerIdEntity;
 import org.niis.xroad.cs.admin.core.entity.ServerClientEntity;
 import org.niis.xroad.cs.admin.core.entity.XRoadMemberEntity;
 import org.niis.xroad.cs.admin.core.entity.mapper.RequestMapper;
@@ -54,15 +55,12 @@ import org.niis.xroad.cs.admin.core.repository.ServerClientRepository;
 import org.niis.xroad.cs.admin.core.repository.XRoadMemberRepository;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
-
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static java.lang.String.valueOf;
 import static org.niis.xroad.cs.admin.api.domain.ManagementRequestStatus.APPROVED;
 import static org.niis.xroad.cs.admin.api.domain.ManagementRequestStatus.SUBMITTED_FOR_APPROVAL;
 import static org.niis.xroad.cs.admin.api.domain.ManagementRequestStatus.WAITING;
@@ -92,11 +90,12 @@ public class OwnerChangeRequestHandler implements RequestHandler<OwnerChangeRequ
     private final GlobalGroupMemberService groupMemberService;
 
     private final RequestMapper requestMapper;
+    private final ManagementServiceConfigProperties managementServiceConfigProperties;
 
     @Override
     public boolean canAutoApprove(OwnerChangeRequest request) {
-        return SystemProperties.getCenterAutoApproveOwnerChangeRequests()
-                && members.findMember(request.getClientId()).isDefined();
+        return managementServiceConfigProperties.isAutoApproveOwnerChangeRequests()
+                && members.findMember(request.getClientId()).isPresent();
     }
 
     @Override
@@ -119,29 +118,28 @@ public class OwnerChangeRequestHandler implements RequestHandler<OwnerChangeRequ
     private void validateRequest(OwnerChangeRequest request) {
         // New owner cannot be a subsystem
         if (StringUtils.isNotBlank(request.getClientId().getSubsystemCode())) {
-            throw new ValidationFailureException(MR_OWNER_MUST_BE_MEMBER);
+            throw new BadRequestException(MR_OWNER_MUST_BE_MEMBER.build());
         }
 
         final SecurityServerEntity securityServer = servers.findBy(request.getSecurityServerId())
-                .getOrElseThrow(() -> new DataIntegrityException(MR_SERVER_NOT_FOUND,
-                        request.getSecurityServerId().toString()));
+                .orElseThrow(() -> new ConflictException(MR_SERVER_NOT_FOUND.build(request.getSecurityServerId())));
 
         // New owner must be registered as a client on the security server
         final boolean clientRegistered = securityServer.getServerClients().stream()
                 .anyMatch(serverClient -> ClientId.equals(serverClient.getSecurityServerClient().getIdentifier(), request.getClientId()));
         if (!clientRegistered) {
-            throw new ValidationFailureException(MR_OWNER_MUST_BE_CLIENT);
+            throw new BadRequestException(MR_OWNER_MUST_BE_CLIENT.build());
         }
 
         // Client cannot be the current owner of the security server
         if (ClientId.equals(securityServer.getOwner().getIdentifier(), request.getClientId())) {
-            throw new ValidationFailureException(MR_CLIENT_ALREADY_OWNER);
+            throw new BadRequestException(MR_CLIENT_ALREADY_OWNER.build());
         }
 
         // Check that server with the new server id does not exist yet
         final long count = servers.count(SecurityServerId.create(request.getClientId(), securityServer.getServerCode()));
         if (count > 0) {
-            throw new DataIntegrityException(MR_SERVER_CODE_EXISTS);
+            throw new ConflictException(MR_SERVER_CODE_EXISTS.build());
         }
     }
 
@@ -149,7 +147,7 @@ public class OwnerChangeRequestHandler implements RequestHandler<OwnerChangeRequ
         final List<OwnerChangeRequestEntity> pendingRequests =
                 ownerChangeRequestRepository.findBy(serverId, EnumSet.of(SUBMITTED_FOR_APPROVAL, WAITING));
         if (!pendingRequests.isEmpty()) {
-            throw new DataIntegrityException(MR_EXISTS);
+            throw new ConflictException(MR_EXISTS.build());
         }
     }
 
@@ -158,17 +156,15 @@ public class OwnerChangeRequestHandler implements RequestHandler<OwnerChangeRequ
         Integer requestId = request.getId();
 
         final OwnerChangeRequestEntity ownerChangeRequestEntity = ownerChangeRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ValidationFailureException(MR_NOT_FOUND, valueOf(requestId)));
+                .orElseThrow(() -> new BadRequestException(MR_NOT_FOUND.build(requestId)));
 
         validateRequestStatus(ownerChangeRequestEntity, EnumSet.of(SUBMITTED_FOR_APPROVAL, WAITING));
 
         final SecurityServerEntity securityServer = servers.findBy(ownerChangeRequestEntity.getSecurityServerId())
-                .getOrElseThrow(() -> new DataIntegrityException(MR_SERVER_NOT_FOUND,
-                        ownerChangeRequestEntity.getSecurityServerId().toString()));
+                .orElseThrow(() -> new ConflictException(MR_SERVER_NOT_FOUND.build(ownerChangeRequestEntity.getSecurityServerId())));
 
         final XRoadMemberEntity newOwner = members.findOneBy(ownerChangeRequestEntity.getClientId())
-                .getOrElseThrow(() -> new DataIntegrityException(MR_MEMBER_NOT_FOUND,
-                        ownerChangeRequestEntity.getClientId().toString()));
+                .orElseThrow(() -> new ConflictException(MR_MEMBER_NOT_FOUND.build(ownerChangeRequestEntity.getClientId())));
 
         final var currentOwner = securityServer.getOwner();
 
@@ -187,8 +183,7 @@ public class OwnerChangeRequestHandler implements RequestHandler<OwnerChangeRequ
 
     private void validateRequestStatus(OwnerChangeRequestEntity requestEntity, EnumSet<ManagementRequestStatus> allowedStatuses) {
         if (!allowedStatuses.contains(requestEntity.getProcessingStatus())) {
-            throw new ValidationFailureException(MR_INVALID_STATE_FOR_APPROVAL,
-                    valueOf(requestEntity.getId()));
+            throw new BadRequestException(MR_INVALID_STATE_FOR_APPROVAL.build(requestEntity.getId()));
         }
     }
 
@@ -216,7 +211,7 @@ public class OwnerChangeRequestHandler implements RequestHandler<OwnerChangeRequ
 
     private void updateGlobalGroups(ClientIdEntity currentOwnerIdentifier, XRoadMemberEntity newOwner) {
         var currentOwner = members.findOneBy(currentOwnerIdentifier)
-                .getOrElseThrow(() -> new DataIntegrityException(MR_MEMBER_NOT_FOUND, currentOwnerIdentifier));
+                .orElseThrow(() -> new ConflictException(MR_MEMBER_NOT_FOUND.build(currentOwnerIdentifier)));
         if (currentOwner.getOwnedServers().isEmpty()) {
             groupMemberService.removeMemberFromGlobalGroup(DEFAULT_SECURITY_SERVER_OWNERS_GROUP,
                     MemberId.create(currentOwner.getIdentifier()));

@@ -1,21 +1,21 @@
-/**
+/*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,20 +26,18 @@
  */
 package org.niis.xroad.cs.admin.core.service;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.common.ErrorCodes;
 import ee.ria.xroad.common.util.process.ExternalProcessRunner;
 import ee.ria.xroad.common.util.process.ProcessFailedException;
 import ee.ria.xroad.common.util.process.ProcessNotExecutableException;
-import ee.ria.xroad.commonui.SignerProxy;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenStatusInfo;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.niis.xroad.common.exception.DataIntegrityException;
-import org.niis.xroad.common.exception.ServiceException;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.core.exception.ErrorCode;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.cs.admin.api.dto.HAConfigStatus;
 import org.niis.xroad.cs.admin.api.dto.InitialServerConfDto;
 import org.niis.xroad.cs.admin.api.dto.InitializationStatusDto;
@@ -48,32 +46,34 @@ import org.niis.xroad.cs.admin.api.facade.SignerProxyFacade;
 import org.niis.xroad.cs.admin.api.service.InitializationService;
 import org.niis.xroad.cs.admin.api.service.SystemParameterService;
 import org.niis.xroad.cs.admin.api.service.TokenPinValidator;
+import org.niis.xroad.cs.admin.core.dataspace.DataspaceIssuerProvisioningWorker;
 import org.niis.xroad.cs.admin.core.entity.GlobalGroupEntity;
 import org.niis.xroad.cs.admin.core.repository.GlobalGroupRepository;
 import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
-import org.niis.xroad.restapi.exceptions.DeviationAwareRuntimeException;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.SignerNotReachableException;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.protocol.dto.TokenStatusInfo;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
-
 import java.util.Arrays;
 import java.util.Optional;
 
-import static ee.ria.xroad.common.ErrorCodes.X_KEY_NOT_FOUND;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.INITIALIZATION_INTERRUPTED;
+import static org.niis.xroad.common.core.exception.ErrorCode.GPG_KEY_GENERATION_FAILED;
+import static org.niis.xroad.common.core.exception.ErrorCode.INITIALIZATION_INTERRUPTED;
+import static org.niis.xroad.common.core.exception.ErrorCode.KEY_NOT_FOUND;
+import static org.niis.xroad.cs.admin.api.dto.TokenInitStatus.INITIALIZED;
+import static org.niis.xroad.cs.admin.api.dto.TokenInitStatus.NOT_INITIALIZED;
+import static org.niis.xroad.cs.admin.api.dto.TokenInitStatus.UNKNOWN;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.INIT_ALREADY_INITIALIZED;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.INIT_SIGNER_PIN_POLICY_FAILED;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.INIT_SOFTWARE_TOKEN_FAILED;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_GPG_KEY_GENERATION_FAILED;
 
 @Slf4j
 @Service
-@Transactional(rollbackOn = ValidationFailureException.class)
+@Transactional(rollbackOn = BadRequestException.class)
 @PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class InitializationServiceImpl implements InitializationService {
@@ -84,6 +84,7 @@ public class InitializationServiceImpl implements InitializationService {
     private final AuditDataHelper auditDataHelper;
     private final HAConfigStatus currentHaConfigStatus;
     private final ExternalProcessRunner externalProcessRunner;
+    private final DataspaceIssuerProvisioningWorker dataspaceIssuerProvisioningWorker;
     @Value("${script.generate-gpg-keypair.path}")
     private final String generateKeypairScriptPath;
     @Value("${gpgkeys.gpghome}")
@@ -91,28 +92,13 @@ public class InitializationServiceImpl implements InitializationService {
 
     @Override
     public InitializationStatusDto getInitializationStatus() {
-        TokenInitStatus initStatusInfo = getTokenInitStatusInfo();
+        TokenInitStatus initStatusInfo = isSWTokenInitialized();
         InitializationStatusDto statusDto = new InitializationStatusDto();
 
         statusDto.setInstanceIdentifier(systemParameterService.getInstanceIdentifier());
         statusDto.setCentralServerAddress(systemParameterService.getCentralServerAddress());
         statusDto.setSoftwareTokenInitStatus(initStatusInfo);
         return statusDto;
-    }
-
-    private TokenInitStatus getTokenInitStatusInfo() {
-        TokenInitStatus initStatusInfo;
-        try {
-            if (isSWTokenInitialized()) {
-                initStatusInfo = TokenInitStatus.INITIALIZED;
-            } else {
-                initStatusInfo = TokenInitStatus.NOT_INITIALIZED;
-            }
-        } catch (SignerNotReachableException notReachableException) {
-            log.info("getInitializationStatus - signer was not reachable", notReachableException);
-            initStatusInfo = TokenInitStatus.UNKNOWN;
-        }
-        return initStatusInfo;
     }
 
     @Override
@@ -124,17 +110,16 @@ public class InitializationServiceImpl implements InitializationService {
         auditDataHelper.put(RestApiAuditProperty.INSTANCE_IDENTIFIER, configDto.getInstanceIdentifier());
         auditDataHelper.put(RestApiAuditProperty.HA_NODE, currentHaConfigStatus.getCurrentHaNodeName());
 
-        final boolean isSWTokenInitialized = TokenInitStatus.INITIALIZED == getTokenInitStatusInfo();
+        final boolean isSWTokenInitialized = TokenInitStatus.INITIALIZED == isSWTokenInitialized();
         final boolean isServerAddressInitialized = !systemParameterService.getCentralServerAddress().isEmpty();
         final boolean isInstanceIdentifierInitialized = !systemParameterService.getInstanceIdentifier().isEmpty();
         if (isSWTokenInitialized && isServerAddressInitialized && isInstanceIdentifierInitialized) {
-            throw new DataIntegrityException(INIT_ALREADY_INITIALIZED);
+            throw new ConflictException(INIT_ALREADY_INITIALIZED.build());
         }
 
         if (!isSWTokenInitialized) {
             tokenPinValidator.validateSoftwareTokenPin(configDto.getSoftwareTokenPin().toCharArray());
         }
-
 
         if (!isServerAddressInitialized) {
             systemParameterService.updateOrCreateParameter(
@@ -158,18 +143,19 @@ public class InitializationServiceImpl implements InitializationService {
             try {
                 signerProxyFacade.initSoftwareToken(configDto.getSoftwareTokenPin().toCharArray());
             } catch (Exception e) {
-                if (e instanceof CodedException
-                        && ((CodedException) e).getFaultCode().contains(ErrorCodes.X_TOKEN_PIN_POLICY_FAILURE)) {
+                if (e instanceof XrdRuntimeException ce
+                        && ce.getErrorCode().contains(ErrorCode.TOKEN_PIN_POLICY_FAILURE.code())) {
                     log.warn("Signer saw Token pin policy failure, remember to restart also the central server after "
                             + "configuring policy enforcement", e);
-                    throw new ValidationFailureException(INIT_SIGNER_PIN_POLICY_FAILED);
+                    throw new BadRequestException(INIT_SIGNER_PIN_POLICY_FAILED.build());
                 }
                 log.warn("Software token initialization failed", e);
-                throw new DataIntegrityException(INIT_SOFTWARE_TOKEN_FAILED, e);
+                throw new ConflictException(e, INIT_SOFTWARE_TOKEN_FAILED.build());
             }
         }
 
         generateGPGKeyPair(systemParameterService.getInstanceIdentifier());
+        dataspaceIssuerProvisioningWorker.provisionAsync();
     }
 
     private void initializeCsSystemParameters() {
@@ -179,15 +165,15 @@ public class InitializationServiceImpl implements InitializationService {
         );
         systemParameterService.updateOrCreateParameter(
                 SystemParameterServiceImpl.CONF_SIGN_DIGEST_ALGO_ID,
-                SystemParameterServiceImpl.DEFAULT_CONF_SIGN_DIGEST_ALGO_ID
+                SystemParameterServiceImpl.DEFAULT_CONF_SIGN_DIGEST_ALGO_ID.name()
         );
         systemParameterService.updateOrCreateParameter(
                 SystemParameterServiceImpl.CONF_HASH_ALGO_URI,
-                SystemParameterServiceImpl.DEFAULT_CONF_HASH_ALGO_URI
+                SystemParameterServiceImpl.DEFAULT_CONF_HASH_ALGO_URI.uri()
         );
         systemParameterService.updateOrCreateParameter(
                 SystemParameterServiceImpl.CONF_SIGN_CERT_HASH_ALGO_URI,
-                SystemParameterServiceImpl.DEFAULT_CONF_HASH_ALGO_URI
+                SystemParameterServiceImpl.DEFAULT_CONF_HASH_ALGO_URI.uri()
         );
         systemParameterService.updateOrCreateParameter(
                 SystemParameterServiceImpl.SECURITY_SERVER_OWNERS_GROUP,
@@ -222,26 +208,26 @@ public class InitializationServiceImpl implements InitializationService {
             log.info(String.join("\n", processResult.getProcessOutput()));
             log.info(" --- Generate GPG keypair script console output - END --- ");
         } catch (ProcessNotExecutableException | ProcessFailedException e) {
-            throw new DeviationAwareRuntimeException(e, new ErrorDeviation(ERROR_GPG_KEY_GENERATION_FAILED));
+            throw new InternalServerErrorException(e, GPG_KEY_GENERATION_FAILED.build());
         } catch (InterruptedException e) {
-            throw new ServiceException(INITIALIZATION_INTERRUPTED);
+            throw new InternalServerErrorException(e, INITIALIZATION_INTERRUPTED.build());
         }
     }
 
-    private boolean isSWTokenInitialized() {
-        boolean isSWTokenInitialized = false;
+    private TokenInitStatus isSWTokenInitialized() {
+        var status = NOT_INITIALIZED;
         TokenInfo tokenInfo;
         try {
-            tokenInfo = signerProxyFacade.getToken(SignerProxy.SSL_TOKEN_ID);
+            tokenInfo = signerProxyFacade.getToken(SignerRpcClient.SSL_TOKEN_ID);
             if (null != tokenInfo) {
-                isSWTokenInitialized = tokenInfo.getStatus() != TokenStatusInfo.NOT_INITIALIZED;
+                status = tokenInfo.getStatus() != TokenStatusInfo.NOT_INITIALIZED ? INITIALIZED : NOT_INITIALIZED;
             }
         } catch (Exception e) {
-            if (!((e instanceof CodedException) && X_KEY_NOT_FOUND.equals(((CodedException) e).getFaultCode()))) {
-                throw new SignerNotReachableException("could not list all tokens", e);
+            if (!(e instanceof XrdRuntimeException se && se.isCausedBy(KEY_NOT_FOUND))) {
+                status = UNKNOWN;
             }
         }
-        return isSWTokenInitialized;
+        return status;
     }
 }
 

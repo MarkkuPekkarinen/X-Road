@@ -1,0 +1,454 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.serverconf.impl;
+
+import ee.ria.xroad.common.ExpectedXrdRuntimeException;
+import ee.ria.xroad.common.db.DatabaseCtx;
+import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.SecurityServerId;
+import ee.ria.xroad.common.identifier.ServiceId;
+import ee.ria.xroad.common.metadata.Endpoint;
+import ee.ria.xroad.common.util.CryptoUtils;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.serverconf.IsAuthentication;
+import org.niis.xroad.serverconf.ServerConfProvider;
+import org.niis.xroad.serverconf.impl.dao.ClientDAOImpl;
+import org.niis.xroad.serverconf.impl.dao.ServiceDAOImpl;
+import org.niis.xroad.test.globalconf.EmptyGlobalConf;
+
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.niis.xroad.common.core.exception.ErrorCode.UNKNOWN_SERVICE;
+import static org.niis.xroad.serverconf.impl.TestUtil.BASE64_CERT;
+import static org.niis.xroad.serverconf.impl.TestUtil.CLIENT_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.MEMBER_CLASS;
+import static org.niis.xroad.serverconf.impl.TestUtil.MEMBER_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.NUM_CLIENTS;
+import static org.niis.xroad.serverconf.impl.TestUtil.NUM_SERVICEDESCRIPTIONS;
+import static org.niis.xroad.serverconf.impl.TestUtil.NUM_SERVICES;
+import static org.niis.xroad.serverconf.impl.TestUtil.NUM_TSPS;
+import static org.niis.xroad.serverconf.impl.TestUtil.SERVER_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_TIMEOUT;
+import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_URL;
+import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_VERSION;
+import static org.niis.xroad.serverconf.impl.TestUtil.SUBSYSTEM;
+import static org.niis.xroad.serverconf.impl.TestUtil.XROAD_INSTANCE;
+import static org.niis.xroad.serverconf.impl.TestUtil.client;
+import static org.niis.xroad.serverconf.impl.TestUtil.createAccessRight;
+import static org.niis.xroad.serverconf.impl.TestUtil.createTestClientId;
+import static org.niis.xroad.serverconf.impl.TestUtil.createTestServiceId;
+import static org.niis.xroad.serverconf.impl.TestUtil.prepareDB;
+import static org.niis.xroad.serverconf.impl.TestUtil.serverConfDbProperties;
+import static org.niis.xroad.serverconf.impl.TestUtil.serverConfProperties;
+import static org.niis.xroad.serverconf.impl.TestUtil.service;
+
+/**
+ * Tests server conf API.
+ */
+public class CachingServerConfTest {
+
+    @Rule
+    public ExpectedXrdRuntimeException thrown = ExpectedXrdRuntimeException.none();
+
+    private static final DatabaseCtx DATABASE_CTX = new DatabaseCtx("serverconf", serverConfDbProperties.hibernate());
+    private static ServerConfProvider serverConfProvider;
+
+    /**
+     * Creates test database.
+     *
+     * @throws Exception if an error occurs
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        GlobalConfProvider globalConfProvider = new EmptyGlobalConf() {
+            @Override
+            public boolean isSecurityServerClient(ClientId client, SecurityServerId securityServer) {
+                return true;
+            }
+        };
+        serverConfProvider = new CachingServerConfImpl(DATABASE_CTX, globalConfProvider, null, serverConfProperties);
+
+        prepareDB(DATABASE_CTX);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        DATABASE_CTX.destroy();
+    }
+
+    /**
+     * Begins transaction.
+     */
+    @Before
+    public void beforeTest() {
+        DATABASE_CTX.beginTransaction();
+    }
+
+    /**
+     * Commits transaction.
+     */
+    @After
+    public void afterTest() {
+        DATABASE_CTX.commitTransaction();
+    }
+
+    /**
+     * Test getting owner.
+     */
+    @Test
+    public void getOwner() {
+        assertEquals(createTestClientId(),
+                serverConfProvider.getIdentifier().getOwner());
+    }
+
+    /**
+     * Tests getting security server identififer.
+     */
+    @Test
+    public void getIdentifier() {
+        SecurityServerId.Conf expectedIdentifier =
+                SecurityServerId.Conf.create(
+                        XROAD_INSTANCE, MEMBER_CLASS, MEMBER_CODE, SERVER_CODE);
+        assertEquals(expectedIdentifier, serverConfProvider.getIdentifier());
+    }
+
+    /**
+     * Tests getting service address.
+     */
+    @Test
+    public void getExistingServiceAddress() {
+        ServiceId.Conf service = ServiceId.Conf.create(XROAD_INSTANCE, MEMBER_CLASS,
+                client(1), null, service(1, 1), SERVICE_VERSION);
+        assertTrue(serverConfProvider.serviceExists(service));
+        assertEquals(SERVICE_URL + 1, serverConfProvider.getServiceAddress(service));
+        assertEquals(SERVICE_TIMEOUT, serverConfProvider.getServiceTimeout(service));
+
+        service = ServiceId.Conf.create(XROAD_INSTANCE, MEMBER_CLASS,
+                client(1), null, service(1, NUM_SERVICES - 2), null);
+        assertTrue(serverConfProvider.serviceExists(service));
+    }
+
+    /**
+     * Tests getting all services.
+     */
+    @Test
+    public void getAllServices() {
+        ClientId.Conf serviceProvider = createTestClientId(client(1));
+
+        List<ServiceId> expectedServices = new ArrayList<>();
+        for (int i = 0; i < NUM_SERVICEDESCRIPTIONS; i++) {
+            for (int j = 0; j < NUM_SERVICES; j++) {
+                String version = j == NUM_SERVICES - 2 ? null : SERVICE_VERSION;
+                expectedServices.add(createTestServiceId(serviceProvider,
+                        service(i, j), version));
+            }
+        }
+
+        assertEquals(expectedServices,
+                serverConfProvider.getAllServices(serviceProvider));
+    }
+
+    /**
+     * Tests getting allowed services.
+     */
+    @Test
+    public void getAllowedServices() {
+        ClientId serviceProvider = createTestClientId(client(1));
+        ClientId client1 = createTestClientId(client(1));
+        ClientId client2 = createTestClientId(client(2));
+
+        List<ServiceId> expectedServices = List.of(
+                createTestServiceId(serviceProvider,
+                        service(1, 1), SERVICE_VERSION));
+
+        assertEquals(expectedServices,
+                serverConfProvider.getAllowedServices(serviceProvider, client1));
+        assertTrue(serverConfProvider.getAllowedServices(serviceProvider,
+                client2).isEmpty());
+    }
+
+    /**
+     * Tests getting non-existing service.
+     */
+    @Test
+    public void getNonExistingServiceAddress() {
+        ServiceId service = createTestServiceId("foo", "bar");
+        assertFalse(serverConfProvider.serviceExists(service));
+        assertNull(serverConfProvider.getServiceAddress(service));
+        assertNotEquals(SERVICE_TIMEOUT,
+                serverConfProvider.getServiceTimeout(service));
+    }
+
+    /**
+     * Tests getting service description disabled notice.
+     */
+    @Test
+    public void getDisabledNotice() {
+        ServiceId existingService = createTestServiceId(client(1),
+                service(NUM_SERVICEDESCRIPTIONS - 1, NUM_SERVICES - 1), SERVICE_VERSION);
+        ServiceId nonExistingService = createTestServiceId("foo", "bar");
+
+        assertNotNull(serverConfProvider.getDisabledNotice(existingService));
+        assertNull(serverConfProvider.getDisabledNotice(nonExistingService));
+    }
+
+    /**
+     * Tests query allowed.
+     */
+    @Test
+    public void isQueryAllowed() {
+        ClientId client1 = createTestClientId(client(1));
+        ClientId clientX = createTestClientId(CLIENT_CODE + "X");
+        ServiceId service1 = createTestServiceId(client1.getMemberCode(),
+                service(1, 1), SERVICE_VERSION);
+        ServiceId serviceX = createTestServiceId(client1.getMemberCode(),
+                SERVICE_CODE + "X", SERVICE_VERSION + "X");
+        ServiceId serviceRest = createTestServiceId(client1.getMemberCode(), "rest", null);
+
+        assertTrue(serverConfProvider.isQueryAllowed(client1, service1));
+        assertTrue(serverConfProvider.isQueryAllowed(client1, service1, "POST", "/"));
+        assertFalse(serverConfProvider.isQueryAllowed(clientX, service1));
+        assertFalse(serverConfProvider.isQueryAllowed(clientX, serviceX));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceX));
+
+        assertTrue(serverConfProvider.isQueryAllowed(client1, serviceRest, "GET", "/api/foo"));
+
+        assertTrue(serverConfProvider.isQueryAllowed(client1, serviceRest, "POST", "/api/test/foo"));
+        assertTrue(serverConfProvider.isQueryAllowed(client1, serviceRest, "POST", "/api/t%65st/foo"));
+        assertTrue(serverConfProvider.isQueryAllowed(client1, serviceRest, "POST", "/api/t%65st/foo%2dbar"));
+        assertTrue(serverConfProvider.isQueryAllowed(client1, serviceRest, "POST", "/api/test/foo/../bar"));
+
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "POST", "/api/test%2Dbar"));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "POST", "/api/test/../bar"));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "GET", "/api/test/../../../api/test"));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "POST", "/api/test/foo/bar"));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "DELETE", "/api/test"));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest));
+
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "GET", "/%2e%2e/secret"));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "GET", "/api/%2e%2e/secret"));
+        assertFalse(serverConfProvider.isQueryAllowed(client1, serviceRest, "GET", "/api/test/%2e%2e/%2e%2e/secret"));
+    }
+
+    /**
+     * Tests getting the ACL endpoint entries a client holds for a service through the caching wrapper — the
+     * same entries {@link #isQueryAllowed()} matches a request against.
+     */
+    @Test
+    public void getAclEndpoints() {
+        ClientId client1 = createTestClientId(client(1));
+        ClientId clientX = createTestClientId(CLIENT_CODE + "X");
+        ServiceId serviceRest = createTestServiceId(client1.getMemberCode(), "rest", null);
+
+        List<org.niis.xroad.serverconf.model.Endpoint> endpoints = serverConfProvider.getAclEndpoints(client1, serviceRest);
+
+        assertEquals(2, endpoints.size());
+        assertTrue(endpoints.stream().anyMatch(e -> "GET".equals(e.getMethod()) && "/api/**".equals(e.getPath())));
+        assertTrue(endpoints.stream().anyMatch(e -> "POST".equals(e.getMethod()) && "/api/test/*".equals(e.getPath())));
+
+        assertTrue(serverConfProvider.getAclEndpoints(clientX, serviceRest).isEmpty());
+    }
+
+    /**
+     * The public {@code getAclEndpoints(ClientId, ServiceId)} enumeration must always read the current
+     * configuration, unlike {@code isQueryAllowed}, which the caching wrapper serves from its ACL cache
+     * for {@link org.niis.xroad.serverconf.ServerConfCommonProperties#DEFAULT_CACHE_PERIOD} seconds.
+     */
+    @Test
+    public void getAclEndpointsBypassesTheAclCacheWhileIsQueryAllowedStaysCached() {
+        ClientId client1 = createTestClientId(client(1));
+        ServiceId serviceRest = createTestServiceId(client1.getMemberCode(), "rest", null);
+
+        assertTrue(serverConfProvider.isQueryAllowed(client1, serviceRest, "GET", "/api/foo"));
+        assertEquals(2, serverConfProvider.getAclEndpoints(client1, serviceRest).size());
+
+        var clientEntity = new ClientDAOImpl().getClient(DATABASE_CTX.getSession(), client1);
+        var revokedRights = clientEntity.getAccessRights().stream()
+                .filter(ar -> "rest".equals(ar.getEndpoint().getServiceCode()))
+                .toList();
+        clientEntity.getAccessRights().removeAll(revokedRights);
+        DATABASE_CTX.commitTransaction();
+        DATABASE_CTX.beginTransaction();
+
+        try {
+            assertTrue(serverConfProvider.getAclEndpoints(client1, serviceRest).isEmpty());
+            assertTrue(serverConfProvider.isQueryAllowed(client1, serviceRest, "GET", "/api/foo"));
+        } finally {
+            restoreRestAccessRights(client1);
+        }
+    }
+
+    private static void restoreRestAccessRights(ClientId client1) {
+        var clientEntity = new ClientDAOImpl().getClient(DATABASE_CTX.getSession(), client1);
+        clientEntity.getEndpoints().stream()
+                .filter(e -> "rest".equals(e.getServiceCode()))
+                .forEach(e -> clientEntity.getAccessRights().add(createAccessRight(e, clientEntity.getIdentifier())));
+        DATABASE_CTX.commitTransaction();
+        DATABASE_CTX.beginTransaction();
+        serverConfProvider.clearCache();
+    }
+
+    /**
+     * Tests getting IS authentication.
+     */
+    @Test
+    public void getIsAuthentication() {
+        assertEquals(IsAuthentication.SSLAUTH,
+                serverConfProvider.getIsAuthentication(createTestClientId(client(1))));
+        assertEquals(IsAuthentication.SSLNOAUTH,
+                serverConfProvider.getIsAuthentication(createTestClientId(client(2))));
+        assertEquals(IsAuthentication.NOSSL,
+                serverConfProvider.getIsAuthentication(createTestClientId(client(3))));
+    }
+
+    /**
+     * Tests getting IS certificates,
+     */
+    @Test
+    public void getIsCerts() {
+        List<X509Certificate> isCerts =
+                serverConfProvider.getIsCerts(createTestClientId(client(1)));
+        assertEquals(1, isCerts.size());
+        assertEquals(CryptoUtils.readCertificate(BASE64_CERT), isCerts.getFirst());
+    }
+
+    /**
+     * Tests getting SSL authentication.
+     */
+    @Test
+    public void isSslAuthentication() {
+        assertTrue(serverConfProvider.isSslAuthentication(
+                createTestServiceId(client(1), service(1, 0),
+                        SERVICE_VERSION)));
+        assertFalse(serverConfProvider.isSslAuthentication(
+                createTestServiceId(client(1), service(1, 1),
+                        SERVICE_VERSION)));
+
+        thrown.expectError(UNKNOWN_SERVICE.code());
+        assertFalse(serverConfProvider.isSslAuthentication(
+                createTestServiceId(client(1), service(1, NUM_SERVICES),
+                        SERVICE_VERSION)));
+    }
+
+    /**
+     * Tests getting members.
+     */
+    @Test
+    public void getMembers() {
+        List<ClientId.Conf> members = serverConfProvider.getMembers();
+        assertNotNull(members);
+        assertEquals(NUM_CLIENTS, members.size());
+    }
+
+    /**
+     * Tests getting TSPs.
+     */
+    @Test
+    public void getTsps() {
+        List<String> tspUrls = serverConfProvider.getTspUrls();
+        assertEquals(NUM_TSPS, tspUrls.size());
+    }
+
+    @Test
+    public void getServiceEndpoints() {
+        ClientId client1 = createTestClientId(client(1));
+        ServiceId serviceRest = createTestServiceId(client1.getMemberCode(), "rest", null);
+        List<Endpoint> endpoints = serverConfProvider.getServiceEndpoints(serviceRest);
+        assertEquals(2, endpoints.size());
+    }
+
+    /**
+     * Tests getting services.
+     */
+    @Test
+    public void getServices() {
+        ClientId serviceProvider = createTestClientId(client(1), null);
+
+        List<ServiceId.Conf> allServices = getServices(serviceProvider);
+        assertEquals(NUM_SERVICEDESCRIPTIONS * NUM_SERVICES, allServices.size());
+
+        serviceProvider = createTestClientId(client(NUM_CLIENTS - 1), null);
+
+        allServices = getServices(serviceProvider);
+        assertEquals(0, allServices.size());
+
+        serviceProvider = createTestClientId(client(NUM_CLIENTS - 1),
+                SUBSYSTEM);
+
+        allServices = getServices(serviceProvider);
+        assertEquals(NUM_SERVICEDESCRIPTIONS * NUM_SERVICES, allServices.size());
+    }
+
+    private static List<ServiceId.Conf> getServices(ClientId serviceProviderId) {
+        return new ServiceDAOImpl().getServices(DATABASE_CTX.getSession(), serviceProviderId);
+    }
+
+    /**
+     * A cached read must keep serving the old value after the underlying row changes, and clearCache()
+     * must discard it so the next read sees the change.
+     */
+    @Test
+    public void clearCacheDiscardsCachedServiceData() {
+        ServiceId.Conf service = ServiceId.Conf.create(XROAD_INSTANCE, MEMBER_CLASS,
+                client(1), null, service(1, 1), SERVICE_VERSION);
+        String originalUrl = serverConfProvider.getServiceAddress(service);
+        assertEquals(SERVICE_URL + 1, originalUrl);
+
+        var entity = new ServiceDAOImpl().getService(DATABASE_CTX.getSession(), service);
+        entity.setUrl(originalUrl + "-changed");
+        DATABASE_CTX.commitTransaction();
+        DATABASE_CTX.beginTransaction();
+
+        assertEquals(originalUrl, serverConfProvider.getServiceAddress(service));
+
+        serverConfProvider.clearCache();
+
+        assertEquals(originalUrl + "-changed", serverConfProvider.getServiceAddress(service));
+
+        entity = new ServiceDAOImpl().getService(DATABASE_CTX.getSession(), service);
+        entity.setUrl(originalUrl);
+        DATABASE_CTX.commitTransaction();
+        DATABASE_CTX.beginTransaction();
+        serverConfProvider.clearCache();
+    }
+}

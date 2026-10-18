@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,62 +25,61 @@
    THE SOFTWARE.
  -->
 <template>
-  <div class="certificate-details-wrapper xrd-default-shadow">
-    <xrd-sub-view-title :title="$t('cert.certificate')" @close="close" />
-    <div class="pl-4">
-      <template v-if="certificate">
-        <div class="dtlv-cert-hash">
-          <certificateHash :hash="certificate.hash" />
-        </div>
-        <certificateInfo :certificate="certificate" />
-      </template>
-    </div>
-  </div>
+  <XrdElevatedViewFixedWidth title="cert.certificate" closeable :breadcrumbs="breadcrumbs" :loading="loading" @close="close">
+    <XrdCertificate v-if="certificate" :certificate="certificate" />
+  </XrdElevatedViewFixedWidth>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import * as api from '@/util/api';
+<script lang="ts" setup>
+import { ref, computed } from 'vue';
 import { CertificateDetails } from '@/openapi-types';
-import CertificateInfo from '@/components/certificate/CertificateInfo.vue';
-import CertificateHash from '@/components/certificate/CertificateHash.vue';
-import { mapActions } from 'pinia';
-import { useNotifications } from '@/store/modules/notifications';
+import { XrdElevatedViewFixedWidth, XrdCertificate, useNotifications } from '@niis/shared-ui';
+import { useTlsCertificate } from '@/store/modules/tls-certificate';
+import { useRouter } from 'vue-router';
+import { RouteName } from '@/global';
+import { useI18n } from 'vue-i18n';
 
-export default Vue.extend({
-  components: {
-    CertificateInfo,
-    CertificateHash,
-  },
-  props: {},
-  data() {
-    return {
-      certificate: undefined as CertificateDetails | undefined,
-    };
-  },
-  created() {
-    this.fetchData();
-  },
-  methods: {
-    ...mapActions(useNotifications, ['showError']),
-    close(): void {
-      this.$router.go(-1);
-    },
-    fetchData(): void {
-      api
-        .get<CertificateDetails>('/system/certificate')
-        .then((res) => {
-          this.certificate = res.data;
-        })
-        .catch((error) => {
-          this.showError(error);
-        });
+const { fetchTlsCertificate } = useTlsCertificate();
+
+const router = useRouter();
+const { t } = useI18n();
+const { addError } = useNotifications();
+const certificate = ref<CertificateDetails | undefined>(undefined);
+const loading = ref(false);
+
+const breadcrumbs = computed(() => [
+  {
+    title: t('tab.main.keys'),
+    to: {
+      name: RouteName.SignAndAuthKeys,
     },
   },
-});
+  {
+    title: t('tab.keys.ssTlsCertificate'),
+    to: {
+      name: RouteName.SSTlsCertificate,
+    },
+  },
+  {
+    title: t('cert.certificate'),
+  },
+]);
+
+function fetchData(): void {
+  loading.value = true;
+  fetchTlsCertificate()
+    .then((cert) => (certificate.value = cert))
+    .catch((error) => addError(error))
+    .finally(() => (loading.value = false));
+}
+
+function close() {
+  router.push({
+    name: RouteName.SSTlsCertificate,
+  });
+}
+
+fetchData();
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/detail-views';
-@import '~styles/wizards';
-</style>
+<style lang="scss" scoped></style>

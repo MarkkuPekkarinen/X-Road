@@ -28,18 +28,17 @@
 import axiosAuth from '../../axios-auth';
 import axios from 'axios';
 import { defineStore } from 'pinia';
-import { Tab } from '@/ui-types';
+import { Tab, useAppState } from '@niis/shared-ui';
 import { User } from '@/openapi-types';
-import { mainTabs } from '@/global';
 import { get } from '@/util/api';
 
-export const userStore = defineStore('userStore', {
+export const useUser = defineStore('user', {
   state: () => {
     return {
       authenticated: false,
-      isSessionAlive: false,
       username: '' as string,
       permissions: [] as string[],
+      roles: [] as string[],
       count: 0,
     };
   },
@@ -58,10 +57,15 @@ export const userStore = defineStore('userStore', {
       return (permission: string) => state.permissions.includes(permission);
     },
 
+    canAssignRole: (state) => {
+      return (role: string) => {
+        return state.roles.includes(role) || (role === 'XROAD_MANAGEMENT_SERVICE' && state.roles.includes('XROAD_SYSTEM_ADMINISTRATOR'));
+      };
+    },
+
     hasAnyOfPermissions: (state) => {
       // Return true if the user has at least one of the tabs permissions
-      return (perm: string[]): boolean =>
-        perm?.some((permission) => state.permissions.includes(permission));
+      return (perm: string[]): boolean => perm?.some((permission) => state.permissions.includes(permission));
     },
 
     getAllowedTabs: (state) => (tabs: Tab[]) => {
@@ -69,25 +73,14 @@ export const userStore = defineStore('userStore', {
       return tabs?.filter((tab: Tab) => {
         const neededPermissions = tab.permissions;
 
-        return !!(
-          neededPermissions &&
-          neededPermissions?.some((permission) =>
-            state.permissions.includes(permission),
-          )
-        );
+        return !!(neededPermissions && neededPermissions?.some((permission) => state.permissions.includes(permission)));
       });
-    },
-
-    getFirstAllowedTab(): Tab {
-      return this.getAllowedTabs(mainTabs)[0];
     },
   },
 
   actions: {
     async login(authData: { username: string; password: string }) {
-      const data = `username=${encodeURIComponent(
-        authData.username,
-      )}&password=${encodeURIComponent(authData.password)}`;
+      const data = `username=${encodeURIComponent(authData.username)}&password=${encodeURIComponent(authData.password)}`;
 
       return axiosAuth({
         url: '/login',
@@ -97,8 +90,9 @@ export const userStore = defineStore('userStore', {
         },
         data,
       }).then(() => {
+        sessionStorage.clear();
         this.authenticated = true;
-        this.isSessionAlive = true;
+        useAppState().setSessionAlive()
       });
     },
 
@@ -106,10 +100,10 @@ export const userStore = defineStore('userStore', {
       return axios
         .get('/notifications/session-status')
         .then((res) => {
-          this.isSessionAlive = res?.data?.valid ?? false;
+          useAppState().setSessionAlive(res?.data?.valid ?? false);
         })
         .catch(() => {
-          this.isSessionAlive = false;
+          useAppState().setSessionAlive(false)
         });
     },
 
@@ -118,6 +112,7 @@ export const userStore = defineStore('userStore', {
         .then((user) => {
           this.username = user?.data?.username;
           this.setPermissions(user?.data?.permissions);
+          this.roles = user?.data?.roles.map((role) => (role.startsWith('ROLE_') ? role.slice(5) : role));
         })
         .catch((error) => {
           throw error;
@@ -131,9 +126,10 @@ export const userStore = defineStore('userStore', {
     logout(reload = true) {
       // Clear auth data
       this.clearAuth();
+      sessionStorage.clear();
 
       // Call backend for logout
-      axiosAuth
+      return axiosAuth
         .post('/logout')
         .catch(() => {
           // Nothing to do
@@ -149,10 +145,6 @@ export const userStore = defineStore('userStore', {
     clearAuth() {
       // Clear auth by resetting the state
       this.$reset();
-    },
-
-    setSessionAlive(value: boolean) {
-      this.isSessionAlive = value;
     },
   },
 });

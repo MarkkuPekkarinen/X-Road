@@ -2,8 +2,8 @@
 
 **Technical Specification**
 
-Version: 1.9<br/>
-08.06.2023
+Version: 1.15<br/>
+25.02.2026
 <!-- 3 pages -->
 Doc. ID: ARC-TEC
 
@@ -11,19 +11,25 @@ Doc. ID: ARC-TEC
 
 ## Version history
 
-| Date       | Version | Description                                            | Author           |
-|------------|---------|--------------------------------------------------------|------------------|
-| 02.02.2018 | 1.0     | Initial version                                        | Antti Luoma      |
-| 02.03.2018 | 1.1     | Added uniform terms and conditions reference           | Tatu Repo        |
-| 17.04.2019 | 1.2     | Added RHEL7, Ubuntu 18.04, systemd and Postgres 10     | Petteri Kivimäki |
-| 11.09.2019 | 1.3     | Remove Ubuntu 14.04 support                            | Jarkko Hyöty     |
-| 12.05.2020 | 1.4     | Add link to X-Road core tech radar                     | Petteri Kivimäki |
-| 15.09.2020 | 1.5     | Updated to match Security Server REST API architecture | Janne Mattila    |
-| 02.06.2021 | 1.6     | Backup encryption related updates                      | Andres Allkivi   |
-| 07.09.2021 | 1.7     | Update technologies                                    | Ilkka Seppälä    |
-| 26.09.2022 | 1.8     | Remove Ubuntu 18.04 support                            | Andres Rosenthal |
-| 08.06.2023 | 1.9     | Central Server technologies update                     | Justas Samuolis  |
-
+| Date       | Version | Description                                            | Author               |
+|------------|---------|--------------------------------------------------------|----------------------|
+| 02.02.2018 | 1.0     | Initial version                                        | Antti Luoma          |
+| 02.03.2018 | 1.1     | Added uniform terms and conditions reference           | Tatu Repo            |
+| 17.04.2019 | 1.2     | Added RHEL7, Ubuntu 18.04, systemd and Postgres 10     | Petteri Kivimäki     |
+| 11.09.2019 | 1.3     | Remove Ubuntu 14.04 support                            | Jarkko Hyöty         |
+| 12.05.2020 | 1.4     | Add link to X-Road core tech radar                     | Petteri Kivimäki     |
+| 15.09.2020 | 1.5     | Updated to match Security Server REST API architecture | Janne Mattila        |
+| 02.06.2021 | 1.6     | Backup encryption related updates                      | Andres Allkivi       |
+| 07.09.2021 | 1.7     | Update technologies                                    | Ilkka Seppälä        |
+| 26.09.2022 | 1.8     | Remove Ubuntu 18.04 support                            | Andres Rosenthal     |
+| 08.06.2023 | 1.9     | Central Server technologies update                     | Justas Samuolis      |
+| 05.10.2023 | 1.10    | Update to Java 17                                      | Justas Samuolis      |
+| 04.10.2023 | 1.11    | Remove Akka references                                 | Ričardas Bučiūnas    |
+| 20.11.2023 | 1.12    | Update version references                              | Ričardas Bučiūnas    |
+| 19.12.2023 | 1.13    | Added RHEL 9                                           | Justas Samuolis      |
+| 17.07.2024 | 1.14    | Update to Java 21                                      | Ovidijus Narkevičius |
+| 25.02.2026 | 1.15    | Update PostgreSQL to version 15 on RHEL                 | Ričardas Bučiūnas    |
+ 
 ## Table of Contents
 
 <!-- toc -->
@@ -77,29 +83,28 @@ Table 1. Technology matrix of the X-Road
 
 | **Technology**                     | **Security Server** | **Central Server** | **Configuration proxy** | **Operational Monitoring Daemon** |
 |------------------------------------|:-------------------:|:------------------:|:-----------------------:|:---------------------------------:|
-| Java 11                            |          X          |         X          |            X            |                 X                 |
+| Java 21                            |          X          |         X          |            X            |                 X                 |
 | C                                  |          X          |         X          |                         |                                   |
 | Logback                            |          X          |         X          |            X            |                 X                 |
-| Akka 2                             |          X          |         X          |            X            |                 X                 |
-| Jetty 9                            |  X\[[3](#Ref_3)\]   |  X\[[4](#Ref_4)\]  |                         |                                   |
-| Ubuntu 20.04                       |          X          |         X          |            X            |                 X                 |
+| gRPC                               |          X          |         X          |            X            |                 X                 |
+| Jetty 11                           |  X\[[3](#Ref_3)\]   |  X\[[4](#Ref_4)\]  |                         |                                   |
 | Ubuntu 22.04                       |          X          |         X          |            X            |                 X                 |
-| Red Hat Enterprise Linux 7 (RHEL7) |          X          |                    |                         |                 X                 |
 | Red Hat Enterprise Linux 8 (RHEL8) |          X          |                    |                         |                 X                 |
-| PostgreSQL 9+\[[5](#Ref_5)\]       |          X          |         X          |                         |                 X                 |
+| Red Hat Enterprise Linux 9 (RHEL9) |          X          |                    |                         |                 X                 |
+| PostgreSQL 15+\[[5](#Ref_5)\]      |          X          |         X          |                         |                 X                 |
 | nginx                              |                     |         X          |            X            |                                   |
 | PAM                                |          X          |         X          |                         |                                   |
 | Liquibase 4                        |          X          |         X          |                         |                 X                 |
 | systemd                            |          X          |         X          |            X            |                 X                 |
 | PKCS \#11\[[2](#Ref_2)\]           |          X          |         X          |            X            |                                   |
 | Dropwizard Metrics 4               |          X          |                    |                         |                 X                 |
-| Spring Boot 2                      |          X          |         X          |                         |                                   |
-| Vue.js 2                           |          X          |         X          |                         |                                   |
+| Spring Boot 3                      |          X          |         X          |                         |                                   |
+| Vue.js 3                           |          X          |         X          |                         |                                   |
 | Npm 8                              |          X          |         X          |                         |                                   |
-| Node 16                            |          X          |         X          |                         |                                   |
+| Node 18                            |          X          |         X          |                         |                                   |
 | Typescript                         |          X          |         X          |                         |                                   |
 | OpenAPI 3                          |          X          |         X          |                         |                                   |
-| Embedded Tomcat 9                  |          X          |         X          |                         |                                   |
+| Embedded Tomcat 10                 |          X          |         X          |                         |                                   |
 | GNU Privacy Guard                  |          X          |         X          |                         |                                   |
 
 See [[ARC-G]](#ARC-G) for general X-Road architecture details.
@@ -114,7 +119,7 @@ See [[ARC-G]](#ARC-G) for general X-Road architecture details.
 \[4\] Central Server uses embedded Jetty for management service and registration service.
 
 <a id="Ref_5" class="anchor"></a>
-\[5\] PostgreSQL version varies depending on operating system. By default, RHEL7 uses version 9, RHEL8 - 10, Ubuntu 20.04 - 12, Ubuntu 22.04 - 14. User may also use external PostgreSQL server. 
+\[5\] Minimum supported PostgreSQL version is 15. By default, RHEL8 and RHEL9 use version 15, Ubuntu 22.04 - 14 (must be upgraded to 15+). User may also use external PostgreSQL server.
 
 ## 3 Central Server technologies
 
@@ -125,19 +130,19 @@ Table 2. Technology matrix of the Central Server
 
 | **Technology**                | **Signer** | **Password Store** | **Management/Registration Service** | **Database** | **User Interface** | **Rest API** | **Backend Scripts** | **Configuration Client** |
 |-------------------------------|:----------:|:------------------:|:-----------------------------------:|:------------:|:------------------:|:------------:|:-------------------:|:------------------------:|
-| Java 11                       |     X      |                    |                  X                  |              |                    |      X       |                     |            X             |
+| Java 21                       |     X      |                    |                  X                  |              |                    |      X       |                     |            X             |
 | C                             |            |         X          |                                     |              |                    |              |                     |                          |
 | Logback                       |     X      |                    |                  X                  |              |                    |      X       |                     |            X             |
-| Akka 2                        |     X      |                    |                                     |              |                    |      X       |                     |                          |
-| Embedded Jetty 9              |            |                    |                  X                  |              |                    |              |                     |                          |
-| Embedded Tomcat 9             |            |                    |                                     |              |                    |      X       |                     |                          |
-| Spring Boot 2                 |            |                    |                  X                  |              |                    |      X       |                     |                          |
-| Vue.js 2                      |            |                    |                                     |              |         X          |              |                     |                          |
+| gRPC                          |     X      |                    |                                     |              |                    |      X       |                     |                          |
+| Embedded Jetty 11             |            |                    |                  X                  |              |                    |              |                     |                          |
+| Embedded Tomcat 10            |            |                    |                                     |              |                    |      X       |                     |                          |
+| Spring Boot 3                 |            |                    |                  X                  |              |                    |      X       |                     |                          |
+| Vue.js 3                      |            |                    |                                     |              |         X          |              |                     |                          |
 | Npm 8                         |            |                    |                                     |              |         X          |              |                     |                          |
-| Node 16                       |            |                    |                                     |              |         X          |              |                     |                          |
+| Node 18                       |            |                    |                                     |              |         X          |              |                     |                          |
 | Typescript                    |            |                    |                                     |              |         X          |              |                     |                          |
 | OpenAPI 3                     |            |                    |                  X                  |              |         X          |      X       |                     |                          |
-| PostgreSQL 12+\[[3](#Ref_3)\] |            |                    |                                     |      X       |                    |      X       |          X          |                          |
+| PostgreSQL 15+\[[3](#Ref_3)\] |            |                    |                                     |      X       |                    |      X       |          X          |                          |
 | nginx                         |            |                    |                  X                  |              |                    |              |                     |                          |
 | PAM                           |            |                    |                                     |              |                    |      X       |                     |                          |
 | Liquibase 4                   |            |                    |                                     |      X       |                    |              |                     |                          |
@@ -149,7 +154,7 @@ Table 2. Technology matrix of the Central Server
 \[2\] The use of hardware cryptographic devices requires that a PKCS \#11 driver is installed and configured in the system.
 
 <a id="Ref_3" class="anchor"></a>
-\[3\] PostgreSQL version varies depending on operating system. By default, Ubuntu 20.04 uses 12, Ubuntu 22.04 - 14. User may also use external PostgreSQL server.
+\[3\] Minimum supported PostgreSQL version is 15. By default, Ubuntu 22.04 ships version 14 (must be upgraded to 15+). User may also use external PostgreSQL server.
 
 See [[ARC-CS]](#ARC-CS) for the Central Server details.
 
@@ -162,9 +167,9 @@ Table 3. Technology matrix of the configuration proxy
 
 | **Technology**           | **Web Server** | **Configuration Processor** | **Signer** | **Configuration Client** |
 |--------------------------|:--------------:|:---------------------------:|:----------:|:------------------------:|
-| Java 11                  |                |              X              |     X      |            X             |
+| Java 21                  |                |              X              |     X      |            X             |
 | Logback                  |                |              X              |     X      |            X             |
-| Akka 2                   |                |              X              |     X      |                          |
+| gRPC                     |                |              X              |     X      |                          |
 | nginx                    |       X        |                             |            |                          |
 | systemd                  |       X        |              X              |     X      |            X             |
 | PKCS \#11\[[2](#Ref_2)\] |                |                             |     X      |                          |
@@ -181,34 +186,34 @@ See [[ARC-CP]](#ARC-CP) for the configuration proxy details.
 <a id="Ref_Technology_matrix_of_the_security_server" class="anchor"></a>
 Table 4. Technology matrix of the Security Server
 
-| **Technology**               | **Signer** | **Proxy** | **Password Store** | **Message Log** | **Metadata Services** | **Database** | **Configuration Client** | **User Interface frontend** | **REST API** | **Monitor** | **Environmental Monitoring Service** | **Operational Monitoring Buffer** | **Operational Monitoring Services** |
-|------------------------------|:----------:|:---------:|:------------------:|:---------------:|:---------------------:|:------------:|:------------------------:|:---------------------------:|:------------:|:-----------:|:------------------------------------:|:---------------------------------:|:-----------------------------------:|
-| Java 11                      |     X      |     X     |                    |        X        |           X           |              |            X             |                             |      X       |      X      |                  X                   |                 X                 |                  X                  |
-| C                            |            |           |         X          |                 |                       |              |                          |                             |              |             |                                      |                                   |                                     |
-| Logback                      |     X      |     X     |                    |        X        |           X           |              |            X             |                             |      X       |             |                  X                   |                 X                 |                  X                  |
-| Akka 2                       |     X      |     X     |                    |        X        |                       |              |                          |                             |      X       |      X      |                  X                   |                 X                 |                                     |
-| Embedded Jetty 9             |            |     X     |                    |                 |                       |              |                          |                             |              |             |                                      |                                   |                                     |
-| Javascript                   |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
-| PostgreSQL 9+\[[3](#Ref_3)\] |            |           |                    |                 |                       |      X       |                          |                             |      X       |             |                                      |                                   |                                     |
-| PAM                          |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
-| Liquibase 4                  |            |           |                    |                 |                       |      X       |                          |                             |              |             |                                      |                                   |                                     |
-| systemd                      |     X      |     X     |                    |                 |                       |              |            X             |                             |      X       |             |                                      |                                   |                                     |
-| PKCS \#11\[[2](#Ref_2)\]     |     X      |           |                    |                 |                       |              |                          |                             |              |             |                                      |                                   |                                     |
-| Dropwizard Metrics 4         |            |           |                    |                 |                       |              |                          |                             |              |      X      |                                      |                                   |                                     |
-| Spring Boot 2                |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
-| Vue.js 2                     |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
-| Npm 6                        |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
-| Node 12                      |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
-| Typescript                   |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
-| OpenAPI 3                    |            |           |                    |                 |                       |              |                          |              X              |      X       |             |                                      |                                   |                                     |
-| Embedded Tomcat 9            |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
-| GNU Privacy Guard            |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
+| **Technology**                | **Signer** | **Proxy** | **Password Store** | **Message Log** | **Metadata Services** | **Database** | **Configuration Client** | **User Interface frontend** | **REST API** | **Monitor** | **Environmental Monitoring Service** | **Operational Monitoring Buffer** | **Operational Monitoring Services** |
+|-------------------------------|:----------:|:---------:|:------------------:|:---------------:|:---------------------:|:------------:|:------------------------:|:---------------------------:|:------------:|:-----------:|:------------------------------------:|:---------------------------------:|:-----------------------------------:|
+| Java 21                       |     X      |     X     |                    |        X        |           X           |              |            X             |                             |      X       |      X      |                  X                   |                 X                 |                  X                  |
+| C                             |            |           |         X          |                 |                       |              |                          |                             |              |             |                                      |                                   |                                     |
+| Logback                       |     X      |     X     |                    |        X        |           X           |              |            X             |                             |      X       |             |                  X                   |                 X                 |                  X                  |
+| gRPC                          |     X      |     X     |                    |        X        |                       |              |                          |                             |      X       |      X      |                  X                   |                 X                 |                                     |
+| Embedded Jetty 9              |            |     X     |                    |                 |                       |              |                          |                             |              |             |                                      |                                   |                                     |
+| Javascript                    |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
+| PostgreSQL 15+\[[3](#Ref_3)\] |            |           |                    |                 |                       |      X       |                          |                             |      X       |             |                                      |                                   |                                     |
+| PAM                           |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
+| Liquibase 4                   |            |           |                    |                 |                       |      X       |                          |                             |              |             |                                      |                                   |                                     |
+| systemd                       |     X      |     X     |                    |                 |                       |              |            X             |                             |      X       |             |                                      |                                   |                                     |
+| PKCS \#11\[[2](#Ref_2)\]      |     X      |           |                    |                 |                       |              |                          |                             |              |             |                                      |                                   |                                     |
+| Dropwizard Metrics 4          |            |           |                    |                 |                       |              |                          |                             |              |      X      |                                      |                                   |                                     |
+| Spring Boot 3                 |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
+| Vue.js 3                      |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
+| Npm 8                         |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
+| Node 18                       |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
+| Typescript                    |            |           |                    |                 |                       |              |                          |              X              |              |             |                                      |                                   |                                     |
+| OpenAPI 3                     |            |           |                    |                 |                       |              |                          |              X              |      X       |             |                                      |                                   |                                     |
+| Embedded Tomcat 10            |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
+| GNU Privacy Guard             |            |           |                    |                 |                       |              |                          |                             |      X       |             |                                      |                                   |                                     |
 
 <a id="Ref_2" class="anchor"></a>
 \[2\] The use of hardware cryptographic devices requires that a PKCS \#11 driver is installed and configured in the system.
 
 <a id="Ref_3" class="anchor"></a>
-\[3\] PostgreSQL version varies depending on operating system. By default, RHEL7 uses version 9, RHEL8 - 10, Ubuntu 20.04 - 12, Ubuntu 22.04 - 14. User may also use external PostgreSQL server.
+\[3\] Minimum supported PostgreSQL version is 15. By default, RHEL8 and RHEL9 use version 15, Ubuntu 22.04 - 14 (must be upgraded to 15+). User may also use external PostgreSQL server.
 
 See [[ARC-SS]](#ARC-SS) for the Security Server details.
 
@@ -220,18 +225,18 @@ Note: OP-monitoring daemon is an additional component of the X-Road.
 <a id="Ref_Technology_matrix_of_the_operational_monitoring_daemon" class="anchor"></a>
 Table 5. Technology matrix of the operational monitoring daemon
 
-| Technology                   | Op. Mon.<br/>Daemon Main | Op. Mon.<br/>Database | Op. Mon.<br/>Service | Configuration<br/>Client |
-|:-----------------------------|:------------------------:|:---------------------:|:--------------------:|:------------------------:|
-| Java 11                      |            X             |           X           |          X           |            X             |
-| Logback                      |            X             |           X           |          X           |            X             |
-| Akka 2                       |            X             |           X           |                      |                          |
-| PostgreSQL 9+\[[1](#Ref_1)\] |            X             |           X           |                      |                          |
-| Liquibase 3                  |            X             |           X           |                      |                          |
-| Dropwizard Metrics 4         |            X             |           X           |                      |                          |
-| systemd                      |            X             |                       |                      |            X             |
+| Technology                    | Op. Mon.<br/>Daemon Main | Op. Mon.<br/>Database | Op. Mon.<br/>Service | Configuration<br/>Client |
+|:------------------------------|:------------------------:|:---------------------:|:--------------------:|:------------------------:|
+| Java 21                       |            X             |           X           |          X           |            X             |
+| Logback                       |            X             |           X           |          X           |            X             |
+| gRPC                          |            X             |           X           |                      |                          |
+| PostgreSQL 15+\[[1](#Ref_1)\] |            X             |           X           |                      |                          |
+| Liquibase 4                   |            X             |           X           |                      |                          |
+| Dropwizard Metrics 4          |            X             |           X           |                      |                          |
+| systemd                       |            X             |                       |                      |            X             |
 
 <a id="Ref_1" class="anchor"></a>
-\[1\] PostgreSQL version varies depending on operating system. By default, RHEL7 uses version 9, RHEL8 - 10, Ubuntu 20.04 - 12, Ubuntu 22.04 - 14. User may also use external PostgreSQL server.
+\[1\] Minimum supported PostgreSQL version is 15. By default, RHEL8 and RHEL9 use version 15, Ubuntu 22.04 - 14 (must be upgraded to 15+). User may also use external PostgreSQL server.
 
 
 See [[ARC-OPMOND]](#ARC-OPMOND) for the operational monitoring daemon details.

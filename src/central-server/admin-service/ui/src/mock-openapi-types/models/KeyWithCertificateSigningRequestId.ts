@@ -1,6 +1,5 @@
 /* istanbul ignore file */
 /* tslint:disable */
-/* eslint-disable */
 
 import type { Key } from './Key';
 
@@ -8,9 +7,9 @@ import type { Key } from './Key';
  * Key and TokenCertificateSigningRequest id
  */
 export type KeyWithCertificateSigningRequestId = {
-    key: Key;
-    /**
-     * CSR id
-     */
-    csr_id: string;
-}
+  key: Key;
+  /**
+   * CSR id
+   */
+  csr_id: string;
+};

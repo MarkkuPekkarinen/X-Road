@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -45,7 +45,7 @@ public class DnFieldTestCertificateProfileInfo implements CertificateProfileInfo
     }
 
     DnFieldTestCertificateProfileInfo(DnFieldDescription description, boolean valid) {
-        this.descriptions = new DnFieldDescription[] {description};
+        this.descriptions = new DnFieldDescription[]{description};
         this.valid = valid;
     }
 
@@ -60,7 +60,7 @@ public class DnFieldTestCertificateProfileInfo implements CertificateProfileInfo
     }
 
     @Override
-    public void validateSubjectField(DnFieldValue field) throws Exception {
+    public void validateSubjectField(DnFieldValue field) {
         if (!valid) {
             throw new RuntimeException("not valid");
         }

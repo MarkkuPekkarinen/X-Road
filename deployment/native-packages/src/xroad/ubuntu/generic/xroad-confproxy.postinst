@@ -1,0 +1,155 @@
+#!/bin/bash
+set -e
+. /usr/share/debconf/confmodule
+
+. /usr/share/xroad/scripts/write_tls_config.sh
+
+log () { echo >&2 "$@"; }
+
+abort() {
+  local rc=$?
+  echo "xroad-confproxy: FATAL: $*" >&2
+  exit $((rc == 0 ? 1 : rc))
+}
+
+handle_error() {
+  ERR=$1
+  db_reset xroad-common/cert-generation-retry
+  db_reset xroad-common/cert-generation-error
+  db_subst xroad-common/cert-generation-error ERR "$(printf %s "$ERR" | debconf-escape -e)"
+  db_beginblock
+  db_input critical xroad-common/cert-generation-error || true
+  db_input critical xroad-common/cert-generation-retry || true
+  db_endblock
+  db_go
+
+  db_get xroad-common/cert-generation-retry
+  if [ "$RET" = false ]; then
+    exit 1
+  fi
+
+  echo "Retrying certificate generation"
+}
+
+prompt_tls_identity() {
+  local host alt list i
+  host=$(hostname -f)
+  if ((${#host} > 64)); then
+    host="$(hostname -s)"
+  fi
+
+  list=
+  for i in $(ip addr | grep 'scope global' | tr '/' ' ' | awk '{print $2}'); do list+="IP:$i,"; done
+  alt="${list}DNS:$(hostname -f),DNS:$(hostname -s)"
+
+  db_subst xroad-common/confproxy-subject HOST "$host"
+  db_subst xroad-common/confproxy-altsubject ALT "$alt"
+
+  db_get xroad-common/confproxy-subject
+  [ -z "$RET" ] && db_set xroad-common/confproxy-subject "/CN=$host"
+  db_get xroad-common/confproxy-altsubject
+  [ -z "$RET" ] && db_set xroad-common/confproxy-altsubject "$alt"
+
+  db_beginblock
+  db_input critical xroad-common/confproxy-subject || true
+  db_input critical xroad-common/confproxy-altsubject || true
+  db_endblock
+  db_go
+
+  db_get xroad-common/confproxy-subject
+  TLS_SUBJECT="$RET"
+  db_get xroad-common/confproxy-altsubject
+  TLS_ALT_NAMES="$RET"
+}
+
+create_conf_proxy_certificate() {
+  local need_certificate=false
+  if [[ ! -r /etc/xroad/ssl/confproxy.crt || ! -r /etc/xroad/ssl/confproxy.key || ! -r /etc/xroad/ssl/confproxy.p12 ]]; then
+    need_certificate=true
+  fi
+
+  while :; do
+    prompt_tls_identity
+    if [[ -z "$TLS_SUBJECT" || -z "$TLS_ALT_NAMES" ]]; then
+      handle_error "Subject or subject alternative names empty"
+      continue
+    fi
+
+    if [[ "$need_certificate" == true ]]; then
+      echo "generating new global configuration TLS key self-signed-certificate with $TLS_SUBJECT and $TLS_ALT_NAMES"
+      if ! /usr/share/xroad/scripts/generate_certificate.sh -n confproxy -s "${TLS_SUBJECT}" -a "${TLS_ALT_NAMES}" -p 2>/tmp/cert.err; then
+        ERR=$(</tmp/cert.err)
+        rm -f /tmp/cert.err
+        handle_error "$ERR"
+        db_fset xroad-common/confproxy-subject seen false
+        db_fset xroad-common/confproxy-altsubject seen false
+        continue
+      fi
+    fi
+
+    break
+  done
+}
+
+store_tls_identity() {
+  local mode=""
+  if [[ "${DEBCONF_RECONFIGURE:-}" == "1" || "${1:-}" == "reconfigure" ]]; then
+    mode="reconfigure"
+  fi
+
+  write_tls_identity_rows configuration-proxy "$TLS_SUBJECT" "$TLS_ALT_NAMES" "$mode" \
+    || abort "Failed to store configuration-proxy TLS identity. ABORTING."
+}
+
+configure_db() {
+  RET=
+  db_get xroad-common/database-host || RET=""
+  db_stop
+
+  /usr/share/xroad/scripts/setup_confproxy_db.sh "$RET"
+}
+
+case "$1" in
+  configure | reconfigure)
+    create_conf_proxy_certificate
+
+    mkdir -p /var/lib/xroad/public
+    chmod 755 /var/lib/xroad/public
+    chown xroad:xroad /var/lib/xroad/public
+
+    mkdir -p /etc/xroad/confproxy
+    chmod 755 /etc/xroad/confproxy
+    chown xroad:xroad /etc/xroad/confproxy
+
+    # replace configuration property signature-algorithm-id with signature-digest-algorithm-id
+    local_ini=/etc/xroad/conf.d/local.ini
+    if [[ -f ${local_ini} && $(crudini --get ${local_ini} configuration-proxy signature-algorithm-id 2>/dev/null) ]]; then
+      signature_algorithm_id=$(crudini --get ${local_ini} configuration-proxy signature-algorithm-id)
+      crudini --del ${local_ini} configuration-proxy signature-algorithm-id
+      case "$signature_algorithm_id" in
+        SHA512*) crudini --set ${local_ini} configuration-proxy signature-digest-algorithm-id SHA-512 ;;
+        SHA384*) crudini --set ${local_ini} configuration-proxy signature-digest-algorithm-id SHA-384 ;;
+        SHA256*) crudini --set ${local_ini} configuration-proxy signature-digest-algorithm-id SHA-256 ;;
+        SHA1*) crudini --set ${local_ini} configuration-proxy signature-digest-algorithm-id SHA-1 ;;
+      esac
+    fi
+
+    configure_db
+    store_tls_identity "$1"
+
+    invoke-rc.d --quiet rsyslog try-restart || true
+    invoke-rc.d --quiet nginx try-restart || true
+    invoke-rc.d --quiet xroad-signer try-restart || true
+    ;;
+
+  abort-upgrade | abort-remove | abort-deconfigure) ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

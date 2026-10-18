@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,16 +25,15 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
+import org.niis.xroad.common.exception.BadRequestException;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_INVALID_DISTINGUISHED_NAME;
+import static org.niis.xroad.common.core.exception.ErrorCode.INVALID_DISTINGUISHED_NAME;
 
 /**
  * Thrown when given DistinguishedName is invalid
  */
-public class InvalidDistinguishedNameException extends ServiceException {
+public class InvalidDistinguishedNameException extends BadRequestException {
     public InvalidDistinguishedNameException(Throwable t) {
-        super(t, new ErrorDeviation(ERROR_INVALID_DISTINGUISHED_NAME));
+        super(t, INVALID_DISTINGUISHED_NAME.build());
     }
 }

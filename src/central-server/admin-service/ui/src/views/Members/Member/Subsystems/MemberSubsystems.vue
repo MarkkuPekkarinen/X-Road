@@ -25,179 +25,232 @@
    THE SOFTWARE.
  -->
 <template>
-  <main>
-    <v-card class="mt-8" flat>
-      <div class="card-corner-button pt-4 pr-4">
-        <xrd-button
-          v-if="allowMemberSubsystemAdd"
-          outlined
-          data-test="add-subsystem"
-          @click="showAddSubsystemDialog = true"
-        >
-          <xrd-icon-base class="xrd-large-button-icon">
-            <xrd-icon-add />
-          </xrd-icon-base>
-          {{ $t('members.member.subsystems.addClient') }}
-        </xrd-button>
-      </div>
-
-      <!-- Table -->
-      <v-data-table
-        :loading="loading"
-        :headers="headers"
-        :items="subsystems"
-        :must-sort="true"
-        :items-per-page="-1"
-        class="elevation-0 data-table"
-        item-key="id"
-        :loader-height="2"
-        hide-default-footer
-        data-test="subsystems-table"
-      >
-        <template #body="{ items }">
-          <tbody v-for="(item, index) in items" :key="index">
-            <tr v-if="item.used_security_servers.length === 0">
-              <td class="unregistered-subsystem">
-                {{ item.subsystem_id.subsystem_code }}
-              </td>
-              <td class="unregistered-subsystem" />
-              <td class="unregistered-subsystem" />
-              <td class="status unregistered-subsystem">
-                <xrd-icon-base>
-                  <XrdIconError />
-                </xrd-icon-base>
-                {{ getStatusText(undefined) }}
-              </td>
-              <td class="subsystem-actions unregistered-subsystem">
-                <div>
-                  <xrd-button
-                    v-if="allowMemberSubsystemDelete"
-                    text
-                    :outlined="false"
-                    data-test="delete-subsystem"
-                    @click="deleteClicked(item)"
-                  >
-                    {{ $t('action.delete') }}
-                  </xrd-button>
-                </div>
-              </td>
-            </tr>
-            <tr
-              v-for="(subitem, iSub) in item.used_security_servers"
-              :key="`${item.subsystem_id.subsystem_code}:${subitem.server_code}`"
+  <XrdSubView>
+    <template #header>
+      <XrdBtn
+        v-if="allowMemberSubsystemAdd"
+        prepend-icon="add_circle"
+        data-test="add-subsystem"
+        class="ml-auto"
+        text="members.member.subsystems.addClient"
+        @click="showAddSubsystemDialog = true"
+      />
+    </template>
+    <v-table :loading="loading" class="xrd bg-surface-container xrd-rounded-12 border subsystems-table" data-test="subsystems-table">
+      <thead>
+        <tr>
+          <th>
+            {{ `${$t('members.member.subsystems.subsystemcode')} (${subsystems.length})` }}
+          </th>
+          <th>{{ $t('members.member.subsystems.subsystemname') }}</th>
+          <th>{{ $t('members.member.subsystems.servercode') }}</th>
+          <th>{{ $t('members.member.subsystems.serverOwner') }}</th>
+          <th>{{ $t('members.member.subsystems.status') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template v-for="(item, index) in subsystems" :key="index">
+          <tr v-if="item.used_security_servers.length === 0" class="bg-unregistered">
+            <td class="unregistered-subsystem">
+              <XrdLabelWithIcon
+                data-test="subsystem-code"
+                class="opacity-60"
+                icon="folder_copy"
+                color="on-surface"
+                :label="item.subsystem_id.subsystem_code"
+              />
+            </td>
+            <td class="unregistered-subsystem">
+              {{ item.subsystem_name }}
+              <rename-subsystem-btn v-if="allowMemberSubsystemRename" :subsystem-name="item.subsystem_name" @click="renameClicked(item)" />
+            </td>
+            <td class="unregistered-subsystem" />
+            <td class="unregistered-subsystem" />
+            <td class="status unregistered-subsystem">
+              <v-chip
+                class="xrd opacity-60 font-weight-medium"
+                prepend-icon="cancel__filled"
+                color="primary"
+                variant="outlined"
+                size="small"
+                :text="$t('securityServers.unregistered')"
+              />
+            </td>
+            <td class="subsystem-actions unregistered-subsystem">
+              <div>
+                <XrdBtn
+                  v-if="allowMemberSubsystemDelete"
+                  data-test="delete-subsystem"
+                  variant="text"
+                  color="tertiary"
+                  text="action.delete"
+                  @click="deleteClicked(item)"
+                />
+              </div>
+            </td>
+          </tr>
+          <tr v-for="(subitem, iSub) in item.used_security_servers" :key="`${item.subsystem_id.subsystem_code}:${subitem.server_code}`">
+            <td
+              :class="{
+                'border-0': item.used_security_servers.length - 1 > iSub,
+              }"
             >
-              <td
+              <XrdLabelWithIcon
                 v-if="iSub === 0"
-                :rowspan="item.used_security_servers.length"
+                data-test="subsystem-code"
+                icon="folder_copy"
+                color="on-surface"
+                :label="item.subsystem_id.subsystem_code"
+              />
+            </td>
+            <td
+              :class="{
+                'border-0': item.used_security_servers.length - 1 > iSub,
+              }"
+            >
+              <span v-if="iSub === 0">
+                {{ item.subsystem_name }}
+                <rename-subsystem-btn
+                  v-if="allowMemberSubsystemRename"
+                  :subsystem-name="item.subsystem_name"
+                  @click="renameClicked(item)"
+                />
+              </span>
+            </td>
+            <td class="text-primary font-weight-medium">
+              {{ subitem.server_code }}
+            </td>
+            <td class="text-primary font-weight-medium">
+              {{ subitem.server_owner }}
+            </td>
+            <td class="status">
+              <v-chip
+                v-if="subitem.status === 'APPROVED'"
+                class="xrd font-weight-medium"
+                color="success-container"
+                variant="flat"
+                size="small"
+                :text="$t('securityServers.registered')"
               >
-                {{ item.subsystem_id.subsystem_code }}
-              </td>
-              <td class="xrd-clickable">{{ subitem.server_code }}</td>
-              <td class="xrd-clickable">{{ subitem.server_owner }}</td>
-              <td class="status">
-                <xrd-icon-base>
-                  <XrdIconChecked
-                    v-if="subitem.status === 'APPROVED'"
-                    :color="colors.Success100"
-                  />
-                  <XrdIconInProgress
-                    v-if="
-                      subitem.status === 'WAITING' ||
-                      subitem.status === 'SUBMITTED FOR APPROVAL'
-                    "
-                    :color="colors.Success100"
-                  />
-                  <XrdIconError v-if="subitem.status === undefined" />
-                </xrd-icon-base>
-                {{ getStatusText(subitem.status) }}
-              </td>
-              <td class="subsystem-actions">
-                <div>
-                  <xrd-button
-                    v-if="
-                      subitem.status === 'APPROVED' &&
-                      allowToUnregisterMemberSubsystem
-                    "
-                    text
-                    :outlined="false"
-                    @click="unregisterClicked(item, subitem)"
-                  >
-                    {{ $t('action.unregister') }}
-                  </xrd-button>
+                <template #prepend>
+                  <v-icon class="status-icon filled" icon="check_circle" color="success" />
+                </template>
+              </v-chip>
+              <v-chip
+                v-if="subitem.status === 'WAITING' || subitem.status === 'SUBMITTED FOR APPROVAL'"
+                class="xrd font-weight-medium"
+                color="warning-container"
+                variant="flat"
+                size="small"
+                :text="$t('securityServers.pending')"
+              >
+                <template #prepend>
+                  <v-icon class="status-icon" icon="warning" color="warning" filled />
+                </template>
+              </v-chip>
+              <v-chip
+                v-if="subitem.status === 'DISABLED'"
+                class="xrd font-weight-medium"
+                color="warning-container"
+                variant="flat"
+                size="small"
+                :text="$t('securityServers.disabled')"
+              >
+                <template #prepend>
+                  <v-icon class="status-icon" icon="cancel" color="warning" filled />
+                </template>
+              </v-chip>
+              <v-chip
+                v-if="subitem.status === undefined"
+                class="xrd font-weight-medium"
+                color="error-container"
+                variant="flat"
+                size="small"
+                :text="$t('securityServers.unregistered')"
+              >
+                <template #prepend>
+                  <v-icon class="status-icon" icon="error" color="error" filled />
+                </template>
+              </v-chip>
+            </td>
+            <td class="subsystem-actions">
+              <div>
+                <XrdBtn
+                  v-if="(subitem.status === 'APPROVED' || subitem.status === 'DISABLED') && allowToUnregisterMemberSubsystem"
+                  variant="text"
+                  color="tertiary"
+                  text="action.unregister"
+                  @click="unregisterClicked(item, subitem)"
+                />
 
-                  <xrd-button
-                    v-if="subitem.status === 'WAITING'"
-                    text
-                    :outlined="false"
-                  >
-                    {{ $t('action.approve') }}
-                  </xrd-button>
+                <XrdBtn v-if="subitem.status === 'WAITING'" variant="text" color="tertiary" text="action.approve" />
 
-                  <xrd-button
-                    v-if="subitem.status === 'WAITING'"
-                    text
-                    :outlined="false"
-                  >
-                    {{ $t('action.decline') }}
-                  </xrd-button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
+                <XrdBtn v-if="subitem.status === 'WAITING'" variant="text" color="tertiary" text="action.decline" />
+              </div>
+            </td>
+          </tr>
         </template>
-        <template #footer>
-          <div class="custom-footer"></div>
-        </template>
-      </v-data-table>
+      </tbody>
+    </v-table>
+    <add-member-subsystem-dialog
+      v-if="memberStore.current && showAddSubsystemDialog"
+      :member="memberStore.current"
+      data-test="add-member-to-group"
+      @cancel="cancel"
+      @save="addedSubsystem"
+    />
 
-      <AddMemberSubsystemDialog
-        v-if="showAddSubsystemDialog"
-        :show-dialog="showAddSubsystemDialog"
-        :member="memberStore.currentMember"
-        data-test="add-member-to-group"
-        @cancel="cancel"
-        @addedSubsystem="addedSubsystem"
-      ></AddMemberSubsystemDialog>
+    <rename-member-subsystem-dialog
+      v-if="memberStore.current && clickedSubsystemCode && showRenameDialog"
+      :member="memberStore.current"
+      :subsystem-code="clickedSubsystemCode"
+      :subsystem-name="clickedSubsystemName"
+      data-test="rename-subsystem"
+      @cancel="cancel"
+      @save="renamedSubsystem"
+    />
 
-      <DeleteMemberSubsystemDialog
-        v-if="showDeleteDialog"
-        :show-dialog="showDeleteDialog"
-        :subsystem-code="clickedSubsystemCode"
-        data-test="delete-subsystem"
-        @cancel="cancel"
-        @deletedSubsystem="deletedSubsystem"
-      ></DeleteMemberSubsystemDialog>
+    <delete-member-subsystem-dialog
+      v-if="memberStore.current && clickedSubsystemCode && showDeleteDialog"
+      :member="memberStore.current"
+      :subsystem-code="clickedSubsystemCode"
+      data-test="delete-subsystem"
+      @cancel="cancel"
+      @delete="deletedSubsystem"
+    />
 
-      <UnregisterMemberSubsystemDialog
-        v-if="showUnregisterDialog"
-        :show-dialog="showUnregisterDialog"
-        :subsystem-code="clickedSubsystemCode"
-        :server-code="clickedServerCode"
-        data-test="unregister-subsystem"
-        @cancel="cancel"
-        @unregisteredSubsystem="unregisteredSubsystem"
-      ></UnregisterMemberSubsystemDialog>
-    </v-card>
-  </main>
+    <unregister-member-subsystem-dialog
+      v-if="memberStore.current && clickedSubsystemCode && clickedServer && showUnregisterDialog"
+      :member="memberStore.current"
+      :server-id="clickedServer.encoded_id!"
+      :subsystem-code="clickedSubsystemCode"
+      :server-code="clickedServer.server_code!"
+      data-test="unregister-subsystem"
+      @cancel="cancel"
+      @unregistered-subsystem="unregisteredSubsystem"
+    />
+  </XrdSubView>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { DataTableHeader } from 'vuetify';
-import { Colors, Permissions } from '@/global';
+import { defineComponent } from 'vue';
+
 import { mapActions, mapState, mapStores } from 'pinia';
-import { userStore } from '@/store/modules/user';
-import { memberStore } from '@/store/modules/members';
-import { subsystemStore } from '@/store/modules/subsystems';
-import { notificationsStore } from '@/store/modules/notifications';
+
+import { useNotifications, XrdBtn, XrdLabelWithIcon, XrdSubView } from '@niis/shared-ui';
+
+import { Permissions } from '@/global';
+import { Subsystem, UsedSecurityServers } from '@/openapi-types';
+import { useMember } from '@/store/modules/members';
+import { useSubsystem } from '@/store/modules/subsystems';
+import { useUser } from '@/store/modules/user';
+
+import RenameSubsystemBtn from './RenameSubsystemBtn.vue';
 import AddMemberSubsystemDialog from '@/views/Members/Member/Subsystems/AddMemberSubsystemDialog.vue';
 import DeleteMemberSubsystemDialog from '@/views/Members/Member/Subsystems/DeleteMemberSubsystemDialog.vue';
+import RenameMemberSubsystemDialog from '@/views/Members/Member/Subsystems/RenameMemberSubsystemDialog.vue';
 import UnregisterMemberSubsystemDialog from '@/views/Members/Member/Subsystems/UnregisterMemberSubsystemDialog.vue';
-import {
-  ManagementRequestStatus,
-  Subsystem,
-  UsedSecurityServers,
-} from '@/openapi-types';
 
 // To provide the Vue instance to debounce
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -206,25 +259,33 @@ let that: any;
 /**
  * Component for Member Subsystem
  */
-export default Vue.extend({
+export default defineComponent({
   name: 'MemberSubsystems',
   components: {
+    RenameSubsystemBtn,
+    RenameMemberSubsystemDialog,
     DeleteMemberSubsystemDialog,
     AddMemberSubsystemDialog,
     UnregisterMemberSubsystemDialog,
+    XrdSubView,
+    XrdBtn,
+    XrdLabelWithIcon,
   },
   props: {
-    memberid: {
+    memberId: {
       type: String,
       required: true,
     },
   },
+  setup() {
+    const { addError } = useNotifications();
+    return { addError };
+  },
   data() {
     return {
-      colors: Colors,
-
       showAddSubsystemDialog: false,
       showDeleteDialog: false,
+      showRenameDialog: false,
       showUnregisterDialog: false,
 
       loading: false,
@@ -233,87 +294,54 @@ export default Vue.extend({
       subsystems: [] as Subsystem[],
 
       clickedSubsystemCode: '',
-      clickedServerCode: '',
+      clickedSubsystemName: '',
+      clickedServer: null as UsedSecurityServers | null,
     };
   },
   computed: {
-    ...mapState(userStore, ['hasPermission']),
-    ...mapStores(memberStore, subsystemStore),
-    headers(): DataTableHeader[] {
-      return [
-        {
-          text:
-            (this.$t('members.member.subsystems.subsystemcode') as string) +
-            ' (' +
-            this.subsystems.length +
-            ')',
-          align: 'start',
-          value: 'subsystem_id.subsystem_code',
-          class: 'xrd-table-header subsystems-table-header-code',
-        },
-        {
-          text: this.$t('members.member.subsystems.servercode') as string,
-          align: 'start',
-          value: 'usedSecurityServers[0].server_code',
-          class: 'xrd-table-header subsystems-table-header-server-code',
-        },
-        {
-          text: this.$t('members.member.subsystems.serverOwner') as string,
-          align: 'start',
-          value: 'usedSecurityServers[0].server_owner',
-          class: 'xrd-table-header subsystems-table-header-server-owner',
-        },
-        {
-          text: this.$t('members.member.subsystems.status') as string,
-          align: 'start',
-          value: 'usedSecurityServers[0].status',
-          class: 'xrd-table-header subsystems-table-header-status',
-        },
-        {
-          text: '',
-          value: 'button',
-          sortable: false,
-          class: 'xrd-table-header subsystems-table-header-buttons',
-        },
-      ];
-    },
+    ...mapState(useUser, ['hasPermission']),
+    ...mapStores(useMember, useSubsystem),
     allowMemberSubsystemAdd(): boolean {
       return this.hasPermission(Permissions.ADD_MEMBER_SUBSYSTEM);
     },
     allowMemberSubsystemDelete(): boolean {
       return this.hasPermission(Permissions.REMOVE_MEMBER_SUBSYSTEM);
     },
+    allowMemberSubsystemRename(): boolean {
+      return this.hasPermission(Permissions.EDIT_MEMBER_SUBSYSTEM);
+    },
     allowToUnregisterMemberSubsystem(): boolean {
       return this.hasPermission(Permissions.UNREGISTER_SUBSYSTEM);
     },
   },
-  created() {
-    that = this;
-
-    this.loading = true;
-    this.subsystemStore
-      .loadByMemberId(this.memberid)
-      .then((resp) => {
-        this.subsystems = resp;
-      })
-      .catch((error) => {
-        this.showError(error);
-      })
-      .finally(() => {
-        this.loading = false;
-      });
+  watch: {
+    memberId: {
+      immediate: true,
+      handler(memberId) {
+        this.loading = true;
+        this.subsystemStore
+          .loadByMemberId(memberId)
+          .then((resp) => {
+            this.subsystems = resp;
+          })
+          .catch((error) => this.addError(error))
+          .finally(() => (this.loading = false));
+      },
+    },
   },
   methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
     deleteClicked(subsystem: Subsystem) {
-      this.clickedSubsystemCode = subsystem.subsystem_id
-        ?.subsystem_code as string;
+      this.clickedSubsystemCode = subsystem.subsystem_id?.subsystem_code as string;
       this.showDeleteDialog = true;
     },
+    renameClicked(subsystem: Subsystem) {
+      this.clickedSubsystemCode = subsystem.subsystem_id?.subsystem_code as string;
+      this.clickedSubsystemName = subsystem.subsystem_name as string;
+      this.showRenameDialog = true;
+    },
     unregisterClicked(subsystem: Subsystem, subitem: UsedSecurityServers) {
-      this.clickedSubsystemCode = subsystem.subsystem_id
-        ?.subsystem_code as string;
-      this.clickedServerCode = subitem.server_code as string;
+      this.clickedSubsystemCode = subsystem.subsystem_id?.subsystem_code as string;
+      this.clickedServer = subitem;
       this.showUnregisterDialog = true;
     },
     addedSubsystem() {
@@ -325,80 +353,48 @@ export default Vue.extend({
       this.clickedSubsystemCode = '';
       this.refetchSubsystems();
     },
+    renamedSubsystem() {
+      this.showRenameDialog = false;
+      this.clickedSubsystemCode = '';
+      this.clickedSubsystemName = '';
+      this.refetchSubsystems();
+    },
     unregisteredSubsystem() {
       this.showUnregisterDialog = false;
       this.clickedSubsystemCode = '';
-      this.clickedServerCode = '';
+      this.clickedServer = null;
       this.refetchSubsystems();
     },
     cancel() {
       this.showAddSubsystemDialog = false;
+      this.showRenameDialog = false;
       this.showDeleteDialog = false;
       this.showUnregisterDialog = false;
       this.clickedSubsystemCode = '';
-      this.clickedServerCode = '';
+      this.clickedSubsystemName = '';
+      this.clickedServer = null;
     },
     refetchSubsystems() {
       this.loading = true;
 
       this.subsystemStore
-        .loadByMemberId(this.memberid)
+        .loadByMemberId(this.memberId)
         .then((resp) => {
           this.subsystems = resp;
         })
-        .catch((error) => {
-          this.showError(error);
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-    },
-    getStatusText(status: string) {
-      if (status) {
-        switch (status) {
-          case ManagementRequestStatus.APPROVED:
-            return this.$t('securityServers.registered') as string;
-          case ManagementRequestStatus.WAITING:
-          case ManagementRequestStatus.SUBMITTED_FOR_APPROVAL:
-            return this.$t('securityServers.pending') as string;
-        }
-      }
-      return this.$t('securityServers.unregistered') as string;
+        .catch((error) => this.addError(error))
+        .finally(() => (this.loading = false));
     },
   },
 });
 </script>
 
 <style lang="scss" scoped>
-@import '~styles/colors';
-
-.card-corner-button {
-  display: flex;
-  justify-content: flex-end;
+.status-icon {
+  margin: 0 6px 0 -6px;
 }
 
-.status {
-  text-transform: uppercase;
-  font-weight: bold;
-}
-
-.subsystem-actions {
-  text-align: right;
-
-  .xrd-clickable {
-    color: $XRoad-Link;
-    margin-left: 10px;
-  }
-}
-
-.unregistered-subsystem {
-  background-color: $XRoad-WarmGrey30;
-}
-
-.custom-footer {
-  height: 16px;
-}
-tbody tr:last-child td {
-  border-bottom: thin solid rgba(0, 0, 0, 0.12); /* Matches the color of the Vuetify table line */
+.bg-unregistered {
+  background-color: color-mix(in srgb, rgb(var(--v-theme-on-surface-variant)) 8%, transparent) !important;
 }
 </style>

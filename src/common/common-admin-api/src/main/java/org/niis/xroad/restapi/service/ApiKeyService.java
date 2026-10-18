@@ -1,20 +1,20 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,7 +34,11 @@ import org.niis.xroad.restapi.domain.InvalidRoleNameException;
 import org.niis.xroad.restapi.domain.PersistentApiKeyType;
 import org.niis.xroad.restapi.domain.Role;
 import org.niis.xroad.restapi.dto.PlaintextApiKeyDto;
+import org.niis.xroad.restapi.entity.ApiKeyEntity;
+import org.niis.xroad.restapi.mapper.ApiKeyMapper;
 import org.niis.xroad.restapi.repository.ApiKeyRepository;
+import org.niis.xroad.restapi.util.SecurityHelper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,12 +47,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.API_KEY_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.API_KEY_NOT_FOUND;
+import static org.niis.xroad.restapi.auth.PasswordEncoderConfig.API_KEY_ENCODER;
 import static org.niis.xroad.restapi.config.ApiCachingConfiguration.LIST_ALL_KEYS_CACHE;
 
 /**
@@ -61,15 +65,17 @@ import static org.niis.xroad.restapi.config.ApiCachingConfiguration.LIST_ALL_KEY
 @RequiredArgsConstructor
 public class ApiKeyService {
 
+    @Qualifier(API_KEY_ENCODER)
     private final PasswordEncoder passwordEncoder;
     private final ApiKeyRepository apiKeyRepository;
     private final CacheManager cacheManager;
     private final AuditDataHelper auditDataHelper;
+    private final SecurityHelper securityHelper;
+    private final ApiKeyMapper apiKeyMapper;
 
     /**
      * Api keys are created with UUID.randomUUID which uses SecureRandom,
      * which is cryptographically secure.
-     *
      * @return pseudo-random "unique" api key.
      */
     private String createApiKey() {
@@ -78,16 +84,14 @@ public class ApiKeyService {
 
     /**
      * create api key with one role
-     *
      * @throws InvalidRoleNameException if roleNames was empty or contained invalid roles
      */
     public PlaintextApiKeyDto create(String roleName) throws InvalidRoleNameException {
-        return create(Collections.singletonList(roleName));
+        return create(Set.of(roleName));
     }
 
     /**
      * create api key with collection of roles
-     *
      * @return new PersistentApiKeyType that contains the new key in plain text
      * @throws InvalidRoleNameException if roleNames was empty or contained invalid roles
      */
@@ -97,18 +101,40 @@ public class ApiKeyService {
             throw new InvalidRoleNameException("missing roles");
         }
         Set<Role> roles = Role.getForNames(roleNames);
+        verifyUserCanCreateApiKeyForRoles(roles);
         String plainKey = createApiKey();
         String encodedKey = encode(plainKey);
-        PersistentApiKeyType apiKey = new PersistentApiKeyType(encodedKey,
-                Collections.unmodifiableCollection(roles));
+        var apiKey = new ApiKeyEntity(encodedKey, Set.copyOf(roles));
 
-        apiKeyRepository.saveOrUpdate(apiKey);
+        apiKeyRepository.save(apiKey);
         auditLog(apiKey);
 
         return new PlaintextApiKeyDto(apiKey.getId(), plainKey, encodedKey, roles);
     }
 
-    private void auditLog(PersistentApiKeyType apiKey) {
+    private void verifyUserCanUpdateApiKeyRoles(ApiKeyEntity apiKey, Set<Role> roles) {
+        final Set<Role> currentKeyRoles = apiKey.getRoles();
+        for (Role role : roles) {
+            // if the role assigned to api key, it is allowed to leave it
+            if (!currentKeyRoles.contains(role)) {
+                verifyUserCanAssignRole(role);
+            }
+        }
+    }
+
+    private void verifyUserCanAssignRole(Role role) {
+        if (role != Role.XROAD_MANAGEMENT_SERVICE) {
+            securityHelper.verifyAuthority(role.getGrantedAuthorityName());
+        } else {
+            securityHelper.verifyAuthority(Role.XROAD_SYSTEM_ADMINISTRATOR.getGrantedAuthorityName());
+        }
+    }
+
+    private void verifyUserCanCreateApiKeyForRoles(Set<Role> roles) {
+        roles.forEach(this::verifyUserCanAssignRole);
+    }
+
+    private void auditLog(ApiKeyEntity apiKey) {
         auditDataHelper.put(RestApiAuditProperty.API_KEY_ID, apiKey.getId());
         auditDataHelper.put(RestApiAuditProperty.API_KEY_ROLES, apiKey.getRoles());
     }
@@ -120,49 +146,49 @@ public class ApiKeyService {
 
     /**
      * Update api key with one role by key id.
-     *
      * @param id       apiKey id.
      * @param roleName a role name.
-     * @return updated {@link  PersistentApiKeyType} entity.
+     * @return updated {@link  ApiKeyEntity} entity.
      * @throws InvalidRoleNameException              if roleNames was empty or contained invalid roles
      * @throws ApiKeyService.ApiKeyNotFoundException if api key was not found
      */
     public PersistentApiKeyType update(long id, String roleName)
             throws InvalidRoleNameException, ApiKeyService.ApiKeyNotFoundException {
-        return update(id, Collections.singletonList(roleName));
+        return update(id, Set.of(roleName));
     }
 
     /**
      * Update api key with collection of roles by key id.
-     *
      * @param id        apiKey id.
      * @param roleNames a list of role names.
-     * @return updated {@link  PersistentApiKeyType} entity.
+     * @return updated {@link  ApiKeyEntity} entity.
      * @throws InvalidRoleNameException              if roleNames was empty or contained invalid roles.
      * @throws ApiKeyService.ApiKeyNotFoundException if api key was not found.
      */
     public PersistentApiKeyType update(long id, Collection<String> roleNames)
             throws InvalidRoleNameException, ApiKeyService.ApiKeyNotFoundException {
         auditLog(id, roleNames);
-        PersistentApiKeyType apiKeyType = getForId(id);
+        ApiKeyEntity apiKeyType = internalGetForId(id);
         if (roleNames.isEmpty()) {
             throw new InvalidRoleNameException("missing roles");
         }
         Set<Role> roles = Role.getForNames(roleNames);
+        verifyUserCanUpdateApiKeyRoles(apiKeyType, roles);
         apiKeyType.setRoles(roles);
-        apiKeyRepository.saveOrUpdate(apiKeyType);
-        return apiKeyType;
+        return apiKeyMapper.toDTO(apiKeyRepository.update(apiKeyType));
     }
 
     /**
      * Get one API key.
-     *
      * @param id apiKey id.
      * @throws ApiKeyService.ApiKeyNotFoundException if api key was not found
      */
-    public PersistentApiKeyType getForId(long id)
-            throws ApiKeyService.ApiKeyNotFoundException {
-        PersistentApiKeyType apiKeyType = apiKeyRepository.getApiKey(id);
+    public PersistentApiKeyType getForId(long id) throws ApiKeyService.ApiKeyNotFoundException {
+        return apiKeyMapper.toDTO(internalGetForId(id));
+    }
+
+    public ApiKeyEntity internalGetForId(long id) throws ApiKeyService.ApiKeyNotFoundException {
+        ApiKeyEntity apiKeyType = apiKeyRepository.getApiKey(id);
         if (apiKeyType == null) {
             throw new ApiKeyService.ApiKeyNotFoundException(id);
         }
@@ -171,7 +197,6 @@ public class ApiKeyService {
 
     /**
      * Encode a plaintext key.
-     *
      * @param key plaintext api key.
      * @return encoded api key.
      */
@@ -181,9 +206,8 @@ public class ApiKeyService {
 
     /**
      * Get matching key.
-     *
      * @param key plaintext api key.
-     * @return a {@link  PersistentApiKeyType} entity.
+     * @return a {@link  ApiKeyEntity} entity.
      * @throws ApiKeyService.ApiKeyNotFoundException if api key was not found
      */
     public PersistentApiKeyType getForPlaintextKey(String key) throws ApiKeyService.ApiKeyNotFoundException {
@@ -192,16 +216,19 @@ public class ApiKeyService {
 
     /**
      * Get matching Api key.
-     *
      * @param key encoded api key.
-     * @return a {@link  PersistentApiKeyType} entity.
+     * @return a {@link  ApiKeyEntity} entity.
      * @throws ApiKeyService.ApiKeyNotFoundException if api key was not found.
      */
     public PersistentApiKeyType getForEncodedKey(String key) throws ApiKeyService.ApiKeyNotFoundException {
-        List<PersistentApiKeyType> keys = apiKeyRepository.getAllApiKeys();
-        for (PersistentApiKeyType apiKeyType : keys) {
-            if (apiKeyType.getEncodedKey().equals(key)) {
-                return apiKeyType;
+        return apiKeyMapper.toDTO(internalGetForEncodedKey(key));
+    }
+
+    public ApiKeyEntity internalGetForEncodedKey(String key) throws ApiKeyService.ApiKeyNotFoundException {
+        List<ApiKeyEntity> keys = apiKeyRepository.getAllApiKeys();
+        for (ApiKeyEntity entity : keys) {
+            if (entity.getEncodedKey().equals(key)) {
+                return entity;
             }
         }
         throw new ApiKeyService.ApiKeyNotFoundException();
@@ -209,24 +236,22 @@ public class ApiKeyService {
 
     /**
      * Remove / revoke one key.
-     *
      * @param key plaintext api key.
      * @throws ApiKeyService.ApiKeyNotFoundException if api key was not found.
      */
     public void removeForPlaintextKey(String key) throws ApiKeyService.ApiKeyNotFoundException {
-        PersistentApiKeyType apiKeyType = getForPlaintextKey(key);
+        var apiKeyType = internalGetForEncodedKey(encode(key));
         auditLog(apiKeyType);
         apiKeyRepository.delete(apiKeyType);
     }
 
     /**
      * Remove / revoke one key based on id.
-     *
      * @param id apiKey id.
      * @throws ApiKeyService.ApiKeyNotFoundException if api key was not found
      */
     public void removeForId(long id) throws ApiKeyService.ApiKeyNotFoundException {
-        PersistentApiKeyType apiKeyType = getForId(id);
+        var apiKeyType = internalGetForId(id);
         auditLog(apiKeyType);
         apiKeyRepository.delete(apiKeyType);
     }
@@ -244,17 +269,20 @@ public class ApiKeyService {
 
     /**
      * List all keys.
-     *
-     * @return a list of {@link PersistentApiKeyType}.
+     * @return a list of {@link ApiKeyEntity}.
      */
     public List<PersistentApiKeyType> listAll() {
-        return apiKeyRepository.getAllApiKeys();
+        return apiKeyMapper.toDTOs(apiKeyRepository.getAllApiKeys());
     }
 
     @SuppressWarnings("squid:S110")
     public static class ApiKeyNotFoundException extends NotFoundException {
-        public ApiKeyNotFoundException(final Object... metadata) {
-            super(API_KEY_NOT_FOUND, metadata);
+        public ApiKeyNotFoundException() {
+            super(API_KEY_NOT_FOUND.build());
+        }
+
+        public ApiKeyNotFoundException(long id) {
+            super(API_KEY_NOT_FOUND.build(id));
         }
     }
 }

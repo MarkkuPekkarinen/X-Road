@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -38,8 +38,6 @@ import org.niis.xroad.restapi.converter.DtoConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import static ee.ria.xroad.common.util.Fn.self;
-
 @Slf4j
 @Service
 @Qualifier("clientIdDtoToModelMapper")
@@ -50,39 +48,30 @@ public class ClientIdDtoConverter extends DtoConverter<ClientId, ClientIdDto> {
 
     @Override
     public ClientIdDto toDto(ClientId source) {
-        return self(new ClientIdDto(), self -> {
-            self.setInstanceId(source.getXRoadInstance());
-            self.setMemberClass(source.getMemberClass());
-            self.setMemberCode(source.getMemberCode());
-            self.setSubsystemCode(source.getSubsystemCode());
-            self.setEncodedId(source.asEncodedId());
-            self.setType(xRoadObjectTypeConverter.convert(source.getObjectType()));
-        });
+        return new ClientIdDto()
+                .instanceId(source.getXRoadInstance())
+                .memberClass(source.getMemberClass())
+                .memberCode(source.getMemberCode())
+                .subsystemCode(source.getSubsystemCode())
+                .encodedId(source.asEncodedId())
+                .type(xRoadObjectTypeConverter.convert(source.getObjectType()));
     }
 
     @Override
     public ClientId fromDto(ClientIdDto source) {
         XRoadIdDto.TypeEnum type = source.getType();
 
-        if (type != null) {
-            switch (type) {
-                case MEMBER:
-                    return MemberId.create(
-                            source.getInstanceId(),
-                            source.getMemberClass(),
-                            source.getMemberCode());
-
-                case SUBSYSTEM:
-                    return SubsystemId.create(
-                            source.getInstanceId(),
-                            source.getMemberClass(),
-                            source.getMemberCode(),
-                            source.getSubsystemCode());
-
-                default://Ignore other cases
-            }
-        }
-
-        throw new IllegalArgumentException("illegal ClientId type: " + type);
+        return switch (type) {
+            case MEMBER -> MemberId.create(
+                    source.getInstanceId(),
+                    source.getMemberClass(),
+                    source.getMemberCode());
+            case SUBSYSTEM -> SubsystemId.create(
+                    source.getInstanceId(),
+                    source.getMemberClass(),
+                    source.getMemberCode(),
+                    source.getSubsystemCode());
+            case null, default -> throw new IllegalArgumentException("illegal ClientId type: " + type);
+        };
     }
 }

@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,125 +26,34 @@
  -->
 <!-- This is the root component of the Vue app -->
 <template>
-  <v-app class="xrd-app">
-    <!-- Dont show toolbar or footer in login view -->
-    <app-toolbar v-if="loginView" />
-    <v-main app>
-      <transition name="fade" mode="out-in">
-        <router-view />
-      </transition>
-    </v-main>
-    <snackbar />
-    <app-footer v-if="loginView" />
-  </v-app>
+  <XrdApp :login-view="loginView" :initial-user-view="initialUserView" @logout="logout">
+    <router-view />
+  </XrdApp>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import axios from 'axios';
-import Snackbar from '@/components/ui/Snackbar.vue';
-import AppFooter from '@/components/layout/AppFooter.vue';
-import AppToolbar from '@/components/layout/AppToolbar.vue';
+<script lang="ts" setup>
+import { computed } from 'vue';
+
+import { useRoute, useRouter } from 'vue-router';
+
+import { XrdApp } from '@niis/shared-ui';
+
 import { RouteName } from '@/global';
-import { mapActions } from 'pinia';
 import { useUser } from '@/store/modules/user';
 
-export default Vue.extend({
-  name: 'App',
-  components: {
-    AppFooter,
-    AppToolbar,
-    Snackbar,
-  },
-  computed: {
-    loginView(): boolean {
-      return this.$route.name !== RouteName.Login;
-    },
-  },
+const route = useRoute();
+const router = useRouter();
+const userStore = useUser();
 
-  created() {
-    // Add a response interceptor
-    axios.interceptors.response.use(
-      (response) => {
-        // Set user authentication status in store
-        this.authUser();
-        return response;
-      },
-      (error) => {
-        /*
-          Check if error is a proper "unauthorized error" meaning it is not happening in sending login form data.
-          Also the response from from session timeout polling is handled in AppBase -component
-         */
-        if (
-          error?.response?.status === 401 &&
-          this.$router.currentRoute.name !== 'login'
-        ) {
-          // if you ever get an unauthorized, logout the user
-          this.setSessionAlive(false);
-        }
-        // If the request is made with responseType: blob, but backend responds with json error
-        if (
-          error.request.responseType === 'blob' &&
-          error.response.data instanceof Blob &&
-          error.response.data.type &&
-          error.response.data.type.toLowerCase().indexOf('json') != -1
-        ) {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-
-            reader.onload = () => {
-              error.response.data = JSON.parse(reader.result as string);
-              resolve(Promise.reject(error));
-            };
-
-            reader.onerror = () => {
-              reject(error);
-            };
-
-            reader.readAsText(error.response.data);
-          });
-        }
-
-        // Do something with response error
-        return Promise.reject(error);
-      },
-    );
-
-    // Session-status api is called before accessing any view. The session-status data is only used to prevent
-    // opening views that user aren't allowed to see (flickering).
-    this.fetchSessionStatus();
-  },
-  methods: {
-    ...mapActions(useUser, [
-      'setSessionAlive',
-      'fetchSessionStatus',
-      'authUser',
-    ]),
-  },
+const loginView = computed(() => {
+  return route.name === RouteName.Login;
 });
+const initialUserView = computed(() => {
+  return route.name === RouteName.InitialAdminUser;
+});
+
+function logout() {
+  userStore.logoutUser();
+  router.replace({ name: RouteName.Login });
+}
 </script>
-
-<style lang="scss">
-@import './assets/global-style.scss';
-</style>
-
-<style lang="scss" scoped>
-@import './assets/colors';
-
-.fade-enter-active,
-.fade-leave-active {
-  transition-duration: 0.2s;
-  transition-property: opacity;
-  transition-timing-function: ease;
-}
-
-.fade-enter,
-.fade-leave-active {
-  opacity: 0;
-}
-
-/* Set the app background color */
-.theme--light.v-application.xrd-app {
-  background: $XRoad-WarmGrey30;
-}
-</style>

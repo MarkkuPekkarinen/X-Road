@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,141 +25,65 @@
    THE SOFTWARE.
  -->
 <template>
-  <div data-test="backup-restore-view" class="xrd-view-common">
-    <div class="xrd-table-toolbar mt-0 pl-0">
-      <div class="xrd-title-search">
-        <div class="xrd-view-title">
-          {{ $t('tab.settings.backupAndRestore') }}
-        </div>
-        <xrd-search v-model="search" />
-      </div>
-      <xrd-backups-toolbar
-        accepts=".gpg"
-        :can-backup="canBackup"
-        :backup-handler="backupBandler()"
-        @refresh-backups="fetchData"
-      />
-    </div>
-    <xrd-backups-data-table
+  <XrdView data-test="backup-restore-view" title="tab.main.settings">
+    <template #tabs>
+      <SettingsTabs />
+    </template>
+
+    <XrdBackupsDataTable
+      accepts=".gpg"
       :can-backup="canBackup"
       :backups="backups"
-      :filter="search"
       :loading="loadingBackups"
-      :backup-handler="backupBandler()"
-      @refresh-backups="fetchData"
+      :backup-handler="backupHandler"
+      @delete="fetchData"
+      @create-backup="fetchData"
+      @upload-backup="fetchData"
     />
-  </div>
+  </XrdView>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 /**
  * View for 'backup and restore' tab
  */
-import Vue from 'vue';
+import { computed, ref } from 'vue';
 import { Permissions } from '@/global';
-import * as api from '@/util/api';
-import { Backup, BackupExt } from '@/openapi-types';
-import { mapActions, mapState } from 'pinia';
+import { Backup } from '@/openapi-types';
 import { useUser } from '@/store/modules/user';
-import { useNotifications } from '@/store/modules/notifications';
-import VueI18n from 'vue-i18n';
-import Values = VueI18n.Values;
-import { encodePathParameter } from '@/util/api';
-import { saveResponseAsFile } from '@/util/helpers';
+import { BackupHandler, useNotifications, XrdBackupsDataTable, XrdView } from '@niis/shared-ui';
+import SettingsTabs from '@/views/Settings/SettingsTabs.vue';
+import { useBackups } from '@/store/modules/backups';
 
-const uploadBackup = (backupFile: File, ignoreWarnings = false) => {
-  const formData = new FormData();
-  formData.set('file', backupFile, backupFile.name);
-  return api.post(
-    `/backups/upload?ignore_warnings=${ignoreWarnings}`,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    },
-  );
+
+const { addError } = useNotifications();
+const backupStore = useBackups();
+const { hasPermission } = useUser();
+
+const backups = ref([] as Backup[]);
+const loadingBackups = ref(false);
+
+const canBackup = computed(() => hasPermission(Permissions.BACKUP_CONFIGURATION));
+
+const backupHandler: BackupHandler = {
+  create: backupStore.createBackup,
+  upload: backupStore.uploadBackup,
+  delete: backupStore.deleteBackup,
+  download: backupStore.downloadBackup,
+  restore: backupStore.restoreBackup,
 };
 
-export default Vue.extend({
-  data() {
-    return {
-      search: '' as string,
-      creatingBackup: false,
-      uploadingBackup: false,
-      needsConfirmation: false,
-      uploadedFile: null as File | null,
-      backups: [] as Backup[],
-      loadingBackups: false,
-    };
-  },
-  computed: {
-    ...mapState(useUser, ['hasPermission']),
-    canBackup(): boolean {
-      return this.hasPermission(Permissions.BACKUP_CONFIGURATION);
-    },
-  },
-  created(): void {
-    this.fetchData();
-  },
-  methods: {
-    ...mapActions(useNotifications, [
-      'showError',
-      'showSuccess',
-      'showWarningMessage',
-    ]),
-    backupBandler() {
-      return {
-        showError: this.showError,
-        showSuccess: this.displaySuccess,
-        showWarning: this.displayWarning,
-        create: this.createBackup,
-        upload: uploadBackup,
-        delete: this.deleteBackup,
-        download: this.downloadBackup,
-        restore: this.downloadBackup,
-      };
-    },
-    fetchData() {
-      this.loadingBackups = true;
-      return api
-        .get<Backup[]>('/backups')
-        .then((res) => {
-          this.backups = res.data.sort((a, b) => {
-            return b.created_at.localeCompare(a.created_at);
-          });
-        })
-        .catch((error) => this.showError(error))
-        .finally(() => (this.loadingBackups = false));
-    },
-    createBackup() {
-      this.creatingBackup = true;
-      return api.post<BackupExt>('/backups/ext', null)
-        .then((resp) => resp.data);
-    },
-    deleteBackup(filename: string) {
-      return api.remove(`/backups/${encodePathParameter(filename)}`);
-    },
-    downloadBackup(fileName: string) {
-      return api
-        .get(`/backups/${encodePathParameter(fileName)}/download`, {
-          responseType: 'blob',
-        })
-        .then((resp) => saveResponseAsFile(resp, fileName));
-    },
-    restoreBackup(fileName: string) {
-      api.put(`/backups/${encodePathParameter(fileName)}/restore`, {});
-    },
-    displaySuccess(textKey: string, data: Values = {}) {
-      this.showSuccess(this.$t(textKey, data));
-    },
-    displayWarning(textKey: string, data: Values = {}) {
-      this.showWarningMessage(this.$t(textKey, data));
-    },
-  },
-});
+
+async function fetchData() {
+  loadingBackups.value = true;
+  return backupStore
+    .fetchData()
+    .then((data) => (backups.value = data))
+    .catch((error) => addError(error))
+    .finally(() => (loadingBackups.value = false));
+}
+
+fetchData();
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/tables';
-</style>
+<style lang="scss" scoped></style>

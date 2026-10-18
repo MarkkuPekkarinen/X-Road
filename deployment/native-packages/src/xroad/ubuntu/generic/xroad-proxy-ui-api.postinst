@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+. /usr/share/debconf/confmodule
+
+. /usr/share/xroad/scripts/write_tls_config.sh
+
+abort() {
+  local rc=$?
+  echo "xroad-proxy-ui-api: FATAL: $*" >&2
+  exit $((rc == 0 ? 1 : rc))
+}
+log () { echo >&2 "$@"; }
+
+store_tls_identity() {
+  local mode=""
+  if [[ "${DEBCONF_RECONFIGURE:-}" == "1" || "${1:-}" == "reconfigure" ]]; then
+    mode="reconfigure"
+  fi
+
+  local subject altn
+  db_get xroad-common/proxy-ui-api-subject
+  subject="$RET"
+  db_get xroad-common/proxy-ui-api-altsubject
+  altn="$RET"
+  write_tls_identity_rows proxy-ui-api "$subject" "$altn" "$mode" \
+    || abort "Failed to store proxy-ui-api TLS identity. ABORTING."
+}
+
+case "$1" in
+  configure | reconfigure)
+    store_tls_identity "$1"
+
+    RET=""
+    db_get xroad-common/username
+    AUSER="$RET"
+
+    if [ -n "$AUSER" ]; then
+      # Use the shared setup_xroad_admin_user.sh script
+      . /usr/share/xroad/scripts/setup_xroad_admin_user.sh
+      setup_xroad_admin_user "$AUSER"
+    else
+      log "WARNING: X-Road admin user not configured."
+    fi
+ ;;
+
+ abort-upgrade|abort-remove|abort-deconfigure)
+ ;;
+
+ *)
+    log "postinst called with unknown argument \`$1'" >&2
+    exit 1
+ ;;
+esac
+
+if [ "$1" = abort-upgrade ]; then
+  exit 0
+fi
+
+#DEBHELPER#
+
+exit 0

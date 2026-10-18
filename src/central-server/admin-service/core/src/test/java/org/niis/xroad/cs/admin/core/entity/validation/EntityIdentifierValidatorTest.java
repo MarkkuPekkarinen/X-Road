@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,15 +26,14 @@
  */
 package org.niis.xroad.cs.admin.core.entity.validation;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
 
 import java.util.Set;
 import java.util.stream.Stream;
@@ -83,12 +82,12 @@ public class EntityIdentifierValidatorTest {
     private static Stream<Arguments> invalidEntityIdentifiers() {
         return Stream.of(
                 Arguments.of("", "must not be blank"),
-                Arguments.of("./", EntityIdentifier.PATTERN_VIOLATION_MESSAGE),
-                Arguments.of("../", EntityIdentifier.PATTERN_VIOLATION_MESSAGE),
-                Arguments.of("/../", EntityIdentifier.PATTERN_VIOLATION_MESSAGE),
-                Arguments.of("/.", EntityIdentifier.PATTERN_VIOLATION_MESSAGE),
-                Arguments.of("/./", EntityIdentifier.PATTERN_VIOLATION_MESSAGE),
-                Arguments.of(">CONTAINS NON-PRINTABLE CHARACTER: \u0000<", EntityIdentifier.PATTERN_VIOLATION_MESSAGE),
+                Arguments.of("./", OptionalEntityIdentifier.PATTERN_VIOLATION_MESSAGE),
+                Arguments.of("../", OptionalEntityIdentifier.PATTERN_VIOLATION_MESSAGE),
+                Arguments.of("/../", OptionalEntityIdentifier.PATTERN_VIOLATION_MESSAGE),
+                Arguments.of("/.", OptionalEntityIdentifier.PATTERN_VIOLATION_MESSAGE),
+                Arguments.of("/./", OptionalEntityIdentifier.PATTERN_VIOLATION_MESSAGE),
+                Arguments.of(">CONTAINS NON-PRINTABLE CHARACTER: \u0000<", OptionalEntityIdentifier.PATTERN_VIOLATION_MESSAGE),
                 Arguments.of("TOO LONG INPUT" + " ".repeat(255), "length must be less or equal to 255")
         );
     }

@@ -1,0 +1,559 @@
+/*
+ * The MIT License
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.globalconf.model;
+
+import org.junit.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+/**
+ * Tests to verify configuration directories are read correctly.
+ */
+public class VersionedConfigurationDirectoryTest {
+
+    /**
+     * Test to ensure a correct configuration directory is read properly.
+     *
+     * @throws Exception in case of any unexpected errors
+     */
+    @Test
+    public void readDirectoryV2() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_good_v2");
+
+        assertEquals("EE", dir.getInstanceIdentifier());
+
+        PrivateParameters p = dir.findPrivate("foo").orElseThrow();
+
+        assertEquals("foo", p.getInstanceIdentifier());
+
+        SharedParameters s = dir.findShared("foo").orElseThrow();
+
+        assertEquals("foo", s.getInstanceIdentifier());
+
+        assertTrue(dir.findPrivate("bar").isEmpty());
+        assertTrue(dir.findShared("bar").isPresent());
+        assertTrue(dir.findShared("xxx").isEmpty());
+    }
+
+    /**
+     * Test to ensure that the list of available configuration files excluding metadata and directories
+     * is read properly.
+     *
+     * @throws Exception in case of any unexpected errors
+     */
+    @Test
+    public void readConfigurationFilesV2() throws Exception {
+        String rootDir = "src/test/resources/globalconf_good_v2";
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(rootDir);
+
+        List<Path> configurationFiles = dir.getConfigurationFiles();
+
+        assertFalse(pathExists(configurationFiles, rootDir + "/instance-identifier"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml.metadata"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo/private-params.xml.metadata"));
+    }
+
+    /**
+     * Test to ensure a correct configuration directory is read properly.
+     *
+     * @throws Exception in case of any unexpected errors
+     */
+    @Test
+    public void readDirectoryContainingV3AndV2Configurations() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_good_v3");
+
+        assertEquals("EE", dir.getInstanceIdentifier());
+
+        PrivateParameters p = dir.findPrivate("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", p.getInstanceIdentifier());
+
+        SharedParameters s = dir.findShared("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", s.getInstanceIdentifier());
+
+        assertTrue(dir.findPrivate("bar").isEmpty());
+        assertTrue(dir.findShared("bar").isPresent());
+        assertTrue(dir.findShared("xxx").isEmpty());
+    }
+
+    @Test
+    public void readDirectoryContainingV4V3AndV2Configurations() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_good_v4");
+
+        assertEquals("EE", dir.getInstanceIdentifier());
+
+        PrivateParameters p2 = dir.findPrivate("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", p2.getInstanceIdentifier());
+
+        SharedParameters s2 = dir.findShared("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", s2.getInstanceIdentifier());
+
+        PrivateParameters p3 = dir.findPrivate("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", p3.getInstanceIdentifier());
+
+        SharedParameters s3 = dir.findShared("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", s3.getInstanceIdentifier());
+
+        assertTrue(dir.findPrivate("bar").isEmpty());
+        assertTrue(dir.findShared("bar").isPresent());
+        assertTrue(dir.findShared("xxx").isEmpty());
+    }
+
+    @Test
+    public void readDirectoryContainingV5V4V3AndV2Configurations() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_good_v5");
+
+        assertEquals("EE", dir.getInstanceIdentifier());
+
+        PrivateParameters p2 = dir.findPrivate("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", p2.getInstanceIdentifier());
+
+        SharedParameters s2 = dir.findShared("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", s2.getInstanceIdentifier());
+
+        PrivateParameters p3 = dir.findPrivate("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", p3.getInstanceIdentifier());
+
+        SharedParameters s3 = dir.findShared("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", s3.getInstanceIdentifier());
+
+        PrivateParameters p4 = dir.findPrivate("qux_v4").orElseThrow();
+
+        assertEquals("qux_v4", p4.getInstanceIdentifier());
+
+        SharedParameters s4 = dir.findShared("qux_v4").orElseThrow();
+
+        assertEquals("qux_v4", s4.getInstanceIdentifier());
+
+        assertTrue(dir.findPrivate("bar").isEmpty());
+        assertTrue(dir.findShared("bar").isPresent());
+        assertTrue(dir.findShared("xxx").isEmpty());
+    }
+
+    @Test
+    public void readDirectoryContainingV6V5V4V3AndV2Configurations() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_good_v6");
+
+        assertEquals("EE", dir.getInstanceIdentifier());
+
+        PrivateParameters p2 = dir.findPrivate("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", p2.getInstanceIdentifier());
+
+        SharedParameters s2 = dir.findShared("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", s2.getInstanceIdentifier());
+
+        PrivateParameters p3 = dir.findPrivate("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", p3.getInstanceIdentifier());
+
+        SharedParameters s3 = dir.findShared("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", s3.getInstanceIdentifier());
+
+        PrivateParameters p4 = dir.findPrivate("qux_v4").orElseThrow();
+
+        assertEquals("qux_v4", p4.getInstanceIdentifier());
+
+        SharedParameters s4 = dir.findShared("qux_v4").orElseThrow();
+
+        assertEquals("qux_v4", s4.getInstanceIdentifier());
+
+        SharedParameters s5 = dir.findShared("quux_v5").orElseThrow();
+
+        assertEquals("quux_v5", s5.getInstanceIdentifier());
+
+        assertTrue(dir.findPrivate("bar").isEmpty());
+        assertTrue(dir.findShared("bar").isPresent());
+        assertTrue(dir.findShared("xxx").isEmpty());
+    }
+
+    @Test
+    public void readDirectoryContainingV7V6V5V4V3AndV2Configurations() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_good_v7");
+
+        assertEquals("EE", dir.getInstanceIdentifier());
+
+        PrivateParameters p2 = dir.findPrivate("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", p2.getInstanceIdentifier());
+
+        SharedParameters s2 = dir.findShared("foo_v2").orElseThrow();
+
+        assertEquals("foo_v2", s2.getInstanceIdentifier());
+
+        PrivateParameters p3 = dir.findPrivate("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", p3.getInstanceIdentifier());
+
+        SharedParameters s3 = dir.findShared("baz_v3").orElseThrow();
+
+        assertEquals("baz_v3", s3.getInstanceIdentifier());
+
+        PrivateParameters p4 = dir.findPrivate("qux_v4").orElseThrow();
+
+        assertEquals("qux_v4", p4.getInstanceIdentifier());
+
+        SharedParameters s4 = dir.findShared("qux_v4").orElseThrow();
+
+        assertEquals("qux_v4", s4.getInstanceIdentifier());
+
+        SharedParameters s5 = dir.findShared("quux_v5").orElseThrow();
+
+        assertEquals("quux_v5", s5.getInstanceIdentifier());
+
+        SharedParameters s6 = dir.findShared("corge_v6").orElseThrow();
+
+        assertEquals("corge_v6", s6.getInstanceIdentifier());
+
+        SharedParameters s7 = dir.findShared("EE").orElseThrow();
+
+        assertEquals("EE", s7.getInstanceIdentifier());
+        assertFalse(s7.getApprovedConnectorTlsCAs().isEmpty());
+
+        assertTrue(dir.findPrivate("bar").isEmpty());
+        assertTrue(dir.findShared("bar").isPresent());
+        assertTrue(dir.findShared("xxx").isEmpty());
+    }
+
+    /**
+     * Test to ensure that the list of available configuration files excluding metadata and directories
+     * is read properly.
+     *
+     * @throws Exception in case of any unexpected errors
+     */
+    @Test
+    public void readConfigurationFilesContainingBothV3AndV2() throws Exception {
+        String rootDir = "src/test/resources/globalconf_good_v3";
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(rootDir);
+
+        List<Path> configurationFiles = dir.getConfigurationFiles();
+
+        assertFalse(pathExists(configurationFiles, rootDir + "/instance-identifier"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml.metadata"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml.metadata"));
+    }
+
+    @Test
+    public void readConfigurationFilesContainingV4V3AndV2() throws Exception {
+        String rootDir = "src/test/resources/globalconf_good_v4";
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(rootDir);
+
+        List<Path> configurationFiles = dir.getConfigurationFiles();
+
+        assertFalse(pathExists(configurationFiles, rootDir + "/instance-identifier"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml.metadata"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/baz_v3/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/baz_v3/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/baz_v3/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/baz_v3/private-params.xml.metadata"));
+    }
+
+    @Test
+    public void readConfigurationFilesContainingAllOfV5V4V3AndV2() throws Exception {
+        String rootDir = "src/test/resources/globalconf_good_v5";
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(rootDir);
+
+        List<Path> configurationFiles = dir.getConfigurationFiles();
+
+        assertFalse(pathExists(configurationFiles, rootDir + "/instance-identifier"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml.metadata"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/baz_v3/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/baz_v3/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/baz_v3/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/baz_v3/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/qux_v4/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/qux_v4/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/qux_v4/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/qux_v4/private-params.xml.metadata"));
+    }
+
+    @Test
+    public void readConfigurationFilesContainingAllOfV6V5V4V3AndV2() throws Exception {
+        String rootDir = "src/test/resources/globalconf_good_v6";
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(rootDir);
+
+        List<Path> configurationFiles = dir.getConfigurationFiles();
+
+        assertFalse(pathExists(configurationFiles, rootDir + "/instance-identifier"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml.metadata"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/EE/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/EE/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/foo_v2/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/baz_v3/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/baz_v3/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/baz_v3/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/baz_v3/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/qux_v4/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/qux_v4/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/qux_v4/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/qux_v4/private-params.xml.metadata"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/quux_v5/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/quux_v5/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/quux_v5/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/quux_v5/private-params.xml.metadata"));
+    }
+
+    @Test
+    public void readConfigurationFilesContainingAllOfV7V6V5V4V3AndV2() throws Exception {
+        String rootDir = "src/test/resources/globalconf_good_v7";
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(rootDir);
+
+        List<Path> configurationFiles = dir.getConfigurationFiles();
+
+        assertFalse(pathExists(configurationFiles, rootDir + "/instance-identifier"));
+
+        assertTrue(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/shared-params.xml.metadata"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/bar/private-params.xml.metadata"));
+
+        assertHasSharedAndPrivateParams(configurationFiles, rootDir, "EE");
+        assertHasSharedAndPrivateParams(configurationFiles, rootDir, "foo_v2");
+        assertHasSharedAndPrivateParams(configurationFiles, rootDir, "baz_v3");
+        assertHasSharedAndPrivateParams(configurationFiles, rootDir, "qux_v4");
+        assertHasSharedAndPrivateParams(configurationFiles, rootDir, "quux_v5");
+        assertHasSharedAndPrivateParams(configurationFiles, rootDir, "corge_v6");
+    }
+
+    private void assertHasSharedAndPrivateParams(List<Path> configurationFiles, String rootDir, String instanceDir) {
+        assertTrue(pathExists(configurationFiles, rootDir + "/" + instanceDir + "/shared-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/" + instanceDir + "/shared-params.xml.metadata"));
+        assertTrue(pathExists(configurationFiles, rootDir + "/" + instanceDir + "/private-params.xml"));
+        assertFalse(pathExists(configurationFiles, rootDir + "/" + instanceDir + "/private-params.xml.metadata"));
+    }
+
+
+    /**
+     * Test to ensure an empty configuration directory is read properly.
+     *
+     * @throws Exception in case of any unexpected errors
+     */
+    @Test
+    public void readEmptyDirectory() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_empty");
+
+        assertTrue(dir.findPrivate("foo").isEmpty());
+        assertTrue(dir.findShared("foo").isEmpty());
+    }
+
+    /**
+     * Test to ensure that reading of a malformed configuration fails.
+     *
+     * @throws Exception in case of any unexpected errors
+     */
+    @Test
+    public void readMalformedDirectory() throws Exception {
+        VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory("src/test/resources/globalconf_malformed");
+
+        assertTrue(dir.findPrivate("foo").isEmpty());
+        assertTrue(dir.findShared("foo").isEmpty());
+    }
+
+    @Test
+    public void excludeMetadataAndDirsUsesExactFilenameMatch() throws Exception {
+        Path tmpDir = Files.createTempDirectory("confdir-filter-test");
+        try {
+            Files.writeString(tmpDir.resolve(ConfigurationDirectory.INSTANCE_IDENTIFIER_FILE), "EE",
+                    StandardCharsets.UTF_8);
+
+            Path subDir = tmpDir.resolve("EE");
+            Files.createDirectories(subDir);
+
+            createFile(subDir, ConfigurationDirectory.FILES);
+            createFile(subDir, ConfigurationDirectory.INSTANCE_IDENTIFIER_FILE);
+            createFile(subDir, "foo-" + ConfigurationDirectory.INSTANCE_IDENTIFIER_FILE);
+            createFile(subDir, "x-" + ConfigurationDirectory.FILES);
+            createFile(subDir, "content.xml");
+            createFile(subDir, "content" + ConfigurationDirectory.METADATA_SUFFIX);
+
+            VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(tmpDir.toString());
+            List<Path> files = dir.getConfigurationFiles();
+
+            List<String> fileNames = files.stream().map(p -> p.getFileName().toString()).toList();
+
+            assertFalse("exact 'files' must be excluded", fileNames.contains(ConfigurationDirectory.FILES));
+            assertFalse("exact 'instance-identifier' must be excluded",
+                    fileNames.contains(ConfigurationDirectory.INSTANCE_IDENTIFIER_FILE));
+            assertTrue("'foo-instance-identifier' must not be excluded",
+                    fileNames.contains("foo-" + ConfigurationDirectory.INSTANCE_IDENTIFIER_FILE));
+            assertTrue("'x-files' must not be excluded",
+                    fileNames.contains("x-" + ConfigurationDirectory.FILES));
+            assertFalse("'.metadata' suffix must be excluded", fileNames.contains("content.metadata"));
+            assertTrue("regular content files must be retained", fileNames.contains("content.xml"));
+        } finally {
+            deleteRecursively(tmpDir);
+        }
+    }
+
+    @Test
+    public void excludeMetadataAndDirsMatchesReservedNamesCaseInsensitively() throws Exception {
+        Path tmpDir = Files.createTempDirectory("confdir-filter-case-test");
+        try {
+            Files.writeString(tmpDir.resolve(ConfigurationDirectory.INSTANCE_IDENTIFIER_FILE), "EE",
+                    StandardCharsets.UTF_8);
+
+            Path subDir = tmpDir.resolve("EE");
+            Files.createDirectories(subDir);
+
+            createFile(subDir, "FILES");
+            createFile(subDir, "Instance-Identifier");
+            createFile(subDir, "content.XML");
+            createFile(subDir, "content.XML" + ".METADATA");
+
+            VersionedConfigurationDirectory dir = new VersionedConfigurationDirectory(tmpDir.toString());
+            List<Path> files = dir.getConfigurationFiles();
+
+            List<String> fileNames = files.stream().map(p -> p.getFileName().toString()).toList();
+
+            assertFalse("'FILES' must be excluded case-insensitively", fileNames.contains("FILES"));
+            assertFalse("'Instance-Identifier' must be excluded case-insensitively",
+                    fileNames.contains("Instance-Identifier"));
+            assertFalse("uppercase '.METADATA' suffix must be excluded",
+                    fileNames.contains("content.XML.METADATA"));
+            assertTrue("regular content files must be retained", fileNames.contains("content.XML"));
+        } finally {
+            deleteRecursively(tmpDir);
+        }
+    }
+
+    private static void createFile(Path dir, String name) throws IOException {
+        Files.writeString(dir.resolve(name), "", StandardCharsets.UTF_8);
+    }
+
+    private static void deleteRecursively(Path dir) throws IOException {
+        if (!Files.exists(dir)) {
+            return;
+        }
+        try (var stream = Files.walk(dir)) {
+            stream.sorted(java.util.Comparator.reverseOrder())
+                    .forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (IOException ignored) {
+                            // ignore
+                        }
+                    });
+        }
+    }
+
+    private boolean pathExists(List<Path> paths, String path) {
+        return null != paths.stream()
+                .filter(p -> (p.getParent() + "/" + p.getFileName()).equals(path))
+                .findAny()
+                .orElse(null);
+    }
+
+}

@@ -25,57 +25,56 @@
    THE SOFTWARE.
  -->
 <template>
-  <configuration-anchor-item :anchor="anchor" :loading="loading">
-    <xrd-button
+  <ConfigurationAnchorItem v-if="anchor" :anchor="anchor" :loading="loading">
+    <XrdBtn
       v-if="showRecreateAnchorButton"
       data-test="re-create-anchor-button"
+      variant="text"
+      color="primary"
+      prepend-icon="autorenew"
+      text="globalConf.anchor.recreate"
       :loading="recreating"
-      outlined
-      class="mr-4"
       @click="recreateConfigurationAnchor()"
-    >
-      <xrd-icon-base class="xrd-large-button-icon">
-        <XrdIconAdd />
-      </xrd-icon-base>
-
-      {{ $t('globalConf.anchor.recreate') }}
-    </xrd-button>
-    <xrd-button
+    />
+    <XrdBtn
       v-if="showDownloadAnchorButton"
       data-test="download-anchor-button"
+      variant="text"
+      color="primary"
+      prepend-icon="download"
+      text="globalConf.anchor.download"
       :loading="downloading"
-      outlined
       @click="downloadConfigurationAnchor()"
-    >
-      <xrd-icon-base class="xrd-large-button-icon">
-        <XrdIconDownload />
-      </xrd-icon-base>
-      {{ $t('globalConf.anchor.download') }}
-    </xrd-button>
-  </configuration-anchor-item>
+    />
+  </ConfigurationAnchorItem>
 </template>
 
 <script lang="ts">
-import { Permissions } from '@/global';
-import { notificationsStore } from '@/store/modules/notifications';
-import { userStore } from '@/store/modules/user';
-import Vue from 'vue';
-import { mapActions, mapState, mapStores } from 'pinia';
-import { ConfigurationType } from '@/openapi-types';
-import { useConfigurationSourceStore } from '@/store/modules/configuration-sources';
-import { Prop } from 'vue/types/options';
-import { DataTableHeader } from 'vuetify';
-import ConfigurationAnchorItem, {
-  Anchor,
-} from '@/views/GlobalConfiguration/shared/ConfigurationAnchorItem.vue';
+import { defineComponent, PropType } from 'vue';
 
-export default Vue.extend({
-  components: { ConfigurationAnchorItem },
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
+import { mapState, mapStores } from 'pinia';
+
+import { useNotifications, XrdBtn } from '@niis/shared-ui';
+
+import { Permissions } from '@/global';
+import { ConfigurationType } from '@/openapi-types';
+import { useConfigurationSource } from '@/store/modules/configuration-sources';
+import { useUser } from '@/store/modules/user';
+
+import ConfigurationAnchorItem, { Anchor } from './ConfigurationAnchorItem.vue';
+
+export default defineComponent({
+  components: { ConfigurationAnchorItem, XrdBtn },
   props: {
     configurationType: {
-      type: String as Prop<ConfigurationType>,
+      type: String as PropType<ConfigurationType>,
       required: true,
     },
+  },
+  setup() {
+    const { addError, addSuccessMessage } = useNotifications();
+    return { addError, addSuccessMessage };
   },
   data() {
     return {
@@ -85,66 +84,53 @@ export default Vue.extend({
     };
   },
   computed: {
-    ...mapStores(useConfigurationSourceStore),
-    ...mapState(userStore, ['hasPermission']),
+    ...mapStores(useConfigurationSource),
+    ...mapState(useUser, ['hasPermission']),
     anchor(): Anchor | null {
       const title = this.$t('globalConf.anchor.title').toString();
-      const anchor = this.configurationSourceStore.getAnchor(
-        this.configurationType,
-      );
-      return anchor.hash
-        ? { hash: anchor.hash, createdAt: anchor.created_at, title }
-        : null;
+      const anchor = this.configurationSourceStore.getAnchor(this.configurationType);
+      return anchor.hash ? { hash: anchor.hash, createdAt: anchor.created_at, title } : null;
     },
     headers(): DataTableHeader[] {
       return [
         {
-          text: this.$t('globalConf.anchor.certificateHash') as string,
+          title: this.$t('globalConf.anchor.certificateHash') as string,
           align: 'start',
-          value: 'hash',
-          class: 'xrd-table-header text-uppercase',
+          key: 'hash',
         },
         {
-          text: this.$t('globalConf.anchor.created') as string,
+          title: this.$t('globalConf.anchor.created') as string,
           align: 'start',
-          value: 'created_at',
-          class: 'xrd-table-header text-uppercase',
+          key: 'created_at',
         },
       ];
     },
     showDownloadAnchorButton(): boolean {
-      return (
-        this.hasPermission(Permissions.DOWNLOAD_SOURCE_ANCHOR) &&
-        this.configurationSourceStore.hasAnchor(this.configurationType)
-      );
+      return this.hasPermission(Permissions.DOWNLOAD_SOURCE_ANCHOR) && this.configurationSourceStore.hasAnchor(this.configurationType);
     },
     showRecreateAnchorButton(): boolean {
       return this.hasPermission(Permissions.GENERATE_SOURCE_ANCHOR);
     },
     formattedConfigurationType(): string {
-      return (
-        this.configurationType.charAt(0).toUpperCase() +
-        this.configurationType.slice(1).toLowerCase()
-      );
+      return this.configurationType.charAt(0).toUpperCase() + this.configurationType.slice(1).toLowerCase();
     },
   },
   created() {
     this.fetchConfigurationAnchor();
   },
   methods: {
-    ...mapActions(notificationsStore, ['showSuccess', 'showError']),
     fetchConfigurationAnchor() {
       this.loading = true;
       this.configurationSourceStore
         .fetchConfigurationAnchor(this.configurationType)
-        .catch(this.showError)
+        .catch(this.addError)
         .finally(() => (this.loading = false));
     },
     downloadConfigurationAnchor() {
       this.downloading = true;
       this.configurationSourceStore
         .downloadConfigurationAnchor(this.configurationType)
-        .catch(this.showError)
+        .catch(this.addError)
         .finally(() => (this.downloading = false));
     },
     recreateConfigurationAnchor() {
@@ -152,57 +138,13 @@ export default Vue.extend({
       this.configurationSourceStore
         .recreateConfigurationAnchor(this.configurationType)
         .then(() =>
-          this.showSuccess(
-            this.$t(`globalConf.anchor.recreateSuccess`, {
-              configurationType: this.formattedConfigurationType,
-            }),
-          ),
+          this.addSuccessMessage(`globalConf.anchor.recreateSuccess`, {
+            configurationType: this.formattedConfigurationType,
+          }),
         )
-        .catch(this.showError)
+        .catch(this.addError)
         .finally(() => (this.recreating = false));
     },
   },
 });
 </script>
-
-<style lang="scss" scoped>
-@import '~styles/colors';
-
-.card-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  color: $XRoad-Black70;
-  font-weight: bold;
-  padding-top: 5px;
-  padding-bottom: 5px;
-}
-
-.card-main-title {
-  color: $XRoad-Black100;
-  font-style: normal;
-  font-weight: bold;
-  font-size: 18px;
-  line-height: 24px;
-  margin-left: 16px;
-}
-
-.card-top {
-  padding-top: 15px;
-  margin-bottom: 10px;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.internal-conf-icon {
-  margin-right: 15px;
-  color: $XRoad-Purple100;
-}
-
-.custom-footer {
-  border-top: thin solid rgba(0, 0, 0, 0.12); /* Matches the color of the Vuetify table line */
-  height: 16px;
-}
-</style>

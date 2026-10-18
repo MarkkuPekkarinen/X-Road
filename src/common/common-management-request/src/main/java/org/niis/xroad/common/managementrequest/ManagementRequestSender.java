@@ -1,20 +1,21 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,9 +26,7 @@
  */
 package org.niis.xroad.common.managementrequest;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.common.SystemProperties;
-import ee.ria.xroad.common.conf.globalconf.GlobalConf;
+import ee.ria.xroad.common.crypto.identifier.DigestAlgorithm;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.common.message.Soap;
@@ -38,26 +37,38 @@ import ee.ria.xroad.common.message.SoapParserImpl;
 import ee.ria.xroad.common.message.SoapUtils;
 import ee.ria.xroad.common.util.HttpSender;
 
+import jakarta.xml.soap.SOAPException;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.annotation.ArchUnitSuppressed;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.managementrequest.model.AddressChangeRequest;
 import org.niis.xroad.common.managementrequest.model.AuthCertRegRequest;
+import org.niis.xroad.common.managementrequest.model.AuthCertRegWithoutCertRequest;
+import org.niis.xroad.common.managementrequest.model.ClientDisableRequest;
+import org.niis.xroad.common.managementrequest.model.ClientEnableRequest;
 import org.niis.xroad.common.managementrequest.model.ClientRegRequest;
+import org.niis.xroad.common.managementrequest.model.ClientRenameRequest;
+import org.niis.xroad.common.managementrequest.model.MaintenanceModeDisableRequest;
+import org.niis.xroad.common.managementrequest.model.MaintenanceModeEnableRequest;
 import org.niis.xroad.common.managementrequest.model.ManagementRequest;
 import org.niis.xroad.common.managementrequest.model.OwnerChangeRequest;
+import org.niis.xroad.common.rpc.VaultKeyProvider;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.client.SignerSignClient;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
-import javax.xml.soap.SOAPException;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 
-import static ee.ria.xroad.common.ErrorCodes.X_HTTP_ERROR;
-import static ee.ria.xroad.common.ErrorCodes.X_INTERNAL_ERROR;
 import static ee.ria.xroad.common.util.AbstractHttpSender.CHUNKED_LENGTH;
 import static ee.ria.xroad.common.util.MimeTypes.TEXT_XML;
 import static ee.ria.xroad.common.util.MimeTypes.TEXT_XML_UTF8;
 import static ee.ria.xroad.common.util.MimeUtils.getBaseContentType;
+import static org.niis.xroad.common.core.exception.ErrorCode.HTTP_ERROR;
 
 /**
  * Sends various management requests. Authentication certificate registration
@@ -65,27 +76,44 @@ import static ee.ria.xroad.common.util.MimeUtils.getBaseContentType;
  * as normal X-Road messages.
  */
 @Slf4j
+@ArchUnitSuppressed("NoVanillaExceptions")
 public final class ManagementRequestSender {
-
+    private final GlobalConfProvider globalConfProvider;
+    private final ManagementRequestClient managementRequestClient;
+    private final SignerRpcClient signerRpcClient;
+    private final SignerSignClient signerSignClient;
+    private final String managementProxyServerUrl;
     private final ManagementRequestBuilder builder;
+    private final DigestAlgorithm signatureDigestAlgorithm;
 
     /**
      * Creates the sender for the user ID, client and receiver used in
      * constructing the X-Road message.
-     * @param sender the sender
+     *
+     * @param sender   the sender
      * @param receiver the receiver
      */
-    public ManagementRequestSender(ClientId sender, ClientId receiver) {
+    public ManagementRequestSender(VaultKeyProvider vaultKeyProvider, GlobalConfProvider globalConfProvider,
+                                   SignerRpcClient signerRpcClient, SignerSignClient signerSignClient,
+                                   ClientId sender, ClientId receiver, String managementProxyServerUrl,
+                                   DigestAlgorithm signatureDigestAlgorithm,
+                                   int connectTimeout, int socketTimeout, boolean isEnabledPooledConnectionReuse) {
+        this.globalConfProvider = globalConfProvider;
+        this.signerRpcClient = signerRpcClient;
+        this.signerSignClient = signerSignClient;
         this.builder = new ManagementRequestBuilder(sender, receiver);
+        this.managementProxyServerUrl = managementProxyServerUrl;
+        this.managementRequestClient = new ManagementRequestClient(vaultKeyProvider, globalConfProvider,
+                connectTimeout, socketTimeout, isEnabledPooledConnectionReuse);
+        this.signatureDigestAlgorithm = signatureDigestAlgorithm;
     }
 
-    protected URI getCentralServiceURI() throws Exception {
-        return new URI(GlobalConf.getManagementRequestServiceAddress());
+    private URI getCentralServiceURI() throws URISyntaxException {
+        return new URI(globalConfProvider.getManagementRequestServiceAddress());
     }
 
-    protected URI getSecurityServerURI() throws Exception {
-        return new URI("https://localhost:"
-                + SystemProperties.getClientProxyHttpsPort());
+    private URI getManagementProxyServerUrl() throws URISyntaxException {
+        return new URI(managementProxyServerUrl);
     }
 
     // -- Management request send methods -------------------------------------
@@ -94,27 +122,40 @@ public final class ManagementRequestSender {
      * Sends the authentication certificate registration request directly
      * to the central server. The request is sent as a signed mime multipart
      * message.
+     *
      * @param securityServer the security server id whose certificate is to be
-     * registered
-     * @param address the IP address of the security server
-     * @param authCert the authentication certificate bytes
+     *                       registered
+     * @param address        the IP address of the security server
+     * @param authCert       the authentication certificate bytes
+     * @param dryRun         if true, the request is not actually processed
      * @return request ID in the central server database
      * @throws Exception if an error occurs
      */
-    public Integer sendAuthCertRegRequest(SecurityServerId.Conf securityServer, String address, byte[] authCert)
+    public Integer sendAuthCertRegRequest(SecurityServerId.Conf securityServer, String address, byte[] authCert, boolean dryRun)
             throws Exception {
-        try (HttpSender sender = ManagementRequestClient.createCentralHttpSender()) {
-            return send(sender, getCentralServiceURI(), new AuthCertRegRequest(authCert, securityServer.getOwner(),
-                    builder.buildAuthCertRegRequest(securityServer, address, authCert)));
+        if (dryRun && authCert.length == 0) {
+            try (HttpSender sender = managementRequestClient.createCentralHttpSender()) {
+                return send(sender, getCentralServiceURI(), new AuthCertRegWithoutCertRequest(signerRpcClient, signerSignClient,
+                        authCert, securityServer.getOwner(),
+                        builder.buildAuthCertRegRequest(securityServer, address, authCert, true),
+                        signatureDigestAlgorithm));
+            }
+        }
+        try (HttpSender sender = managementRequestClient.createCentralHttpSender()) {
+            return send(sender, getCentralServiceURI(), new AuthCertRegRequest(signerRpcClient, signerSignClient,
+                    authCert, securityServer.getOwner(),
+                    builder.buildAuthCertRegRequest(securityServer, address, authCert, dryRun),
+                    signatureDigestAlgorithm));
         }
     }
 
     /**
      * Sends the authentication certificate deletion request as a normal
      * X-Road message.
+     *
      * @param securityServer the security server id whose certificate is to be
-     * deleted
-     * @param authCert the authentication certificate bytes
+     *                       deleted
+     * @param authCert       the authentication certificate bytes
      * @return request ID in the central server database
      * @throws Exception if an error occurs
      */
@@ -125,23 +166,73 @@ public final class ManagementRequestSender {
     }
 
     /**
-     * Sends a client registration request as a normal X-Road message.
+     * Sends the SecurityServer address change request as a normal X-Road message.
+     *
      * @param securityServer the security server id
-     * @param clientId the client id that will be registered
+     * @param address        the new address
      * @return request ID in the central server database
      * @throws Exception if an error occurs
      */
-    public Integer sendClientRegRequest(SecurityServerId.Conf securityServer, ClientId.Conf clientId) throws Exception {
-        try (HttpSender sender = ManagementRequestClient.createProxyHttpSender()) {
-            return send(sender, getSecurityServerURI(),
-                    new ClientRegRequest(clientId, builder.buildClientRegRequest(securityServer, clientId)));
+    public Integer sendAddressChangeRequest(SecurityServerId.Conf securityServer, String address) throws Exception {
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new AddressChangeRequest(signerRpcClient, signerSignClient, securityServer.getOwner(),
+                            builder.buildAddressChangeRequest(securityServer, address), signatureDigestAlgorithm));
+        }
+    }
+
+    /**
+     * Sends enable maintenance mode request as a normal X-Road message.
+     *
+     * @param securityServer the security server id
+     * @param message        the optional message
+     * @return request ID in the central server database
+     * @throws Exception if an error occurs
+     */
+    public Integer sendMaintenanceModeEnableRequest(SecurityServerId.Conf securityServer, String message) throws Exception {
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new MaintenanceModeEnableRequest(signerRpcClient, signerSignClient, securityServer.getOwner(),
+                            builder.buildMaintenanceModeEnableRequest(securityServer, message), signatureDigestAlgorithm));
+        }
+    }
+
+    /**
+     * Sends disable maintenance mode request as a normal X-Road message.
+     *
+     * @param securityServer the security server id
+     * @return request ID in the central server database
+     * @throws Exception if an error occurs
+     */
+    public Integer sendMaintenanceModeDisableRequest(SecurityServerId.Conf securityServer) throws Exception {
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new MaintenanceModeDisableRequest(signerRpcClient, signerSignClient, securityServer.getOwner(),
+                            builder.buildMaintenanceModeDisableRequest(securityServer), signatureDigestAlgorithm));
+        }
+    }
+
+    /**
+     * Sends a client registration request as a normal X-Road message.
+     *
+     * @param securityServer the security server id
+     * @param clientId       the client id that will be registered
+     * @return request ID in the central server database
+     * @throws Exception if an error occurs
+     */
+    public Integer sendClientRegRequest(SecurityServerId.Conf securityServer, ClientId.Conf clientId, String clientName) throws Exception {
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new ClientRegRequest(signerRpcClient, signerSignClient,
+                            clientId, builder.buildClientRegRequest(securityServer, clientId, clientName), signatureDigestAlgorithm));
         }
     }
 
     /**
      * Sends a client deletion request as a normal X-Road message.
+     *
      * @param securityServer the security server id
-     * @param clientId the client id that will be registered
+     * @param clientId       the client id that will be registered
      * @return request ID in the central server database
      * @throws Exception if an error occurs
      */
@@ -153,16 +244,46 @@ public final class ManagementRequestSender {
 
     /**
      * Sends an owner change request as a normal X-Road message.
+     *
      * @param securityServer the security server id
-     * @param clientId the client id of the new security server owner
+     * @param clientId       the client id of the new security server owner
      * @return request ID in the central server database
      * @throws Exception if an error occurs
      */
     public Integer sendOwnerChangeRequest(SecurityServerId.Conf securityServer,
                                           ClientId.Conf clientId) throws Exception {
-        try (HttpSender sender = ManagementRequestClient.createProxyHttpSender()) {
-            return send(sender, getSecurityServerURI(),
-                    new OwnerChangeRequest(clientId, builder.buildOwnerChangeRequest(securityServer, clientId)));
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new OwnerChangeRequest(signerRpcClient, signerSignClient,
+                            clientId, builder.buildOwnerChangeRequest(securityServer, clientId), signatureDigestAlgorithm));
+        }
+    }
+
+    public Integer sendClientDisableRequest(SecurityServerId.Conf securityServer,
+                                            ClientId.Conf clientId) throws Exception {
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new ClientDisableRequest(signerRpcClient, signerSignClient,
+                            clientId, builder.buildClientDisableRequest(securityServer, clientId),
+                            signatureDigestAlgorithm));
+        }
+    }
+
+    public Integer sendClientEnableRequest(SecurityServerId.Conf securityServer,
+                                           ClientId.Conf clientId) throws Exception {
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new ClientEnableRequest(signerRpcClient, signerSignClient,
+                            clientId, builder.buildClientEnableRequest(securityServer, clientId), signatureDigestAlgorithm));
+        }
+    }
+
+    public Integer sendClientRenameRequest(SecurityServerId.Conf securityServer,
+                                           ClientId.Conf clientId, String subsystemName) throws Exception {
+        try (HttpSender sender = managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
+                    new ClientRenameRequest(signerRpcClient, signerSignClient, clientId,
+                            builder.buildClientRenameRequest(securityServer, clientId, subsystemName), signatureDigestAlgorithm));
         }
     }
 
@@ -170,13 +291,14 @@ public final class ManagementRequestSender {
 
     private Integer sendToProxy(SoapMessageImpl request) throws Exception {
         try (HttpSender sender =
-                     ManagementRequestClient.createProxyHttpSender()) {
-            return send(sender, getSecurityServerURI(),
+                     managementRequestClient.createProxyHttpSender()) {
+            return send(sender, getManagementProxyServerUrl(),
                     new SimpleManagementRequest(request));
         }
     }
 
-    private static Integer send(HttpSender sender, URI address, ManagementRequest req) throws Exception {
+    private static Integer send(HttpSender sender, URI address, ManagementRequest req)
+            throws Exception {
         sender.doPost(address, req.getRequestContent(), CHUNKED_LENGTH, req.getRequestContentType());
 
         SoapMessageImpl requestMessage = req.getRequestMessage();
@@ -220,33 +342,31 @@ public final class ManagementRequestSender {
         }
     }
 
-
     private static SoapMessageImpl getResponse(HttpSender sender,
-                                               String expectedContentType) throws Exception {
+                                               String expectedContentType) {
         String baseContentType =
                 getBaseContentType(sender.getResponseContentType());
         if (baseContentType == null
                 || !baseContentType.equalsIgnoreCase(expectedContentType)) {
-            throw new CodedException(X_HTTP_ERROR,
+            throw XrdRuntimeException.systemException(HTTP_ERROR,
                     "Unexpected or no content type (%s) in response",
                     baseContentType);
         }
 
         Soap response = new SoapParserImpl().parse(baseContentType,
                 sender.getResponseContent());
-        if (response instanceof SoapFault) {
+        if (response instanceof SoapFault soapFault) {
             // Server responded with fault
-            throw ((SoapFault) response).toCodedException();
+            throw soapFault.toXrdRuntimeException();
         }
 
-        if (!(response instanceof SoapMessageImpl)) {
-            throw new CodedException(X_INTERNAL_ERROR,
+        if (!(response instanceof SoapMessageImpl responseMessage)) {
+            throw XrdRuntimeException.systemInternalError(
                     "Got unexpected response message " + response);
         }
 
-        SoapMessageImpl responseMessage = (SoapMessageImpl) response;
         if (!responseMessage.isResponse()) {
-            throw new CodedException(X_INTERNAL_ERROR,
+            throw XrdRuntimeException.systemInternalError(
                     "Expected response message");
         }
 
@@ -267,7 +387,7 @@ public final class ManagementRequestSender {
         }
 
         @Override
-        public InputStream getRequestContent() throws Exception {
+        public InputStream getRequestContent() {
             return new ByteArrayInputStream(getRequestMessage().getBytes());
         }
 

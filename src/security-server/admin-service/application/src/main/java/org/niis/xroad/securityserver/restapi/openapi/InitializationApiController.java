@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -27,21 +28,20 @@ package org.niis.xroad.securityserver.restapi.openapi;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.restapi.config.audit.AuditEventMethod;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.openapi.BadRequestException;
-import org.niis.xroad.restapi.openapi.ConflictException;
+import org.niis.xroad.restapi.config.audit.RestApiAuditEvent;
 import org.niis.xroad.restapi.openapi.ControllerUtil;
-import org.niis.xroad.restapi.openapi.InternalServerErrorException;
 import org.niis.xroad.restapi.service.UnhandledWarningsException;
 import org.niis.xroad.securityserver.restapi.converter.TokenInitStatusMapping;
-import org.niis.xroad.securityserver.restapi.dto.InitializationStatusDto;
-import org.niis.xroad.securityserver.restapi.openapi.model.InitialServerConf;
-import org.niis.xroad.securityserver.restapi.openapi.model.InitializationStatus;
-import org.niis.xroad.securityserver.restapi.service.AnchorNotFoundException;
+import org.niis.xroad.securityserver.restapi.dto.InitializationStatus;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitialAdminUserDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitialAdminUserStatusDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitialServerConfDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitializationStatusDto;
+import org.niis.xroad.securityserver.restapi.scheduling.DataspaceParticipantProvisioningTrigger;
+import org.niis.xroad.securityserver.restapi.service.InitialAdminUserService;
 import org.niis.xroad.securityserver.restapi.service.InitializationService;
-import org.niis.xroad.securityserver.restapi.service.InvalidCharactersException;
-import org.niis.xroad.securityserver.restapi.service.WeakPinException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,7 +49,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static org.niis.xroad.restapi.config.audit.RestApiAuditEvent.INIT_SERVER_CONFIGURATION;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_GPG_KEY_GENERATION_INTERRUPTED;
 
 /**
  * Init (Security Server) controller
@@ -61,43 +60,61 @@ import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_GPG_KEY_GEN
 @RequiredArgsConstructor
 public class InitializationApiController implements InitializationApi {
     private final InitializationService initializationService;
+    private final InitialAdminUserService initialAdminUserService;
+    private final DataspaceParticipantProvisioningTrigger dataspaceParticipantProvisioningTrigger;
+
+    @Override
+    @PreAuthorize("permitAll")
+    public ResponseEntity<InitialAdminUserStatusDto> getInitialAdminUserStatus() {
+        var dto = new InitialAdminUserStatusDto();
+        dto.setAdminUserCreationRequired(initialAdminUserService.isInitialAdminUserRequired());
+        return new ResponseEntity<>(dto, HttpStatus.OK);
+    }
+
+    @Override
+    @PreAuthorize("permitAll")
+    @AuditEventMethod(event = RestApiAuditEvent.ADMIN_USER_ADD)
+    public synchronized ResponseEntity<Void> createInitialAdminUser(InitialAdminUserDto initialAdminUserDto) {
+        char[] password = initialAdminUserDto.getPassword().toCharArray();
+        try {
+            initialAdminUserService.createInitialAdminUser(initialAdminUserDto.getUsername(), password);
+        } finally {
+            java.util.Arrays.fill(password, '\0');
+        }
+        return new ResponseEntity<>(HttpStatus.CREATED);
+    }
 
     @Override
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<InitializationStatus> getInitializationStatus() {
-        InitializationStatusDto initializationStatusDto =
-                initializationService.getSecurityServerInitializationStatus();
-        InitializationStatus initializationStatus = new InitializationStatus();
-        initializationStatus.setIsAnchorImported(initializationStatusDto.isAnchorImported());
-        initializationStatus.setIsServerCodeInitialized(initializationStatusDto.isServerCodeInitialized());
-        initializationStatus.setIsServerOwnerInitialized(initializationStatusDto.isServerOwnerInitialized());
-        initializationStatus.setSoftwareTokenInitStatus(TokenInitStatusMapping
-                .map(initializationStatusDto.getSoftwareTokenInitStatusInfo()).get());
-        return new ResponseEntity<>(initializationStatus, HttpStatus.OK);
+    public ResponseEntity<InitializationStatusDto> getInitializationStatus() {
+        InitializationStatus initStatus = initializationService.getSecurityServerInitializationStatus();
+        var initializationStatusDto = new InitializationStatusDto();
+        initializationStatusDto.setIsAnchorImported(initStatus.isAnchorImported());
+        initializationStatusDto.setIsServerCodeInitialized(initStatus.isServerCodeInitialized());
+        initializationStatusDto.setIsServerOwnerInitialized(initStatus.isServerOwnerInitialized());
+        initializationStatusDto.setSoftwareTokenInitStatus(TokenInitStatusMapping.map(initStatus.getSoftwareTokenInitStatusInfo()));
+        initializationStatusDto.setEnforceTokenPinPolicy(initStatus.getTokenPinPolicyEnforced());
+        initializationStatusDto.setSoftwareTokenAutologinEnabled(initStatus.getSoftwareTokenAutologinEnabled());
+        return new ResponseEntity<>(initializationStatusDto, HttpStatus.OK);
     }
 
     @Override
     @PreAuthorize("hasAuthority('INIT_CONFIG')")
     @AuditEventMethod(event = INIT_SERVER_CONFIGURATION)
-    public synchronized ResponseEntity<Void> initSecurityServer(InitialServerConf initialServerConf) {
-        String securityServerCode = initialServerConf.getSecurityServerCode();
-        String ownerMemberClass = initialServerConf.getOwnerMemberClass();
-        String ownerMemberCode = initialServerConf.getOwnerMemberCode();
-        String softwareTokenPin = initialServerConf.getSoftwareTokenPin();
-        boolean ignoreWarnings = Boolean.TRUE.equals(initialServerConf.getIgnoreWarnings());
+    public synchronized ResponseEntity<Void> initSecurityServer(InitialServerConfDto initialServerConfDto) {
+        String securityServerCode = initialServerConfDto.getSecurityServerCode();
+        String ownerMemberClass = initialServerConfDto.getOwnerMemberClass();
+        String ownerMemberCode = initialServerConfDto.getOwnerMemberCode();
+        String softwareTokenPin = initialServerConfDto.getSoftwareTokenPin();
+        boolean ignoreWarnings = Boolean.TRUE.equals(initialServerConfDto.getIgnoreWarnings());
+        Boolean enableSoftwareTokenAutologin = initialServerConfDto.getEnableSoftwareTokenAutologin();
         try {
             initializationService.initialize(securityServerCode, ownerMemberClass, ownerMemberCode, softwareTokenPin,
-                    ignoreWarnings);
-        } catch (AnchorNotFoundException | InitializationService.ServerAlreadyFullyInitializedException e) {
-            throw new ConflictException(e);
-        } catch (UnhandledWarningsException | InvalidCharactersException
-                | WeakPinException | InitializationService.InvalidInitParamsException e) {
+                    ignoreWarnings, enableSoftwareTokenAutologin);
+        } catch (UnhandledWarningsException e) {
             throw new BadRequestException(e);
-        } catch (InitializationService.SoftwareTokenInitException e) {
-            throw new InternalServerErrorException(e);
-        } catch (InterruptedException e) {
-            throw new InternalServerErrorException(new ErrorDeviation(ERROR_GPG_KEY_GENERATION_INTERRUPTED));
         }
+        dataspaceParticipantProvisioningTrigger.provisionParticipantAsync();
 
         return new ResponseEntity<>(HttpStatus.CREATED);
     }

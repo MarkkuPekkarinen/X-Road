@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,9 +27,12 @@ package org.niis.xroad.securityserver.restapi.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import org.niis.xroad.common.CostType;
+import org.niis.xroad.globalconf.model.CsrFormat;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DTO for approved certificate authority data
@@ -47,4 +50,9 @@ public class ApprovedCaDto {
     private final boolean topCa;
     // subject DN names from topmost CA to this CA
     private final List<String> subjectDnPath;
+    private final String certificateProfileInfo;
+    private final CsrFormat defaultCsrFormat;
+    private final boolean acmeCapable;
+    private final String acmeServerIpAddress;
+    private final Map<String, CostType> ocspUrlsAndCostTypes;
 }

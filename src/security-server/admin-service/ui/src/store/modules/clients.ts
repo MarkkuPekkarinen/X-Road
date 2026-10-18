@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -23,14 +24,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import axios from 'axios';
-import { Client } from '@/openapi-types';
+import * as api from '@/util/api';
+import { Client, ClientAdd } from '@/openapi-types';
 import { createClientId, deepClone, Mutable } from '@/util/helpers';
 import { ExtendedClient } from '@/ui-types';
 import { ClientTypes } from '@/global';
-import i18n from './../../i18n';
+import { i18n } from '@niis/shared-ui';
+import { defineStore } from 'pinia';
 
-const UNKNOWN_NAME: string = i18n.t('client.unknownMember') as string;
+const unknownName = () => i18n.global.t('client.unknownMember') as string;
 
 export interface ClientsState {
   clients: Client[];
@@ -40,11 +42,11 @@ export interface ClientsState {
   members: ExtendedClient[]; // all local members, virtual and real
   realMembers: ExtendedClient[]; // local actual real members, owner +1
   subsystems: ExtendedClient[];
+  searchingClients: boolean;
+  allSubsystems: Client[];
 }
 
-import { defineStore } from 'pinia';
-
-export const useClientsStore = defineStore('clientsStore', {
+export const useClients = defineStore('clients', {
   state: (): ClientsState => {
     return {
       clients: [] as Client[],
@@ -54,6 +56,8 @@ export const useClientsStore = defineStore('clientsStore', {
       members: [],
       subsystems: [],
       realMembers: [],
+      searchingClients: false,
+      allSubsystems: [] as Client[],
     };
   },
   getters: {
@@ -61,11 +65,11 @@ export const useClientsStore = defineStore('clientsStore', {
   },
 
   actions: {
-    fetchClients() {
+    async fetchClients() {
       this.clientsLoading = true;
 
-      return axios
-        .get('/clients')
+      return api
+        .get<Client[]>('/clients')
         .then((res) => {
           this.storeClients(res.data);
         })
@@ -74,6 +78,33 @@ export const useClientsStore = defineStore('clientsStore', {
         })
         .finally(() => {
           this.clientsLoading = false;
+        });
+    },
+    async searchClients(query: Record<string, string | boolean>) {
+      this.searchingClients = true;
+      return api
+        .get<Client[]>('/clients', { params: query })
+        .then((res) => res.data)
+        .finally(() => (this.searchingClients = false));
+    },
+    async addClient(clientAdd: ClientAdd) {
+      return api.post<Client>('/clients', clientAdd).then((res) => res.data);
+    },
+    async fetchAllSubsystems(instance: string) {
+      return api
+        .get<Client[]>('/clients', {
+          params: {
+            instance: instance,
+            show_members: false,
+            internal_search: false,
+            include_management_service_check: true,
+          },
+        })
+        .then((res) => {
+          this.allSubsystems = res.data;
+        })
+        .catch((error) => {
+          throw error;
         });
     },
     storeClients(clients: Client[]) {
@@ -90,7 +121,7 @@ export const useClientsStore = defineStore('clientsStore', {
           const clone = deepClone(element) as ExtendedClient;
           clone.type = ClientTypes.OWNER_MEMBER;
           clone.subsystem_code = undefined;
-          clone.visibleName = clone.member_name || UNKNOWN_NAME;
+          clone.visibleName = clone.member_name || unknownName();
 
           if (element.owner) {
             clone.type = ClientTypes.OWNER_MEMBER;
@@ -125,16 +156,12 @@ export const useClientsStore = defineStore('clientsStore', {
           }
 
           // Create "virtual member" id
-          clone.id = createClientId(
-            element.instance_id,
-            element.member_class,
-            element.member_code,
-          );
+          clone.id = createClientId(element.instance_id, element.member_class, element.member_code);
 
           clone.subsystem_code = undefined;
 
           // Create a name from member_name
-          clone.visibleName = clone.member_name || UNKNOWN_NAME;
+          clone.visibleName = clone.member_name || unknownName();
 
           clone.status = undefined;
 
@@ -144,7 +171,7 @@ export const useClientsStore = defineStore('clientsStore', {
         // Push subsystems to an array
         if (element.subsystem_code) {
           const clone = deepClone(element) as ExtendedClient;
-          clone.visibleName = clone.subsystem_code || UNKNOWN_NAME;
+          clone.visibleName = clone.subsystem_name || clone.subsystem_code || '';
           clone.type = ClientTypes.SUBSYSTEM;
 
           subsystems.push(clone);

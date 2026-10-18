@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,88 +25,61 @@
    THE SOFTWARE.
  -->
 <template>
-  <v-dialog v-if="dialog" :value="dialog" width="750" scrollable persistent>
-    <v-card class="xrd-card">
-      <v-card-title>
-        <span class="headline">{{ title }}</span>
-        <v-spacer />
-        <i data-test="x-close-button" @click="cancel()"></i>
-      </v-card-title>
-
-      <v-card-text style="height: 500px" class="elevation-0">
-        <v-text-field
-          v-model="search"
-          :label="searchLabel"
-          single-line
-          hide-details
-          class="search-input"
-          data-test="client-search-input"
-          autofocus
+  <XrdSimpleDialog
+    hide-close
+    scrollable
+    save-button-text="localGroup.addSelected"
+    height="752"
+    width="840"
+    :title="title"
+    :disable-save="!selectedMember"
+    @save="save"
+    @cancel="cancel"
+  >
+    <template #content>
+      <v-radio-group v-model="selectedMember">
+        <v-data-table
+          class="xrd border xrd-rounded-12 bg-surface-container"
+          hide-default-footer
+          items-per-page="-1"
+          no-data-text="localGroup.noResults"
+          :headers="headers"
+          :items="filteredMembers"
         >
-          <v-icon slot="append">mdi-magnify</v-icon>
-        </v-text-field>
-
-        <!-- Table -->
-        <v-radio-group v-model="selectedMember">
-          <table class="xrd-table members-table fixed_header">
-            <thead>
-              <tr>
-                <th class="checkbox-column"></th>
-                <th>{{ $t('general.name') }}</th>
-                <th>{{ $t('localGroup.id') }}</th>
-              </tr>
-            </thead>
-            <tbody v-if="selectableClients && selectableClients.length > 0">
-              <tr v-for="member in filteredMembers()" :key="member.id">
-                <td class="checkbox-column">
-                  <div class="checkbox-wrap">
-                    <v-radio :key="member.id" :value="member"></v-radio>
-                  </div>
-                </td>
-
-                <td>{{ member.member_name }}</td>
-                <td>{{ member.id }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </v-radio-group>
-
-        <div v-if="filteredMembers().length < 1" class="empty-row">
-          <p>{{ $t('localGroup.noResults') }}</p>
-        </div>
-      </v-card-text>
-      <v-card-actions class="xrd-card-actions">
-        <v-spacer></v-spacer>
-
-        <xrd-button
-          class="button-margin"
-          outlined
-          data-test="cancel-button"
-          @click="cancel()"
-          >{{ $t('action.cancel') }}</xrd-button
-        >
-
-        <xrd-button
-          :disabled="!selectedMember"
-          data-test="save-button"
-          @click="save()"
-          >{{ $t('localGroup.addSelected') }}</xrd-button
-        >
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+          <template #top>
+            <v-text-field
+              v-model="search"
+              data-test="client-search-input"
+              class="xrd w-50 mt-2 ml-4 mb-6"
+              hide-details
+              autofocus
+              single-line
+              prepend-inner-icon="search"
+              :label="$t('action.search')"
+            />
+          </template>
+          <template #item.radio="{ item }">
+            <v-radio :value="item" class="xrd" />
+          </template>
+          <template #item.name="{ item }">
+            <client-name :client="item" />
+          </template>
+        </v-data-table>
+      </v-radio-group>
+    </template>
+  </XrdSimpleDialog>
 </template>
 
 <script lang="ts">
-import Vue, { PropType } from 'vue';
+import { defineComponent, PropType } from 'vue';
 import { Client } from '@/openapi-types';
+import ClientName from '@/components/client/ClientName.vue';
+import { XrdSimpleDialog } from '@niis/shared-ui';
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
 
-export default Vue.extend({
+export default defineComponent({
+  components: { ClientName, XrdSimpleDialog },
   props: {
-    dialog: {
-      type: Boolean,
-      required: true,
-    },
     title: {
       type: String,
       required: true,
@@ -116,19 +90,43 @@ export default Vue.extend({
     },
     selectableClients: {
       type: Array as PropType<Client[]>,
-      default() {
+      default: () => {
         return [];
       },
     },
   },
-
+  emits: ['cancel', 'save'],
   data() {
     return {
       search: '',
       selectedMember: undefined,
     };
   },
-  methods: {
+  computed: {
+    headers() {
+      return [
+        {
+          title: '',
+          align: 'start',
+          key: 'radio',
+        },
+        {
+          title: this.$t('general.name') as string,
+          align: 'start',
+          key: 'name',
+          sortRaw(itemA, itemB) {
+            const aName = itemA.subsystem_name || itemA.subsystem_code || itemA.member_name || '';
+            const bName = itemB.subsystem_name || itemB.subsystem_code || itemB.member_name || '';
+            return aName.localeCompare(bName);
+          },
+        },
+        {
+          title: this.$t('localGroup.id') as string,
+          align: 'start',
+          key: 'id',
+        },
+      ] as DataTableHeader[];
+    },
     filteredMembers() {
       if (!this.search) {
         return this.selectableClients;
@@ -142,6 +140,8 @@ export default Vue.extend({
       return this.selectableClients.filter((member) => {
         if (member.member_name?.toLowerCase().includes(tempSearch)) {
           return true;
+        } else if (member.subsystem_name?.toLowerCase().includes(tempSearch)) {
+          return true;
         } else if (member.id?.toLowerCase().includes(tempSearch)) {
           return true;
         }
@@ -149,6 +149,8 @@ export default Vue.extend({
         return false;
       });
     },
+  },
+  methods: {
     cancel(): void {
       this.clearForm();
       this.$emit('cancel');
@@ -167,15 +169,4 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" scoped>
-@import '../../assets/tables';
-@import '../../assets/add-dialogs';
-
-.checkbox-column {
-  width: 50px;
-}
-
-.search-input {
-  width: 300px;
-}
-</style>
+<style lang="scss" scoped></style>

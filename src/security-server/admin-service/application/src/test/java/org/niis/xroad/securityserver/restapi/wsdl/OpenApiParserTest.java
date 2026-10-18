@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,20 +27,37 @@ package org.niis.xroad.securityserver.restapi.wsdl;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.niis.xroad.securityserver.restapi.config.AdminServiceProperties;
+import org.niis.xroad.serverconf.ServerConfProvider;
 
 import java.net.URL;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for OpenAPIParser
  */
 public class OpenApiParserTest {
+    private final HttpUrlConnectionConfig httpUrlConnectionConfig = new HttpUrlConnectionConfig(mock(ServerConfProvider.class),
+            mock(AdminServiceProperties.class));
 
     @Test
     public void shouldParseOpenApiYaml() throws OpenApiParser.ParsingException, UnsupportedOpenApiVersionException {
         URL url = getClass().getResource("/openapiparser/valid.yaml");
         final OpenApiParser.Result result = new TestOpenApiParser().parse(url.toString());
-        Assert.assertFalse(result.hasWarnings());
-        Assert.assertEquals("https://example.org/api", result.getBaseUrl());
+        assertFalse(result.hasWarnings());
+        assertEquals("https://example.org/api", result.baseUrl());
+    }
+
+    @Test
+    public void shouldParseOpenApi31Yaml() throws OpenApiParser.ParsingException, UnsupportedOpenApiVersionException {
+        URL url = getClass().getResource("/openapiparser/v310.yaml");
+        final OpenApiParser.Result result = new TestOpenApiParser().parse(url.toString());
+        assertFalse(result.hasWarnings());
+        assertEquals("https://example.org/api", result.baseUrl());
+        assertEquals(3, result.operations().size());
     }
 
     @Test
@@ -48,49 +65,58 @@ public class OpenApiParserTest {
         URL url = getClass().getResource("/openapiparser/warnings.yml");
         final OpenApiParser.Result result = new TestOpenApiParser().parse(url.toString());
         Assert.assertTrue(result.hasWarnings());
-        Assert.assertEquals("https://{securityserver}/r1", result.getBaseUrl());
+        assertEquals("https://{securityserver}/r1", result.baseUrl());
     }
 
     @Test
     public void shouldParseOpenApiJson() throws OpenApiParser.ParsingException, UnsupportedOpenApiVersionException {
         URL url = getClass().getResource("/openapiparser/valid.json");
         final OpenApiParser.Result result = new TestOpenApiParser().parse(url.toString());
-        Assert.assertFalse(result.hasWarnings());
-        Assert.assertEquals("https://example.org/api", result.getBaseUrl());
+        assertFalse(result.hasWarnings());
+        assertEquals("https://example.org/api", result.baseUrl());
+    }
+
+    @Test
+    public void shouldParseOpenApi31Json() throws OpenApiParser.ParsingException, UnsupportedOpenApiVersionException {
+        URL url = getClass().getResource("/openapiparser/v310.json");
+        final OpenApiParser.Result result = new TestOpenApiParser().parse(url.toString());
+        assertFalse(result.hasWarnings());
+        assertEquals("https://example.org/api", result.baseUrl());
+        assertEquals(3, result.operations().size());
     }
 
     @Test(expected = OpenApiParser.ParsingException.class)
     public void shouldFailIfInvalidProtocol() throws OpenApiParser.ParsingException,
             UnsupportedOpenApiVersionException {
         URL url = getClass().getResource("/openapiparser/valid.json");
-        final OpenApiParser.Result result = new OpenApiParser().parse(url.toString());
+        final OpenApiParser.Result result = new OpenApiParser(httpUrlConnectionConfig).parse(url.toString());
     }
 
     @Test(expected = OpenApiParser.ParsingException.class)
     public void shouldFailIfDuplicateEndpoint() throws OpenApiParser.ParsingException,
             UnsupportedOpenApiVersionException {
         URL url = getClass().getResource("/openapiparser/duplicateendpoint.yaml");
-        final OpenApiParser.Result result = new OpenApiParser().parse(url.toString());
+        final OpenApiParser.Result result = new OpenApiParser(httpUrlConnectionConfig).parse(url.toString());
     }
 
     @Test(expected = UnsupportedOpenApiVersionException.class)
     public void shouldFailOnUnsupportedOpenApiVersionYaml() throws OpenApiParser.ParsingException,
             UnsupportedOpenApiVersionException {
-        URL url = getClass().getResource("/openapiparser/v310.yaml");
+        URL url = getClass().getResource("/openapiparser/invalid_version.yaml");
         new TestOpenApiParser().parse(url.toString());
     }
 
     @Test(expected = UnsupportedOpenApiVersionException.class)
     public void shouldFailOnUnsupportedOpenApiVersionJson() throws OpenApiParser.ParsingException,
             UnsupportedOpenApiVersionException {
-        URL url = getClass().getResource("/openapiparser/v310.json");
+        URL url = getClass().getResource("/openapiparser/invalid_version.json");
         new TestOpenApiParser().parse(url.toString());
     }
 
-    static class TestOpenApiParser extends OpenApiParser {
+    class TestOpenApiParser extends OpenApiParser {
 
         TestOpenApiParser() throws ParsingException {
-            super();
+            super(httpUrlConnectionConfig);
         }
 
         @Override

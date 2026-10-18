@@ -1,183 +1,64 @@
 {
-  "403": {
-    "goBack": "Go back",
-    "mainTitle": "Permission denied",
-    "text": "Seems like you do not have the permission to view this page. If you think this is a mistake, check if you are logged into the correct account or contact your administrator to inquire about your permissions.",
-    "topTitle": "Forbidden"
-  },
-  "404": {
-    "pageNotFound": "404 - page not found",
-    "text": "Seems like you found the",
-    "textUnicorn": "unicorn"
-  },
   "accessRights": {
     "addServiceClients": "Add subjects",
     "addServiceClientsSuccess": "Access rights added successfully",
     "addServiceClientsTitle": "Add Subjects",
     "addSubjectsSuccess": "Access rights added successfully",
     "id": "ID",
-    "memberName": "Member Name / Group Description",
     "removeAllText": "Are you sure you want to remove access rights from all clients?",
     "removeAllTitle": "Remove all access rights?",
     "removeSuccess": "Access rights removed successfully",
     "removeText": "Are you sure you want to remove access rights from this client?",
     "removeTitle": "Remove access rights?",
     "rightsGiven": "Access Rights given",
+    "subsystemName": "Subsystem Name / Group Description",
     "title": "Access Rights"
   },
   "action": {
-    "activate": "Activate",
-    "add": "Add",
-    "addClient": "Add client",
-    "addMember": "Add member",
-    "addSubsystem": "Add subsystem",
-    "cancel": "Cancel",
-    "close": "Close",
-    "confirm": "Confirm",
-    "continue": "Continue",
-    "copy": "Copy",
-    "copyId": "Copy ID",
-    "deactivate": "Disable",
-    "delete": "Delete",
-    "done": "Done",
-    "download": "Download",
-    "edit": "Edit",
-    "emptySearch": "Your search for {msg} found no results.",
-    "export": "Export",
-    "finish": "Finish",
-    "goToFront": "Go to the front page",
-    "next": "Next",
-    "noData": "No data",
-    "ok": "Ok",
-    "previous": "Previous",
-    "refresh": "Refresh",
-    "register": "Register",
-    "remove": "Remove",
-    "removeAll": "Remove All",
-    "restore": "Restore",
-    "save": "Save",
-    "search": "Search",
-    "searching": "Searching...",
-    "submit": "Submit",
-    "unregister": "Unregister",
-    "yes": "Yes"
+    "disable": "Disable",
+    "enable": "Enable",
+    "order": "Order"
+  },
+  "adminUsers": {
+    "role": {
+      "XROAD_SECURITYSERVER_OBSERVER": "Server Observer",
+      "XROAD_SERVICE_ADMINISTRATOR": "Service Administrator"
+    }
   },
   "alert": {
-    "count": "Amount of same errors:",
-    "warningCount": "Amount of same warnings",
-    "id": "ID"
+    "warningCount": "Amount of same warnings"
   },
   "apiKey": {
-    "createApiKey": {
-      "button": "CREATE API KEY",
-      "step": {
-        "keyDetails": {
-          "apiKey": "API key",
-          "apiKeyID": "API key ID",
-          "assignedRoles": "Roles assigned",
-          "createKeyButton": "Create Key",
-          "name": "Key Details",
-          "note": "NOTE: save the API key in a secure place. The API key is visible only at the time of key generation. It will not be presented again and cannot be retrieved later."
-        },
-        "roles": {
-          "description": "Please select the roles associated with the API key. The roles define the permissions granted to the API key.",
-          "name": "Roles",
-          "selectRoles": "Select roles"
-        }
-      },
-      "success": "API key successfully created",
-      "title": "Create API key"
-    },
     "role": {
-      "XROAD_REGISTRATION_OFFICER": "Registration Officer",
       "XROAD_SECURITYSERVER_OBSERVER": "Server Observer",
-      "XROAD_SECURITY_OFFICER": "Security Officer",
-      "XROAD_SERVICE_ADMINISTRATOR": "Service Administrator",
-      "XROAD_SYSTEM_ADMINISTRATOR": "System Administrator"
-    },
-    "table": {
-      "action": {
-        "edit": {
-          "button": "Edit",
-          "dialog": {
-            "message": "Roles associated with the API key:",
-            "title": "Edit API Key (ID: {id})"
-          },
-          "success": "API key with ID {id} saved"
-        },
-        "revoke": {
-          "button": "Revoke key",
-          "confirmationDialog": {
-            "message": "Are you sure you want to revoke the API key with ID {id}?",
-            "title": "Are you sure?"
-          },
-          "success": "API key with ID {id} successfully revoked"
-        }
-      },
-      "header": {
-        "id": "ID",
-        "roles": "Roles"
-      }
+      "XROAD_SERVICE_ADMINISTRATOR": "Service Administrator"
     }
   },
   "backup": {
-      "deleteBackup": {
-        "dialog": {
-          "confirmation": "Are you sure you want to delete backup {file}?",
-          "title": "Are you sure?"
-        },
-        "success": "Backup {file} deleted"
-      },
-      "restoreFromBackup": {
-        "dialog": {
-          "confirmation": "Are you sure you want to restore from {file}?",
-          "title": "Are you sure?"
-        },
-        "success": "Configuration restored from {file}"
-      },
     "createBackup": {
-      "button": "Back up config.",
       "messages": {
-        "success": "Backup {file} successfully created",
         "localConfWarning": "Warning! The file “/etc/xroad/services/local.conf” used for configuration overrides is deprecated and not included in the backups anymore. The file “/etc/xroad/services/local.properties” should be used instead."
       }
-    },
-    "uploadBackup": {
-      "button": "Upload backup",
-      "confirmationDialog": {
-        "confirmation": "File {name} already exists, are you sure you want to overwrite it?",
-        "title": "File already exists"
-      },
-      "success": "Backup {file} uploaded successfully"
     }
   },
   "cert": {
     "activateSuccess": "Certificate has been activated",
     "certDeleted": "Certificate deleted",
-    "certificate": "Certificate",
     "deleteCertConfirm": "Are you sure that you want to delete this certificate?",
     "deleteCertTitle": "Delete certificate?",
     "disableSuccess": "Certificate has been disabled",
     "disabled": "disabled",
     "expires": "Expires",
-    "hashInfo": "Hash (SHA-1)",
     "inUse": "in use",
-    "keyUsage": {
-      "CRL_SIGN": "CRL Sign",
-      "DATA_ENCIPHERMENT": "Data Encipherment",
-      "DECIPHER_ONLY": "Decipher Only",
-      "DIGITAL_SIGNATURE": "Digital Signature",
-      "ENCIPHER_ONLY": "Encipher Only",
-      "KEY_AGREEMENT": "Key Agreement",
-      "KEY_CERT_SIGN": "Certificate Sign",
-      "KEY_ENCIPHERMENT": "Key Encipherment",
-      "NON_REPUDIATION": "Non Repudiation"
-    },
-    "rsaExp": "RSA Public Key Exponent",
-    "rsaModulus": "RSA Public Key Modulus",
     "serialNumber": "Serial Number",
     "signCertificate": "Sign Certificate",
     "state": "State"
+  },
+  "certificate": {
+    "hash": "Certificate Hash",
+    "notAfter": "Not After",
+    "notBefore": "Not Before",
+    "subjectDistinguishedName": "Subject Distinguished Name"
   },
   "certificateProfile": {
     "COMMON_NAME": "Common Name (CN)",
@@ -194,7 +75,8 @@
     "SERIAL_NUMBER": "Serial Number",
     "SERIAL_NUMBER_SN": "Serial Number (SN)",
     "SERVER_CODE": "Server Code (CN)",
-    "SERVER_DNS_NAME": "Server DNS name (CN)"
+    "SERVER_DNS_NAME": "Server DNS Name (CN)",
+    "SUBJECT_ALTERNATIVE_NAME": "Subject Alternative Name (SAN)"
   },
   "client": {
     "action": {
@@ -202,6 +84,16 @@
         "confirmText": "Do you want to delete this client?",
         "confirmTitle": "Delete client",
         "success": "Client deleted"
+      },
+      "disable": {
+        "confirmText": "Do you want to disable this client?",
+        "confirmTitle": "Disable client",
+        "success": "Client disabling in progress"
+      },
+      "enable": {
+        "confirmText": "Do you want to enable this client?",
+        "confirmTitle": "Enable client",
+        "success": "Client enabling in progress"
       },
       "makeOwner": {
         "button": "Make Owner",
@@ -216,28 +108,44 @@
         "confirmTitle": "Key and certificate deletion",
         "success": "Certificate deleted"
       },
+      "renameSubsystem": {
+        "changeAdded": "Subsystem name change successfully added and will be applied on client registration",
+        "changeSubmitted": "Subsystem name change successfully submitted",
+        "title": "Edit subsystem name"
+      },
       "unregister": {
         "confirmText": "Do you want to unregister this client?",
         "confirmTitle": "Unregister client",
         "success": "Client unregistered"
       }
     },
+    "defaultSubsystemNameTooltip": "Subsystem name is not defined",
+    "forbiddenDisable": "The provider of management services is not eligible for deactivation.",
     "id": "ID",
     "member": "Member",
     "memberClass": "Member Class",
     "memberCode": "Member Code",
+    "memberInParenthesis": "(@:client.member)",
     "memberName": "Member Name",
     "name": "Name",
     "owner": "Owner",
+    "ownerInParenthesis": "(@:client.owner)",
     "status": "Status",
     "statusText": {
-      "deletionInProgress": "DELETION IN PROGRESS",
-      "globalError": "GLOBAL ERROR",
-      "registered": "REGISTERED",
-      "registrationInProgress": "REGISTRATION IN PROGRESS",
-      "saved": "SAVED"
+      "deletionInProgress": "Deletion in progress",
+      "disabled": "Disabled",
+      "disablingInProgress": "Disabling in progress",
+      "enablingInProgress": "Enabling in progress",
+      "globalError": "Global error",
+      "nameSet": "Name change will be applied on client registration",
+      "nameSubmitted": "Name change is submitted",
+      "registered": "Registered",
+      "registrationInProgress": "Registration in progress",
+      "saved": "Saved"
     },
     "subsystemCode": "Subsystem Code",
+    "subsystemName": "Subsystem Name",
+    "subsystemTitleSuffix": " (@:general.subsystem)",
     "unknownMember": "unknown member"
   },
   "clients": {
@@ -257,34 +165,107 @@
     "client": "Client",
     "csrDetails": "CSR details",
     "csrFormat": "CSR Format",
+    "eabCredRequired": "Selected Certification Authority requires external account binding for ACME, but the credentials are missing from the configuration.",
+    "failedFetchAcmeMetadata": "Failed to fetch ACME metadata for selected Certification Authority, this may cause errors on the next steps.",
     "generateCsr": "Generate CSR",
     "helpCertificationService": "Certification Authority (CA) that will issue the certificate.",
     "helpClient": "X-Road member the certificate will be issued for.",
     "helpCsrFormat": "Format of the certificate signing request according to the CA’s requirements.",
     "helpUsage": "Usage policy of the certificate: signing messages or authenticating Security Server.",
+    "orderAcmeCertificate": "Order certificate from ACME Server with the generated CSR and import the returned certificate to the token.",
     "saveInfo": "Generate a new CSR and save it into a safe place.",
     "usage": "Usage"
   },
   "customValidation": {
     "invalidEndpoint": "Endpoint contains illegal characters",
     "invalidUrl": "URL is not valid",
-    "invalidXrdIdentifier": "Identifier value contains illegal characters"
+    "invalidXrdIdentifier": "Identifier value contains illegal characters",
+    "requiredIf": "The {fieldName} field is required",
+    "description": "Use valid description characters only"
+  },
+  "dsTlsCertificates": {
+    "downloadSuccess": "Dataspace TLS certificate successfully downloaded",
+    "generateCsr": {
+      "example": "CN=mysecurityserver.example.com, O=My Organization, C=EE"
+    },
+    "generateKey": {
+      "confirmation": "Generate a new Dataspace TLS key and certificate?",
+      "explanation": "The system will generate a new Dataspace TLS key and a self-signed certificate, replacing the existing key and certificate. The Dataspace protocol endpoints of this Security Server will start serving the new certificate.",
+      "success": "New Dataspace TLS key and certificate generated successfully",
+      "title": "Dataspace TLS Key"
+    },
+    "title": "Dataspace TLS Key",
+    "uploadCertificate": {
+      "success": "Dataspace TLS certificate imported",
+      "title": "Upload Dataspace TLS certificate"
+    }
   },
   "diagnostics": {
     "addOnStatus": {
       "messageLogDisabled": "Disabled by configuration"
     },
+    "connection": {
+      "ok": "Everything ok",
+      "test": "Test",
+      "centralServer": {
+        "authCertRequest": "Authentication certificate registration service",
+        "globalConf": "Global configuration download",
+        "globalConfHttp": "http",
+        "globalConfHttps": "https",
+        "title": "Central Server"
+      },
+      "management": {
+        "title": "Management Security Server"
+      },
+      "securityServer": {
+        "client": "Client",
+        "sourceClient": "Source Client",
+        "rest": "REST",
+        "securityServer": "Security Server",
+        "soap": "SOAP",
+        "title": "Other Security Server",
+        "target": "Target",
+        "targetClient": "Target Client"
+      }
+    },
+    "costType": "Cost Type",
+    "downloadReport": "Download Diagnostic Report",
+    "encryption": {
+      "backup": {
+        "configuredKeyId": "Configured Key Id",
+        "title": "Backup encryption"
+      },
+      "messageLog": {
+        "archive": {
+          "defaultKeyNote": "This member is configured to use the servers default encryption key. For additional security, consider defining a specific key to be used.",
+          "groupingTitle": "Grouping rule:",
+          "keyId": "Key id",
+          "memberIdentifier": "Member identifier",
+          "title": "Message log archive encryption"
+        },
+        "database": {
+          "title": "Message log database encryption"
+        }
+      },
+      "status": {
+        "false": "Disabled",
+        "true": "Enabled"
+      },
+      "statusTitle": "Encryption status:"
+    },
     "globalConfiguration": {
       "configurationStatus": {
-        "ERROR_CODE_CANNOT_DOWNLOAD_CONF": "Unable to download global configuration. Check network connection.",
+        "ERROR_CODE_CANNOT_DOWNLOAD_CONF": "Unable to download global configuration. Check the network connection.",
         "ERROR_CODE_EXPIRED_CONF": "The downloaded global configuration has expired.",
         "ERROR_CODE_INTERNAL": "Internal error occurred.",
         "ERROR_CODE_INVALID_SIGNATURE_VALUE": "Invalid signature value.",
         "ERROR_CODE_MISSING_PRIVATE_PARAMS": "The downloaded global configuration did not contain private parameters",
         "ERROR_CODE_UNINITIALIZED": "The configuration client is initialising.",
-        "SUCCESS": "Everything ok",
-        "UNKNOWN": "Unknown"
+        "OK": "Everything ok",
+        "UNKNOWN": "Unknown",
+        "WAITING": "The configuration client is initialising."
       },
+      "last_successful_url": "Last successful URL",
       "title": "Global configuration"
     },
     "javaVersion": {
@@ -294,6 +275,49 @@
       "ok": "Everything ok",
       "title": "Java version",
       "vendor": "Vendor name"
+    },
+    "mailNotificationConfiguration": {
+      "confStatus": {
+        "false": "Configuration incomplete",
+        "true": "Configured"
+      },
+      "configuration": "Mail server configuration",
+      "enabled": {
+        "false": "Disabled",
+        "true": "Enabled"
+      },
+      "help": {
+        "description": "Mail notifications are sent automatically to configured recipients for the following events depending on the configuration: authentication certificate renewal over ACME succeeded / failed, signing certificate renewal over ACME succeeded / failed, authentication certificate registration succeeded. Enabling email notifications requires changes to the Security Server’s configuration. Please see the Security Server User Guide for details.",
+        "title": "Different mail notification statuses available"
+      },
+      "recipientsEmails": "Recipients' emails",
+      "sentTestMail": "Send test e-mail",
+      "status": "Status",
+      "title": "Mail notification status",
+      "type": {
+        "ACME_CERT_AUTOMATICALLY_ACTIVATED": "ACME certificate automatically activated notifications",
+        "ACME_CERT_AUTOMATIC_ACTIVATION_FAILURE": "ACME certificate automatic activation failure notifications",
+        "ACME_FAILURE": "ACME failure notifications",
+        "ACME_SUCCESS": "ACME success notifications",
+        "AUTH_CERT_REGISTERED": "AUTH certificate registered notifications"
+      },
+      "types": "Mail notification types"
+    },
+    "maintenanceMode": {
+      "disableConfirm": "Do you want to disable maintenance mode?",
+      "disableSuccess": "Maintenance mode disabling in progress",
+      "disableTitle": "Disable maintenance mode",
+      "enableConfirm": "Do you want to enable maintenance mode?",
+      "enableSuccess": "Maintenance mode enabling in progress",
+      "enableTitle": "Enable maintenance mode",
+      "forbiddenEnable": "Maintenance mode cannot be enabled for a management services provider",
+      "label": "Maintenance mode:",
+      "status": {
+        "DISABLED_MAINTENANCE_MODE": "Maintenance mode is disabled",
+        "ENABLED_MAINTENANCE_MODE": "Maintenance mode is enabled",
+        "PENDING_DISABLE_MAINTENANCE_MODE": "Disable maintenance mode request is submitted",
+        "PENDING_ENABLE_MAINTENANCE_MODE": "Enable maintenance mode request is submitted"
+      }
     },
     "message": "Message",
     "nextUpdate": "Next Update",
@@ -305,47 +329,58 @@
         "ERROR_CODE_OCSP_RESPONSE_INVALID": "Unable to parse the OCSP response",
         "ERROR_CODE_OCSP_RESPONSE_UNVERIFIED": "Unable to verify the OCSP response",
         "ERROR_CODE_OCSP_UNINITIALIZED": "Status request not sent yet",
-        "SUCCESS": "Everything ok",
-        "UNKNOWN": "Unknown"
+        "OK": "Everything ok",
+        "UNKNOWN": "Unknown",
+        "WAITING": "Status request not sent yet"
       },
       "title": "OCSP responders"
     },
     "previousUpdate": "Previous Update",
+    "proxyMemoryUsage": {
+      "alertOverThreshold": "Warning: Proxy's memory usage is above configured threshold",
+      "max": "Maximum memory",
+      "ok": "Everything ok",
+      "threshold": "Threshold",
+      "title": "Proxy memory usage",
+      "total": "Total allocated memory",
+      "usagePercent": "Used memory (%)",
+      "used": "Used memory"
+    },
     "serviceUrl": "Service URL",
     "status": "Status",
     "timestamping": {
       "timestampingStatus": {
         "ERROR_CODE_INTERNAL": "Internal error occurred",
         "ERROR_CODE_MALFORMED_TIMESTAMP_SERVER_URL": "Malformed timestamp server URL. Check the URL.",
-        "ERROR_CODE_TIMESTAMP_REQUEST_TIMED_OUT": "Connection timed out. Check the network connection to global configuration provider.",
+        "ERROR_CODE_TIMESTAMP_REQUEST_TIMED_OUT": "Connection timed out. Check the network connection.",
         "ERROR_CODE_TIMESTAMP_UNINITIALIZED": "Connection ok, no timestamp request made yet",
-        "SUCCESS": "Everything ok",
-        "UNKNOWN": "Unknown"
+        "ERROR_CODE_UNKNOWN_HOST": "Connection error, unknown host",
+        "OK": "Everything ok",
+        "UNKNOWN": "Unknown",
+        "WAITING": "Connection ok, no timestamp request made yet"
       },
       "title": "Timestamping"
     },
-    "encryption": {
-      "status": {
-        "false": "Disabled",
-        "true": "Enabled"
-      },
-      "statusTitle": "Encryption status:",
-      "backup": {
-        "title": "Backup encryption",
-        "configuredKeyId": "Configured Key Id"
-      },
-      "messageLog": {
-        "archive": {
-          "title": "Message log archive encryption",
-          "groupingTitle": "Grouping rule:",
-          "memberIdentifier": "Member identifier",
-          "keyId": "Key id",
-          "defaultKeyNote": "This member is configured to use the servers default encryption key. For additional security, consider defining a specific key to be used."
-        },
-        "database": {
-          "title": "Message log database encryption"
-        }
-      }
+    "traffic": {
+      "client": "Client",
+      "date": "Date",
+      "disabledMessage": "Operational data monitoring is disabled for this Security Server. To enable it, please enable operational monitoring in the Security Server configuration.",
+      "disabledTitle": "Operational Data Monitoring Is Disabled",
+      "exchangeRole": "Exchange role",
+      "exchangeRoleInfo": "Producer or Consumer",
+      "failedRequests": "Failed requests",
+      "failure": "Failure",
+      "party": "Party",
+      "partyInfo": "Service, subsystem, member",
+      "period": "Period",
+      "periodInfo": "Select start and end",
+      "producer": "Producer",
+      "service": "Service",
+      "status": "Status",
+      "statusInfo": "Message exchange status",
+      "success": "Success",
+      "successfulRequests": "Successful requests",
+      "time": "Time"
     }
   },
   "endpoints": {
@@ -366,19 +401,43 @@
   },
   "error_code": {
     "accessright_not_found": "Access right not found",
+    "acme": {
+      "account_creation_failure": "Creating Account on ACME server failed. If external account binding is required, check that the correct credentials are configured in acme.yml",
+      "account_key_pair_error": "Getting key pair for ACME server account failed",
+      "authorization_failure": "Authorization failed. Usually related to a challenge validation failure that is required to prove the ownership of the domain",
+      "authorization_wait_failure": "Waiting for the Authorization to complete failed",
+      "certificate_failure": "Getting the Certificate from the ACME server failed",
+      "certificate_wait_failure": "Waiting for the creation of the new Certificate failed",
+      "challenge_trigger_failure": "Requesting the ACME server to validate the challenge failed",
+      "eab_credentials_missing": "External Account binding credentials missing, but required",
+      "eab_secret_length": "Invalid external account binding base64 secret length",
+      "fetching_metadata_error": "Fetching ACME server metadata failed. ACME Server might be unreachable",
+      "http_challenge_file_creation": "Creating ACME HTTP challenge file failed",
+      "http_challenge_file_deletion": "Deleting ACME HTTP challenge file failed",
+      "http_challenge_missing": "Currently X-Road only supports HTTP challenge, but is missing from the possible options from the ACME server",
+      "http_challenge_token_invalid": "ACME server returned an invalid HTTP challenge token",
+      "order_creation_failure": "Creating new Order on ACME server failed",
+      "order_finalization_failure": "Finalizing the Order on ACME server failed"
+    },
     "action_not_possible": "Action is not possible",
     "additional_member_already_exists": "Additional member already exists",
+    "already_disabled_maintenance_mode": "Maintenance mode is already disabled",
+    "already_enabled_maintenance_mode": "Maintenance mode is already enabled",
     "anchor_already_exists": "Anchor already exists",
     "anchor_file_not_found": "Anchor file not found",
     "anchor_not_found": "Anchor not found",
     "anchor_upload_failed": "Anchor upload failed",
-    "api_key_not_found": "API key not found",
     "auth_cert_not_supported": "Authentication certificate is not supported",
-    "backup_file_not_found": "Backup file not found",
-    "backup_generation_failed": "Backup generation failed",
-    "backup_restore_interrupted": "Backup restore interrupted",
     "base_endpoint_not_found": "Base endpoint not found",
+    "ca_cert_empty": "The file is empty",
+    "ca_cert_expired": "The CA certificate has expired",
+    "ca_cert_key_material": "The file contains private key material. Upload the CA certificate only",
+    "ca_cert_multiple_certificates": "The file contains more than one certificate. Upload only the CA certificate that issues the certificate",
+    "ca_cert_not_a_ca": "The certificate is not a CA certificate",
+    "ca_cert_not_a_certificate": "The file is not a PEM or DER encoded certificate",
+    "ca_cert_not_yet_valid": "The CA certificate is not yet valid",
     "ca_cert_status_processing_failure": "CA certificate status processing failed",
+    "ca_cert_unsupported_key_algorithm": "The CA certificate public key must be RSA or EC",
     "cannot_delete_owner": "Cannot delete the owner",
     "cannot_register_owner": "Cannot register the owner",
     "cannot_unregister_owner": "Cannot unregister owner",
@@ -410,52 +469,79 @@
           },
           "UnknownService": "Unknown service"
         }
-      },
-      "Signer": {
-        "CertNotFound": "Certification is not found",
-        "KeyNotFound": "Key is not found",
-        "TokenNotAvailable": "Token is not available",
-        "TokenNotFound": "Token is not found",
-        "UnknownMember": "X-Road core - signer: Unknown member"
       }
     },
     "csr_not_found": "CSR not found",
+    "database_error": "Database error",
     "diagnostic_request_failed": "Diagnostic request failed",
+    "ds_tls_acme_order_failed": "Ordering the Dataspace TLS certificate failed",
+    "ds_tls_ca_not_found": "The named certification authority is not a designated, ACME-capable Dataspace TLS CA",
+    "ds_tls_certificate_expired": "The Dataspace TLS certificate has expired",
+    "ds_tls_certificate_not_configured": "No Dataspace TLS certificate has been provisioned yet",
+    "ds_tls_certificate_not_yet_valid": "The Dataspace TLS certificate is not yet valid",
+    "ds_tls_certificate_parse_failed": "Cannot read the Dataspace TLS certificate",
+    "ds_tls_invalid_subject_alt_name": "The subject alternative name must be a single name with no whitespace",
+    "ds_tls_key_certificate_mismatch": "The uploaded certificate does not match the Dataspace TLS key",
+    "ds_tls_key_not_generated": "Generate a Dataspace TLS key before requesting a CSR or uploading a certificate",
     "duplicate_accessright": "Duplicate access right",
     "endpoint_already_exists": "Endpoint already exists",
     "endpoint_not_found": "Endpoint not found",
-    "generate_backup_interrupted": "Backup generation interrupted",
+    "external_rpc_ca_not_available": "The Security Server RPC CA is not available",
+    "failed_to_save_instance_identifier": "Failed to save instance identifier to a file",
+    "forbidden_disable_management_service_client": "The management services provider cannot be deactivated.",
+    "forbidden_enable_maintenance_mode_for_management_service": "The management services provider cannot be deactivated.",
     "global_conf_download_request_failed": "Global configuration download request failed",
+    "global_conf_download_url_connection_failure": "Failed to open connection to the global configuration download url",
+    "global_conf_get_version_failed": "Failed to determine global configuration version from the url",
+    "global_conf_header_field_missing": "Global configuration response is missing required header field {0}",
+    "global_conf_header_field_missing_parameter": "Global configuration response header field {0} is missing parameter {1}",
+    "global_conf_header_field_wrong_value": "Global configuration response header field {0} has wrong value (value: {1}, expected: {2})",
+    "global_conf_missing_signed_data": "Global configuration is missing signed data",
+    "global_conf_missing_signed_data_expiration_date": "Global configuration signed data is missing expiration date",
+    "global_conf_missing_verification_cert": "Cannot find verification certificate (certificate hash {0}) to verify signature of global configuration",
     "global_conf_outdated": "Global configuration is outdated",
+    "global_conf_parsing_downloaded_conf_directory_failure": "Failed to parse downloaded global configuration directory from {0}",
+    "global_conf_part_download_failure": "Failed to download global configuration part",
+    "global_conf_part_downloaded_file_integrity_failure": "Failed to verify downloaded global configuration part integrity of {0}",
+    "global_conf_part_downloaded_hash_failure": "Failed to get hash for downloaded global configuration part",
+    "global_conf_part_file_expiration_date_update_failure": "Failed to update expiration date of global configuration part file",
+    "global_conf_part_file_hash_failure": "Failed to get hash for existing global configuration file",
+    "global_conf_part_file_save_failure": "Failed to save global configuration part file to {0}",
+    "global_conf_part_invalid_instance_identifier": "Global configuration part file {0} has invalid instance identifier",
+    "global_conf_part_reserved_file_name": "Global configuration part {0} resolves to a reserved file name",
+    "global_conf_part_duplicate_target": "Two configuration parts resolve to the same target path {0}",
+    "global_conf_signature_decode_failure": "Failed to decode signature of global configuration",
+    "global_conf_signature_verification_failure": "Failed to verify signature of global configuration",
     "gpg_key_generation_failed": "GPG keypair generation failed",
     "gpg_key_generation_interrupted": "GPG keypair generation interrupted",
+    "http_error": "HTTP error",
     "identifier_not_found": "Identifier not found",
     "illegal_generated_endpoint_remove": "Removing the generated endpoint is not allowed",
     "illegal_generated_endpoint_update": "Updating the generated endpoint is not allowed",
     "import_internal_cert_failed": "Importing internal certificate failed",
     "internal_anchor_upload_invalid_instance_id": "Anchor has an invalid instance id",
     "internal_key_cert_interrupted": "Internal key certificate interrupted",
-    "invalid_backup_file": "Invalid backup file",
-    "invalid_cert": "Invalid certificate",
     "invalid_characters_pin": "PIN has invalid characters",
-    "invalid_distinguished_name": "Distinguished name is invalid",
     "invalid_dn_parameter": "Invalid DN parameter",
-    "invalid_filename": "Invalid filename",
     "invalid_https_url": "URL does not use HTTPS",
     "invalid_init_params": "Invalid initialisation parameters",
     "invalid_instance_identifier": "Invalid instance identifier",
     "invalid_member_class": "Invalid member class",
+    "invalid_pem_csr": "Invalid PEM CSR",
     "invalid_service_client_id": "Invalid service client ID",
     "invalid_service_url": "Invalid service url",
     "invalid_wsdl": "Invalid WSDL",
     "invalid_wsdl_service_identifier": "Invalid WSDL service identifier",
+    "io_error": "IO error",
     "key_and_cert_generation_failed": "Key and certificate generation failed",
     "key_not_found": "Key not found",
     "local_group_code_already_exists": "Local group code already exists",
     "local_group_member_already_exists": "Local group member already exists",
     "local_group_member_not_found": "Local group member not found",
     "local_group_not_found": "Local group not found",
+    "maintenance_mode_change_request_already_submitted": "Maintenance mode change is already pending",
     "malformed_anchor": "Malformed anchor",
+    "malformed_global_conf": "Malformed global configuration",
     "malformed_url": "Malformed URL",
     "management_request_sending_failed": "Sending of management request failed",
     "member_already_owner": "Member is already the owner",
@@ -464,50 +550,87 @@
     "member_code_exists": "Member code exists",
     "member_code_not_provided": "Member code is not provided",
     "missing_parameter": "Missing parameter",
+    "mlog": {
+      "adding_signature_to_ts_token_failed": "Adding signer certificate to timestamp token failed",
+      "calculating_message_digest_failed": "Calculating message digest failed",
+      "failed_to_build_signature_hash_chain": "Failed to build signature hash chain for batch timestamping",
+      "failed_to_prepare_signature_data": "Failed to prepare signature data for timestamping",
+      "log_manager_unavailable": "Unable to connect to LogManager, immediate timestamping status unavailable",
+      "malformed_timestamp_server_url": "Malformed timestamp server URL. Check the URL.",
+      "message_log_record_not_found": "Could not find log record from the database",
+      "no_log_records_specified": "Cannot timestamp, no log records specified",
+      "no_signature_hashes_specified": "Cannot timestamp, no signature hashes specified",
+      "no_timestamping_provider_found": "No timestamping services configured",
+      "reading_timestamp_response_failed": "Could not read timestamp response. The response should have valid ASN.1 structure",
+      "timestamp_non_granted_response": "Status in timestamping response is not 'granted' nor 'grantedWithMods'. (status: {0} statusString: {1} failInfo: {2})",
+      "timestamp_provider_connection_failed": "Network error: connection to timestamping service failed",
+      "timestamp_record_save_failure": "Could not save timestamp record to the database",
+      "timestamp_request_timed_out": "Connection timed out. Check the network connection.",
+      "timestamp_response_object_creation_failed": "Could not create RFC 3161 timestamp response object",
+      "timestamp_response_validation_failed": "Timestamp response validation against the request failed",
+      "timestamp_signer_verification_failed": "Failed to verify timestamp signer information. Verifier message: {0}",
+      "timestamp_token_encoding_failed": "Timestamp token der encoding failed",
+      "timestamp_token_signer_info_not_found": "Could not get signer information from the timestamp token",
+      "timestamping_non_ok_response": "Timestamping response did not return 'OK' HTTP status. Response was: {0}, {1}",
+      "tsp_certificate_not_found": "Could not find TSP certificate",
+      "updating_message_signature_failed": "Updating the message signature properties in the database failed"
+    },
+    "network_error": "Network error",
+    "ocsp_connection_error": "Unable to connect to the OCSP responder",
+    "ocsp_failed": "Unable to fetch response from the OCSP responder",
+    "ocsp_response_parsing_failure": "Unable to parse the OCSP response",
+    "ocsp_response_verification_failure": "Unable to verify the OCSP response",
     "openapi_parsing_error": "Parsing OpenApi3 description failed",
     "orphans_not_found": "Orphan keys, certificates and/or CSRs that belong to the given client were not found",
     "pin_code_exists": "PIN code exists",
     "pin_code_not_provided": "PIN code is not provided",
     "pin_incorrect": "Incorrect PIN. Please try again.",
-    "pin_min_char_classes_count": "PIN minimum character classes count",
-    "pin_min_length": "PIN minimum length",
     "process_failed": "Process failed",
     "process_not_executable": "Process is not executable",
-    "resource_read_failed": "Failed to read resource",
-    "restore_process_failed": "Restore process failed",
     "server_already_fully_initialized": "Server is already fully initialised",
     "server_code_exists": "Server code exists",
     "server_code_not_provided": "Server code is not provided",
     "service_already_exists": "Service already exists",
     "service_client_not_found": "Service client not found",
     "service_code_already_exists": "Service code already exists",
+    "service_code_reserved": "The service code provided is reserved for internal system use and cannot be assigned to custom services.",
     "service_description_not_found": "Service description not found",
-    "service_not_found": "service not found",
+    "service_not_found": "Service not found",
     "sign_cert_not_supported": "Signing certificate is not supported",
-    "signer_not_reachable": "Signer is not currently reachable. Please check the signer log for details.",
     "software_token_init_failed": "Software token initialisation failed",
+    "ssl_authentication_failed": "SSL authentication failed",
     "timestamping_service_already_configured": "Timestamping service is already configured",
     "timestamping_service_not_found": "Timestamping service not found",
+    "token": {
+      "malformed_csr": "CSR data is malformed"
+    },
     "token_not_active": "Token is not active",
-    "token_not_found": "Token not found",
-    "unsupported_openapi_version": "Unsupported OpenAPI version. Only versions 3.0.x are currently supported.",
+    "tr": {
+      "op_monitor": {
+        "network_error": "Network error: Operational Monitoring is not available"
+      }
+    },
+    "unknown_host": "Connection error, unknown host",
+    "unsupported_openapi_version": "Unsupported OpenAPI version. Only versions 3.0.x and 3.1.0 are currently supported.",
     "url_already_exists": "URL already exists",
-    "validation_failure": "Validation failure",
     "warnings_detected": "Warnings detected",
-    "weak_pin": "Weak PIN",
     "wrong_key_usage": "Wrong key usage",
     "wrong_servicedescription_type": "Wrong service description type",
     "wsdl_download_failed": "WSDL download failed",
     "wsdl_exists": "WSDL exists",
-    "wsdl_validator_interrupted": "WSDL validator interrupted",
     "wsdl_validator_not_executable": "WSDL validator is not executable"
   },
   "fields": {
+    "C": "Country Code",
+    "CN": "Server DNS Name",
+    "O": "Organization Name",
     "addClient": {
-      "memberClass": "Member class",
+      "memberClass": "Member Class",
       "memberCode": "Member Code",
-      "subsystemCode": "Subsystem Code"
+      "subsystemCode": "Subsystem Code",
+      "subsystemName": "Subsystem Name"
     },
+    "certificationService": "Certification Service",
     "clientAdd": {
       "client": {
         "memberCode": "Member Code",
@@ -517,6 +640,7 @@
     "confirmPin": "Confirm PIN",
     "csr": {
       "certService": "Certification Service",
+      "certificationService": "Certification Service",
       "client": "Client",
       "csrFormat": "CSR Format",
       "usage": "Usage"
@@ -525,10 +649,13 @@
     "keys": {
       "name": "Name"
     },
-    "password": "Password",
-    "path": "path",
+    "maintenanceModeMessage": "Maintenance mode message",
+    "memberCode": "Member Code",
+    "method": "Method",
+    "path": "Path",
     "pin": "PIN",
-    "securityServerCode": "Security Server Code",
+    "securityServerAddress": "Security Server address",
+    "serialNumber": "Serial Number",
     "serviceCode": "Service Code",
     "serviceDescriptionAdd": {
       "restServiceCode": "Service code"
@@ -539,6 +666,7 @@
     "serviceTimeout": "Timeout",
     "serviceType": "Service Type",
     "serviceUrl": "URL",
+    "subjectAltName": "Subject Alternative Name",
     "token": {
       "friendlyName": "Friendly name",
       "newPin": "New pin",
@@ -549,21 +677,6 @@
     "url": "URL",
     "username": "Username"
   },
-  "footer": {
-    "copyright": {
-      "company": "Nordic Institute for Interoperability Solutions (NIIS)",
-      "licenceInfo": "Licence info",
-      "title": "Copyright"
-    },
-    "software": {
-      "feedback": "Feedback",
-      "title": "Software",
-      "versionPrefix": "X-Road"
-    }
-  },
-  "global": {
-    "name": "Name"
-  },
   "general": {
     "instance": "Instance",
     "memberClass": "Member class",
@@ -571,13 +684,28 @@
     "name": "Name",
     "subsystem": "subsystem",
     "subsystemCode": "Subsystem code",
-    "type": "Type"
+    "type": "Type",
+    "undefinedSubsystemName": "undefined"
+  },
+  "global": {
+    "appTitle": "X-Road Security Server"
   },
   "globalAlert": {
     "backupRestoreInProgress": "The Security Server configuration is being restored from a backup. Process started at {startTime}",
+    "certificateRenewalJobFailure": "Last certificate renewal job has failed.",
+    "certificateRenewalJobFailureAuth": "Failed Authentication certificate(s):",
+    "certificateRenewalJobFailureSign": "Failed Signing certificate(s):",
     "globalConfigurationInvalid": "Global configuration is expired",
+    "navigateToKeysPage": "See keys and certificates page for more details",
     "secondaryNode": "You are on a secondary node in a Security Server cluster. Modifying configuration is disabled.",
     "softTokenPinNotEntered": "Please enter soft token PIN"
+  },
+  "initialAdminUser": {
+    "confirmPassword": "Confirm password",
+    "info": "Create the initial administrator account that will be used to manage this Security Server.",
+    "password": "Password",
+    "title": "Create Administrator Account",
+    "username": "Username"
   },
   "initialConfiguration": {
     "anchor": {
@@ -595,6 +723,7 @@
     "noPermission": "This Security Server is currently not initialised, please contact an administrator to do the initial configuration",
     "pin": {
       "confirmPin": "Confirm PIN",
+      "enableAutologin": "Enable token autologin",
       "info1": "The software token is the place where the Security Server’s AUTH keys is stored. Please define a PIN to log-in into the software token.",
       "info2": "All required information is collected, press the Submit button to to initialise the Security Server.",
       "info3": "Once the initialisation is done, you must complete the Security Server configuration - simply click the Configure button in the toast notification that will appear in a few moments.",
@@ -613,7 +742,7 @@
     }
   },
   "internalServers": {
-    "certHash": "Certificate Hash (SHA/1)",
+    "certHash": "Certificate Hash",
     "connTypeUpdated": "Connection type updated",
     "connectionInfo": "Connection type for servers in service provider role is set in the Services tab by the service URL (http/https).",
     "connectionType": "Connection type",
@@ -621,6 +750,7 @@
     "tlsTitle": "Information System TLS certificate"
   },
   "keys": {
+    "acmeCertOrdered": "Certificate successfully ordered",
     "addKey": "Add key",
     "authDetailsTitle": "AUTH Key details",
     "authKeyCert": "AUTH Keys and Certificates",
@@ -658,20 +788,23 @@
     "helpTitleSS": "Security Server TLS Certificate",
     "id": "ID",
     "importCert": "Import cert.",
+    "importCertOcspVerifyWarning": "Could not activate certificate, because OCSP Responses could not be verified. Error message: {errorMessage}",
     "importCertSuccess": "Uploading certificate succeeded",
     "incorrectPin": "Incorrect PIN. Please try again.",
+    "keyAlgorithm": "Key Algorithm",
     "keyDeleted": "Key deleted",
-    "keyId": "Key ID:",
+    "keyId": "Key ID",
     "keyInfo": "Key information",
     "keyLabelInput": "Key label",
     "keySaved": "Key saved",
-    "label": "Label:",
+    "label": "Label",
     "logIn": "Log in",
     "logOut": "Log out",
     "logOutText": "Log out of the token?",
     "logOutTitle": "Log out",
     "loggedIn": "Logged in token",
     "loggedOut": "Logged out of token",
+    "name": "Name",
     "noIssues": "No issues",
     "ocsp": "OCSP",
     "ocspStatus": {
@@ -682,18 +815,23 @@
       "suspended": "Suspended",
       "unknown": "Unknown"
     },
-    "readOnly": "Read-only:",
+    "orderAcmeCertificate": "Order Certificate",
+    "readOnly": "Read-only",
     "registrationRequest": "Registration request",
+    "renewal": "Automatic Renewal",
     "request": "Request",
     "signDetailsTitle": "SIGN Key details",
     "signKeyCert": "SIGN Keys and Certificates",
     "status": "Status",
-    "token": "Token:",
-    "tokenDetails": "Token details",
-    "tokenId": "Token ID:",
-    "tokenInfo": "Token information",
-    "tokenPin": "Token PIN",
-    "tokenSaved": "Token saved",
+    "token": {
+      "deleteSuccess": "Token was deleted",
+      "deleteText": "Are you sure that you want to delete this token and all associated information from the server configuration?",
+      "deleteTitle": "Delete token?",
+      "details": "Token details",
+      "id": "Token ID:",
+      "info": "Token information",
+      "saved": "Token saved"
+    },
     "tokenStatus": {
       "active": "",
       "available": "",
@@ -722,13 +860,14 @@
     "id": "Id",
     "localGroup": "Local group",
     "localGroupAdded": "Local group added",
-    "name": "Member Name",
+    "memberName": "Member Name",
     "noResults": "Your search found no results.",
     "removeAllText": "Are you sure you want to remove all members of this group?",
     "removeAllTitle": "Remove all members?",
     "removeText": "Are you sure you want to remove this member?",
     "removeTitle": "Remove member?",
-    "searchOptions": "Search options"
+    "searchOptions": "Search options",
+    "subsystemName": "Subsystem Name"
   },
   "localGroups": {
     "addGroup": "Add group",
@@ -737,31 +876,33 @@
     "memberCount": "Member Count",
     "updated": "Updated"
   },
-  "login": {
-    "errorMsg401": "Wrong username or password",
-    "generalError": "Login failed. Please try again.",
-    "logIn": "Log in",
-    "logOut": "Log out"
-  },
-  "logout": {
-    "idleWarning": "You have been idle for 30 minutes and your session has expired. For security reasons, you will be logged out.",
-    "sessionExpired": "Session expired"
-  },
   "noData": {
-    "loading": "Loading... Please wait",
     "noBackUpEncryptionKeys": "No configured backup encryption keys",
-    "noBackups": "No backups yet",
-    "noCertificate": "No certificate",
-    "noCertificates": "No certificates",
-    "noClientData": "No client data",
     "noCertificateAuthorities": "No certificate authorities",
-    "noData": "No data",
+    "noClientData": "No client data",
     "noLocalGroups": "No local groups",
-    "noMatches": "No items matching criteria",
-    "noServices": "No services",
     "noServiceClients": "No service clients",
-    "noTimestampingServices": "No timestaping services",
-    "noTokens": "No tokens"
+    "noTimestampingServices": "No timestamping services"
+  },
+  "opMonitorTrust": {
+    "externalRpcCa": {
+      "description": "The Security Server RPC CA signs the certificates of the RPC connections of this Security Server. Download it and install it on the operational monitoring daemon host, so that the host trusts this Security Server.",
+      "download": "Download",
+      "title": "Security Server RPC CA",
+      "unavailable": "The Security Server RPC CA is not available"
+    },
+    "opMonitorCa": {
+      "delete": "Delete",
+      "deleteConfirmText": "Delete the Operational Monitoring CA? This Security Server then trusts only the Security Server RPC CA, as for an operational monitoring daemon on the same host.",
+      "deleteConfirmTitle": "Delete Operational Monitoring CA?",
+      "deleted": "The Operational Monitoring CA is deleted",
+      "description": "The CA of an operational monitoring daemon running on another host. Upload it so that this Security Server trusts that operational monitoring daemon. The file must hold exactly one PEM or DER encoded CA certificate and no private key.",
+      "empty": "No Operational Monitoring CA is stored",
+      "replace": "Replace",
+      "title": "Operational Monitoring CA",
+      "upload": "Upload",
+      "uploaded": "The Operational Monitoring CA is stored"
+    }
   },
   "serviceClientType": {
     "globalGroup": "GLOBALGROUP",
@@ -779,7 +920,7 @@
     "id": "ID",
     "memberGroupCodeLabel": "Member/Group code",
     "memberGroupStep": "Member / Group",
-    "name": "Member name / Group description",
+    "name": "Subsystem name / Group description",
     "noAccessRights": "No access rights to this client",
     "noAvailableServices": "No available services",
     "removeAll": "Remove all",
@@ -791,6 +932,7 @@
     "serviceCode": "Service code",
     "serviceSelectionStep": "Servicecode",
     "servicesStep": "Services",
+    "subjectType": "Subject type",
     "title": "Title"
   },
   "services": {
@@ -805,11 +947,12 @@
     "disableNotice": "Disable notice",
     "disableSuccess": "Service description disabled",
     "disableTitle": "Disable?",
+    "editRest": "Edit REST",
     "editUrl": "Edit URL",
+    "editWsdl": "Edit WSDL",
     "enableSuccess": "Service description enabled",
     "idGroupCode": "ID / Group code",
     "lastRefreshed": "Last refreshed: ",
-    "memberNameGroupDesc": "Member name / Group description",
     "noMatches": "No matching records",
     "openApi3Added": "OpenApi3 service added",
     "openapiDetails": "OpenAPI 3 details",
@@ -827,6 +970,11 @@
       "internal_server_ssl_error": "Checking internal server certificates failed. Is the upstream server URL correct and accessible by the Security Server?",
       "internal_server_ssl_handshake_error": "TLS handshake with the upstream server failed, server certificate missing from configuration:"
     },
+    "status": {
+      "disabled": "Disabled",
+      "enabled": "Enabled"
+    },
+    "subsystemNameGroupDesc": "Subsystem name / Group description",
     "timeout": "Timeout",
     "timeoutSec": "Timeout (s)",
     "timeoutTooltip": "The maximum duration of a request to the service, in seconds",
@@ -834,46 +982,19 @@
     "url": "URL",
     "urlPlaceholder": "Insert URL",
     "urlTooltip": "The URL where requests targeted at the service are directed",
+    "verifyTls": "Verify TLS certificate",
     "warning": "Warning",
     "warningCode": {
+      "adding_endpoints": "Adding endpoints:",
       "adding_services": "Adding services:",
+      "deleting_endpoints": "Deleting endpoints:",
       "deleting_services": "Deleting services:",
+      "openapi_validation_warnings": "Validation warnings:",
       "wsdl_validation_warnings": "Validation warnings:"
     },
-    "verifyTls": "Verify TLS certificate",
     "wsdlAdded": "WSDL added",
     "wsdlDescription": "WSDL Description",
     "wsdlDetails": "WSDL details"
-  },
-  "ssTlsCertificate": {
-    "certificateImported": "Certificate imported",
-    "exportCertificate": "Export cert.",
-    "generateCsr": "Generate CSR",
-    "generateInternalCsr": {
-      "cancel": "CANCEL",
-      "done": "DONE",
-      "step1": {
-        "description": "1) First, provide a distinguished name",
-        "label": "Distinguished name",
-        "placeholder": "CN=mysecurityserver.example.com, O=My Organization, C=EE",
-        "tooltip": "The Distinguished Name (DN) uniquely identifies an entity in an X.509 certificate. The following attribute types are commonly found in the DN: CN = Common name, O = Organization name, C = Country code."
-      },
-      "step2": {
-        "description": "2) Generate a new CSR and save it into a safe place",
-        "generateCSR": "Generate CSR"
-      },
-      "title": "Generate TLS Certificate Signing Request"
-    },
-    "generateKey": "Generate key",
-    "generateTlsAndCertificateDialog": {
-      "confirmation": "Generate a new Security Server TLS key and certificate?",
-      "explanation": "The system will generate a new Security Server TLS key and a self-signed certificate, replacing the existing key and certificate.",
-      "success": "New Security Server TLS key and certificate generated successfully",
-      "title": "Security Server TLS Key"
-    },
-    "importCertificate": "Import cert.",
-    "keyCertTitle": "TLS Key and Certificate",
-    "keyText": "Internal TLS Key"
   },
   "stores": {
     "user": {
@@ -881,13 +1002,18 @@
     }
   },
   "systemParameters": {
+    "title": "System parameters",
     "approvedCertificateAuthorities": {
       "table": {
         "header": {
+          "acmeIpAddresses": "ACME Server IP",
           "distinguishedName": "Distinguished Name",
           "expires": "Expires",
-          "ocspResponse": "OCSP Response"
+          "ocspCostType": "OCSP Cost Type",
+          "ocspResponse": "OCSP Response",
+          "ocspUrl": "OCSP URL"
         },
+        "notAvailable": "N/A",
         "ocspResponse": {
           "NOT_AVAILABLE": "N/A",
           "OCSP_RESPONSE_GOOD": "Good",
@@ -923,12 +1049,44 @@
       },
       "title": "Configuration Anchor"
     },
+    "costType": {
+      "FREE": "Free",
+      "PAID": "Paid",
+      "UNDEFINED": "Undefined"
+    },
+    "securityServer": {
+      "addressChangeInProgress": "CHANGE IN PROGRESS",
+      "editDialog": {
+        "title": "Edit Security Server address"
+      },
+      "securityServer": "Security Server",
+      "serverAddress": "Server address",
+      "updateSubmitted": "Security Server address change successfully submitted"
+    },
+    "servicePrioritizationStrategy": {
+      "timestamping": {
+        "label": "Timestamping prioritization strategy: ",
+        "ONLY_FREE": "use only free timestamping services",
+        "ONLY_PAID": "use only paid timestamping services",
+        "FREE_FIRST": "use free timestamping services first, if all of them fail or none are available then use paid ones",
+        "PAID_FIRST": "use paid timestamping services first, if all of them fail or none are available then use free ones",
+        "NONE": "use all timestamping services without prioritization"
+      },
+      "ocsp": {
+        "label": "OCSP prioritization strategy: ",
+        "ONLY_FREE": "use only free OCSP services",
+        "ONLY_PAID": "use only paid OCSP services",
+        "FREE_FIRST": "use free OCSP services first, if all of them fail or none are available then use paid ones",
+        "PAID_FIRST": "use paid OCSP services first, if all of them fail or none are available then use free ones",
+        "NONE": "use all OCSP services without prioritization"
+      }
+    },
     "timestampingServices": {
       "action": {
         "add": {
           "button": "Add",
           "dialog": {
-            "info": "Trusted Timestamping services:",
+            "info": "Trusted Timestamping services",
             "success": "Timestamping service added",
             "title": "Add Timestamping Service"
           }
@@ -946,13 +1104,416 @@
           }
         },
         "header": {
+          "costType": "Cost Type",
           "serviceURL": "Service URL",
           "timestampingService": "Timestamping Service"
         }
       },
       "title": "Timestamping Services"
     },
-    "title": "System parameters"
+    "configurableProperties": {
+      "descriptions": {
+        "xroad": {
+          "proxy-ui-api": {
+            "rate-limit-requests-per-second": "Management REST API request rate limit per second. Rate limits apply per each requesting IP.",
+            "rate-limit-requests-per-minute": "Management REST API request rate limit per minute. Rate limits apply per each requesting IP.",
+            "rate-limit-cache-size": "Controls how many IP addresses can be remembered in the rate-limit cache Tradeoff between memory usage and protection from a large attack.",
+            "rate-limit-expire-after-access-minutes": "Controls how long the rate-limit cache entries are valid",
+            "cache-default-ttl": "Configures default cache expiration in seconds. Cache is hit during authentication requests. Setting the value to -1 disables the cache.",
+            "cache-api-key-ttl": "Configures Api Key cache expiration in seconds. Can be used by various api services. Setting the value to -1 disables the cache.",
+            "strict-identifier-checks": "Configures identifier input validation (member code, subsystem code etc). Values: true- identifiers must mach pattern ^[a-zA-Z0-9'()+,-.=?]*. false- identfiers must not contain colon (:), semicolon (;), slashes (/\\), percent (%) or control characters.",
+            "request-size-limit-regular": "Maximum size of Management REST API requests",
+            "request-size-limit-binary-upload": "Maximum size of Management REST API requests for file uploads",
+            "authentication-key-algorithm": "Key algorithm used for creating authentication certificate request. Possible values are RSA and EC. (since version 7.6)",
+            "signing-key-algorithm": "Key algorithm used for creating signing certificate request. Possible values are RSA and EC. (since version 7.6)",
+            "authentication-provider": "Authentication provider used for UI login. Possible values are PAM or DATABASE.",
+            "enforce-user-password-policy": "When enabled, user passwords must meet the configured password policy.",
+            "auto-update-timestamp-service-url": "If enabled, makes the security server update the timestamping service URLs when they are changed on the central server. In case there are multiple timestamping services with the same name, the update will not be done and a warning is logged instead.",
+            "automatic-activate-auth-certificate": "If enabled, authentication certificates are activated automatically after they have been registered on the Central Server.",
+            "acme-renewal-success-notification-enabled": "If enabled, notification e-mail is sent to the member when automatic certificate renewal has successfully renewed a certificate",
+            "acme-renewal-failure-notification-enabled": "If enabled, notification e-mail is sent to the member when automatic certificate renewal has failed to renew a certificate",
+            "auth-cert-registered-notification-enabled": "If enabled, notification e-mail is sent to the member when authentication certificate has been registered in global configuration",
+            "cert-auto-activation-notification-enabled": "If enabled, notification e-mail is sent to the member when automatic certificate activation was successful",
+            "cert-auto-activation-failure-notification-enabled": "If enabled, notification e-mail is sent to the member when automatic certificate activation has failed",
+            "mail-notification-locale": "Locale for mail notifications, which determines the language of the notifications.",
+            "acme-renewal-active": "If enabled, the ACME automatic certificate renewal job will run periodically",
+            "acme-renewal-retry-delay": "Amount of seconds between automatic ACME certificate renewal runs, if the last run was a failure",
+            "acme-renewal-interval": "Seconds between ACME renewal check cycles.",
+            "acme-renewal-time-before-expiration-date": "When to trigger next automatic renewal. Subtracted as days from the expiration date of the certificate. Used when it's not possible to receive the ACME renewal information from the ACME server.",
+            "acme-keypair-renewal-time-before-expiration-date": "When to trigger automatic ACME account keypair renewal subtracted as days from the expiration date of the certificate",
+            "automatic-activate-acme-sign-certificate": "If enabled, signing certificates are activated automatically when they have been ordered from via ACME (new or renew)",
+            "acme-authorization-wait-attempts": "Number of attempts to check whether the ACME authorizations have completed before giving up",
+            "acme-authorization-wait-interval": "Amount of time in milliseconds to wait between ACME authorization completion check attempts",
+            "acme-certificate-wait-attempts": "Number of attempts to poll for ACME certificate issuance.",
+            "acme-certificate-wait-interval": "Seconds between ACME certificate issuance polling attempts.",
+            "acme-certificate-account-key-pair-expiration": "Amount of days the ACME server account's self-signed certificate is valid",
+            "acme-challenge-port-enabled": "If enabled, the API will listen on acme challenge port (default 80) for incoming ACME challenge requests",
+            "acme-challenge-port": "Custom port number for ACME challenges. When set, the Security Server host's port 80 needs to redirect to this port, because ACME Servers always use port 80 for the challenge.",
+            "acme-key-length": "RSA key length in bits used for ACME certificate requests.",
+            "acme-challenge-path": "File system path where ACME HTTP-01 challenge tokens are served.",
+            "allow-csr-for-key-with-certificate": "Controls if generating the new CSR is allowed for a key that has an existing certificate.",
+            "auth-cert-reg-signature-digest-algorithm-id": "Signature digest algorithm used for generating authentication certificate registration request. Possible values are - SHA-256, SHA-384, SHA-512.",
+            "proxy-server-url": "URL of the Security Server proxy used by the Admin API.",
+            "proxy-server-connect-timeout": "Milliseconds to wait when establishing a connection to the proxy server.",
+            "proxy-server-socket-timeout": "Milliseconds to wait for data from the proxy server socket (0 = no timeout).",
+            "proxy-server-enable-connection-reuse": "When enabled, HTTP connections to the proxy server are reused across requests.",
+            "proxy-tls-protocols": "TLS protocols accepted by the Admin API proxy connection.",
+            "proxy-tls-cipher-suites": "TLS cipher suites accepted by the Admin API proxy connection.",
+            "key-management-api-whitelist": "Comma-separated list of plain IP addresses or address ranges in CIDR notation, which are allowed to call key management endpoints using basic authentication",
+            "regular-api-whitelist": "Comma-separated list of plain IP addresses or address ranges in CIDR notation, which are allowed to call regular endpoints using api key authentication",
+            "tls": {
+              "certificate-provisioning": {
+                "issuance-role-name": "Vault PKI role name used when provisioning the Admin API TLS certificate.",
+                "common-name": "Common name set on the provisioned Admin API TLS certificate.",
+                "alt-names": "DNS subject alternative names included in the provisioned Admin API TLS certificate.",
+                "ip-subject-alt-names": "IP subject alternative names included in the provisioned Admin API TLS certificate.",
+                "ttl": "Time-to-live of the provisioned Admin API TLS certificate (e.g. 3650D).",
+                "secret-store-pki-path": "Vault PKI secrets engine mount path for Admin API TLS certificate provisioning."
+              }
+            }
+          },
+          "proxy": {
+            "admin-port": "Port on which the proxy exposes its admin interface.",
+            "ssl-enabled": "If true, TLS is used for connections between the service client's and service provider's security servers.",
+            "health-check-port": "The TCP port where the health check service listens to requests. Setting the port to 0 disables the health check service completely.",
+            "health-check-interface": "The network interface where the health check service listens to requests. Default is all available interfaces.",
+            "hsm-health-check-enabled": "When enabled, the health-check endpoint also verifies HSM availability.",
+            "message-sign-digest-name": "Digest algorithm used to sign X-Road messages.",
+            "verify-client-cert": "When enabled, the server proxy verifies the client proxy's TLS certificate.",
+            "log-client-cert": "Whether to log client certificate subject information.",
+            "enforce-client-is-cert-validity-period-check": "Whether to reject a request when client information system certificate is expired or not yet valid.",
+            "server-port": "Destination TCP port for outgoing queries in the service client's security server.",
+            "xroad-tls-ciphers": "TLS ciphers (comma-separated list in preferred order) accepted on requests between security servers, and between operational monitoring daemon and client. (since version 6.20)",
+            "batch-signing-enabled": "When enabled, multiple messages are signed in a single batch operation.",
+            "strict-identifier-checks": "Configures identifier input validation (member code, subsystem code etc). Values: true - identifiers must match pattern ^[a-zA-Z0-9'()+,-.=?]* and non-matching values are rejected. false - identifiers are validated against the pattern, non-matching values are not rejected but a warning is logged.",
+            "client-proxy": {
+              "connector-host": "IP address on which the service client's security server listens for connections from client applications. The value 0.0.0.0 allows listening on all IPv4 interfaces. The value 127.0.0.1 allows listening on localhost only. NB! Changing this value could make your Security Server externally accessible and as such, a firewall rules should be implemented first to limit access to trusted hosts.",
+              "client-http-port": "TCP port on which the service client's security server listens for HTTP requests from client applications.",
+              "client-https-port": "TCP port on which the service client's security server listens for HTTPS requests from client applications.",
+              "jetty-configuration-file": "Absolute filename of the Jetty configuration file for the service client's security server. For more information about configuring Jetty server, see https://www.eclipse.org/jetty/documentation/jetty-9/index.html.",
+              "client-connector-initial-idle-time": "The initial idle time (in milliseconds) that client connections are allowed to be idle before the security server starts closing them. Value of 0 means that an infinite idle time is allowed.",
+              "client-timeout": "Signing timeout in milliseconds.",
+              "client-httpclient-so-linger": "The SO_LINGER time (in seconds) at the service consuming security server end for connections between security servers. A value larger than 0 means that upon closing a connection, the system will allow SO_LINGER seconds for the transmission and acknowledgement of all data written to the peer, at which point the socket is closed gracefully. Upon reaching the linger timeout, the socket is closed forcefully, with a TCP RST. Enabling the option with a timeout of zero does a forceful close immediately. Value of -1 disables the forceful close.",
+              "client-httpclient-timeout": "The maximum time (SO_TIMEOUT, in milliseconds) that connections from a service consuming security server to a service providing security server are allowed to wait for a response before the consumer end httpclient gives up. Value of 0 means that an infinite wait time is allowed. This does not affect idle connections.",
+              "pool-total-max-connections": "The total maximum number of connections that are allowed in the pool.",
+              "pool-total-default-max-connections-per-route": "The default route specific connection maximum that is set unless a route specific connection limit is set. Due to the current implementation, this is actually the total maximum limit of connections, indepedent of what the above setting is.",
+              "pool-validate-connections-after-inactivity-of-millis": "When reusing a pooled connection to a service providing security server, check that the connection (the socket) is not half-closed if it has been idle for at least this many milliseconds. This method cannot detect half-open connections. Value of -1 disables the check.",
+              "client-idle-connection-monitor-interval": "How often (in milliseconds) should the connection monitor go through the pooled connections to see if it can clean up any idle or expired connections. This option requires the connection monitor to be enabled to have any effect.",
+              "client-idle-connection-monitor-timeout": "The minimum time (in milliseconds) that a pooled connection must be unused (idle) before it can be removed from the pool. Note that removal from the pool also depends on how often the connection monitor runs. This option requires the connection monitor to be enabled to have any effect.",
+              "client-use-idle-connection-monitor": "Should the idle connection monitor be used to clean up idle and expired connections from the connection pool.",
+              "fastest-connecting-ssl-uri-cache-period": "When a service consumer's security server finds the fastest responding service providing security server, how long the result should be kept in the TLS session cache? 0 to disable.",
+              "use-fastest-connecting-ssl-socket-autoclose": "On TLS connections between security servers, should the underlying TCP-layer connection (socket) be closed on the service consumer end when the TLS layer connection is terminated.",
+              "client-tls-protocols": "TLS protocols (comma-separated list) enabled on the client-side interfaces (for both incoming and outgoing requests). For backward compatibility TLSv1.1 is still supported on the client-side interfaces for outgoing requests (since version 6.7)",
+              "client-tls-ciphers": "TLS ciphers (comma-separated list) enabled on the client-side interfaces (for both incoming and outgoing requests). (since version 6.7)",
+              "pool-enable-connection-reuse": "Allow pooled connections between security servers to be used more than once on the client side. The service provider end of the connections has to have the setting server-support-clients-pooled-connections=true for the pooling to work between a provider and consumer security servers."
+            },
+            "server": {
+              "listen-address": "IP address on which the service provider's security server listens for connections from the service client's security servers. The value 0.0.0.0 allows listening on all IPv4 interfaces.",
+              "listen-port": "TCP port on which the service provider's security server listens for connections from the service client's security server.",
+              "connector-initial-idle-time": "The initial idle time (in milliseconds) that unauthenticated connections are allowed to be idle before the provider security server starts closing them. Value of 0 means that an infinite idle time is allowed.",
+              "jetty-configuration-file": "Absolute filename of the Jetty configuration file for the service provider's security server. For more information about configuring Jetty server, see https://www.eclipse.org/jetty/documentation/jetty-9/index.html.",
+              "support-clients-pooled-connections": "Whether this service providing security server supports pooled connections from the service consumer side. If set to false, connections are to be closed immediately after each message. This may be a wanted approached for security servers behind load balancers.",
+              "min-supported-client-version": "Minimum version of the client Security Server allowed to call services on this provider. Requests from older versions are rejected. Leave empty to allow all versions."
+            },
+            "ocsp-responder": {
+              "listen-address": "IP address on which the service provider's security server listens for requests for OCSP responses from the service client's security server. The service client's security server downloads OCSP responses from the service provider's security server while establishing a secure connection between the security servers. The value 0.0.0.0 allows listening on all IPv4 interfaces. Must match the value of proxy.server-listen-address.",
+              "port": "TCP port on which the service provider's security server listens for requests for OCSP responses from the service client's security server. The service client's security server downloads OCSP responses from the service provider's security server while establishing a secure connection between the security servers.",
+              "client-connect-timeout": "Connect timeout (in milliseconds) of the OCSP responder client. The service client's security server downloads OCSP responses from the service provider's security server while establishing a secure connection between the security servers.",
+              "client-read-timeout": "Read timeout (in milliseconds) of the OCSP responder client. The service client's security server downloads OCSP responses from the service provider's security server while establishing a secure connection between the security servers.",
+              "jetty-configuration-file": "Absolute filename of the Jetty configuration file for the OCSP responder of the service provider's security server. For more information about configuring Jetty server, see https://www.eclipse.org/jetty/documentation/jetty-9/index.html."
+            },
+            "addon": {
+              "proxy-monitor": {
+                "enabled": "Enable the proxy monitor add-on."
+              },
+              "meta-services": {
+                "enabled": "Enable the meta-services add-on."
+              },
+              "op-monitor": {
+                "enabled": "Enable the op-monitor add-on.",
+                "buffer": {
+                  "size": "Maximum number of records buffered before sending to the operational monitor.",
+                  "max-records-in-message": "Maximum number of operational data records in a message sent by the operational monitoring buffer to the operational monitoring daemon.",
+                  "max-message-size": "Maximum size in bytes of one store request sent by the operational monitoring buffer to the operational monitoring daemon. Larger batches are split into several requests. The minimum is 65536. Keep it below the daemon's xroad.op-monitor.rpc.max-inbound-message-size (gRPC default 4 MiB).",
+                  "sending-interval-seconds": "The interval in seconds at which the operational monitoring buffer (re)tries to send records to the operational monitoring daemon. Normally, the buffer triggers the sending mechanism immediately when it receives a new record. In case of heavy load or sending failures the records are accumulating in the buffer and need periodical attention.",
+                  "socket-timeout-seconds": "The socket timeout (SO_TIMEOUT) of sending operational monitoring records from the operational monitoring buffer to the operational monitoring daemon in seconds.",
+                  "connection-timeout-seconds": "HTTP client connection timeout in seconds."
+                },
+                "connection": {
+                  "host": "The host address on which the operational monitoring daemon listens.",
+                  "port": "TCP port on which the operational monitoring daemon listens.",
+                  "scheme": "The URI scheme name of the operational monitoring daemon. Possible values are http and https.",
+                  "socket-timeout-seconds": "HTTP client connection timeout in seconds.",
+                  "connection-timeout-seconds": "The socket timeout (SO_TIMEOUT) of sending the operational data request to the operational monitoring daemon in seconds.",
+                  "xroad-tls-ciphers": "TLS ciphers (comma-separated list in preferred order) accepted on requests between security servers, and between operational monitoring daemon and client. (since version 6.20)"
+                }
+              }
+            },
+            "message-log": {
+              "enabled": "Enable message logging.",
+              "message-body-logging": "Whether message body should be logged or not. If true, the messages are logged in their original form. If false, the message body is cleared of its contents (SOAP body will have an empty child element inside it; REST message body, service path and query parameters will be omitted). In addition, the SOAP header and REST HTTP headers will only have specific set of elements logged, see Note on logged X-Road message headers . As a side effect, details such as formatting and namespace labels of the xml message can be changed and new elements may be introduced for default values in SOAP header. Removal of message body is usually done for confidentiality reasons (body contains data that we do not want to have in the logs). Note that changing the message this way prevents verifying its signature with the asicverifier tool.",
+              "max-loggable-message-body-size": "Maximum loggable REST message body size",
+              "truncated-body-allowed": "If the REST message body exceeds the maximum loggable body size, truncate the body in the log (true) or reject the message (false).",
+              "hash-algo-id": "The algorithm identifier used for hashing in the message log. Possible values are - SHA-224, SHA-256, SHA-384, SHA-512.",
+              "timestamping-prioritization-strategy": "Timestamping prioritization strategy, that determines what timestamping services and in what order are used to timestamp. Possible values are: ONLY_FREE - Only free timestamping services are used. ONLY_PAID - only paid timestamping services are used. FREE_FIRST - free timestamping services are used first, then if no successful responses, then paid services are used next, finally timestamping services whose cost type is undefined are used last. PAID_FIRST - paid timestamping services are used first, then if no successful responses, then free services are used next, finally timestamping services whose cost type is undefined are used last. NONE - no new ordering nor filtering is added (same as before adding cost type to timestamping services.)",
+              "enabled-body-logging-local-producer-subsystems": "Subsystem-specific overrides for message body logging when message-body-logging = false. This parameter defines logging for local producer subsystems, that is, our subsystems that produce some service which external clients use. Comma-separated list of client identifiers for which message body logging is enabled. For example FI/ORG/1710128-9/SUBSYSTEM_A1, FI/ORG/1710128-9/SUBSYSTEM_A2, where - FI = x-road instance, ORG = member class, 1710128-9 = member code, SUBSYSTEM_A1 = subsystem code. This parameter can only be used on subsystem-level, it is not possible to configure message body logging per member. If a subsystem has forward slashes “/” in for example subsystem code, those subsystems can’t be configured with this parameter.",
+              "enabled-body-logging-remote-producer-subsystems": "Subsystem-specific overrides for remote producer subsystems, that is, remote subsystems that produce services which we use. Parameter is used when message-body-logging = false.",
+              "disabled-body-logging-local-producer-subsystems": "Same as enabled-body-logging-local-producer-subsystems, but this parameter is used when message-body-logging = true.",
+              "disabled-body-logging-remote-producer-subsystems": "Same as enabled-body-logging-remote-producer-subsystems, but this parameter is used when message-body-logging = true.",
+              "timestamper": {
+                "client-connect-timeout": "The timestamper client connect timeout in milliseconds. A timeout of zero is interpreted as an infinite timeout.",
+                "client-read-timeout": "The timestamper client read timeout in milliseconds. A timeout of zero is interpreted as an infinite timeout.",
+                "timestamp-immediately": "If true, the time-stamp is created synchronously for each request message. This is a security policy requirement to guarantee the time-stamp at the time of logging the message.",
+                "records-limit": "Maximum number of message records to time-stamp in one batch. If the number of message records in a single batch exceeds 70 % of timestamp-records-limit value, a warning is logged in proxy.log.",
+                "retry-delay": "Time-stamp retry delay in seconds when batch time-stamping fails. After failing to batch time-stamp, the timestamper waits for the time period defined by \"timestamp-retry-delay\" before trying again. This is repeated until fetching a time-stamp succeeds. After successfully fetching a time-stamp, the timestamper returns to normal time-stamping schedule. If the value of \"timestamp-retry-delay\" is higher than the value of the central server system parameter \"timeStampingIntervalSeconds\", the value of \"timeStampingIntervalSeconds\" is used. If the value of \"timestamp-retry-delay\" is zero, the value of \"timeStampingIntervalSeconds\" is used.",
+                "acceptable-timestamp-failure-period": "Defines the time period (in seconds) for how long is time-stamping allowed to fail (for whatever reasons) before the message log stops accepting any more messages (and consequently the security server stops accepting requests). Set to 0 to disable this check. The value of this parameter should not be lower than the value of the central server system parameter timeStampingIntervalSeconds."
+              }
+            },
+            "tls": {
+              "certificate-provisioning": {
+                "issuance-role-name": "Vault PKI role name used when provisioning the proxy TLS certificate.",
+                "common-name": "Common name set on the provisioned proxy TLS certificate.",
+                "alt-names": "DNS subject alternative names included in the provisioned proxy TLS certificate.",
+                "ip-subject-alt-names": "IP subject alternative names included in the provisioned proxy TLS certificate.",
+                "ttl": "Time-to-live of the provisioned proxy TLS certificate (e.g. 3650D).",
+                "secret-store-pki-path": "Vault PKI secrets engine mount path for proxy TLS certificate provisioning."
+              }
+            },
+            "rpc": {
+              "enabled": "Enable the proxy gRPC server.",
+              "listen-address": "IP address on which the proxy gRPC server listens.",
+              "port": "The (localhost) port where the proxy gRPC server binds to. Used for communicating with xroad-signer and xroad-monitor."
+            }
+          },
+          "signer": {
+            "selfsigned-cert-digest-algorithm": "Digest algorithm used when creating self-signed certificates.",
+            "csr-signature-digest-algorithm": "Certificate Signing Request signature digest algorithm. Possible values are - SHA-256, SHA-384, SHA-512.",
+            "enforce-token-pin-policy": "Controls enforcing the token pin policy. When set to true, software token pin is required to be at least 10 ASCII characters from at least tree character classes (lowercase letters, uppercase letters, digits, special characters). (since version 6.7.7)",
+            "ocsp-response-retrieval-active": "This property is used as an override to deactivate periodic OCSP-response retrieval for components that don't need that functionality, but still use signer. Values: false - OCSP-response retrieval jobs are never scheduled. true - periodic OCSP-response retrieval is active based on ocspFetchInterval. Note that if the entire property is missing, it is interpreted as true. This property is delivered as an override and only for the components where the OCSP-response retrieval jobs need to be deactivated. The property is missing for components that require OCSP-response retrieval to be activated.",
+            "ocsp-retry-delay": "OCSP retry delay for signer when fetching OCSP responses fail. After failing to fetch OCSP responses signer waits for the time period defined by \"ocsp-retry-delay\" before trying again. This is repeated until fetching OCSP responses succeeds. After successfully fetching OCSP responses signer returns to normal OCSP refresh schedule defined by \"ocspFetchInterval\". If the value of \"ocsp-retry-delay\" is higher than \"ocspFetchInterval\", the value of \"ocspFetchInterval\" is used as OCSP retry delay.",
+            "ocsp-cache-path": "Absolute path to the directory where the cached OCSP responses are stored.",
+            "ocsp-prioritization-strategy": "OCSP prioritization strategy, that determines what OCSP responders and in what order are used to get OCSP responses. Possible values are: ONLY_FREE - Only free OCSP responders are used. ONLY_PAID - only paid OCSP responders are used. FREE_FIRST - free OCSP responders are used first, then if no successful responses, then paid responders are used next, finally OCSP responders whose cost type is undefined are used last. PAID_FIRST - paid OCSP responders are used first, then if no successful responses, then free responders are used next, finally OCSP responders whose cost type is undefined are used last. NONE - no new ordering nor filtering is added (same as before adding cost type to OCSP endpoints.)",
+            "module-manager-update-interval": "HSM module manager update interval in seconds.",
+            "soft-token-rsa-sign-mechanism": "PKCS#11 mechanism used for RSA signing on the software token.",
+            "soft-token-ec-sign-mechanism": "PKCS#11 mechanism used for EC signing on the software token.",
+            "soft-token-pin-keystore-algorithm": "Key algorithm used for creating PIN keystore for software token. Possible values are RSA and EC. (since version 7.6)",
+            "key-length": "Key length for generating authentication and signing keys (since version 6.7)",
+            "key-named-curve": "Named curve for generating authentication and signing keys in case EC algorithms are used (since version 7.6)",
+            "autologin": {
+              "enabled": "Enable automatic token login on startup.",
+              "retry": {
+                "retry-delay": "Initial delay between autologin retry attempts (e.g. 3S).",
+                "retry-exponential-backoff-multiplier": "Multiplier applied to the retry delay on each subsequent autologin attempt.",
+                "retry-max-attempts": "Maximum number of autologin retry attempts.",
+                "retry-timeout": "Total time limit for all autologin retry attempts (e.g. 60S)."
+              }
+            },
+            "addon": {
+              "hwtoken": {
+                "enabled": "Enable the hardware token (HSM) add-on.",
+                "session-pool-enabled": "Enable pooling of PKCS#11 sessions for the hardware token.",
+                "session-pool-max-total": "Maximum total PKCS#11 sessions in the hardware token session pool.",
+                "session-pool-min-idle": "Minimum number of idle PKCS#11 sessions kept in the hardware token pool.",
+                "session-pool-max-idle": "Maximum number of idle PKCS#11 sessions kept in the hardware token pool.",
+                "session-acquire-timeout": "Maximum time to wait when acquiring a PKCS#11 session from the pool (e.g. 15S)."
+              }
+            },
+            "rpc": {
+              "enabled": "Enable the Signer gRPC server.",
+              "listen-address": "IP address on which the Signer gRPC server listens.",
+              "port": "Port on which the Signer gRPC server listens."
+            },
+            "pin-hasher": {
+              "iterations": "Argon2 iteration count used when hashing token PINs.",
+              "memory-kb": "Argon2 memory cost in kilobytes used when hashing token PINs.",
+              "parallelism": "Argon2 parallelism degree used when hashing token PINs.",
+              "hash-length": "Output hash length in bytes used when hashing token PINs."
+            }
+          },
+          "configuration-client": {
+            "allowed-federations": "A comma-separated list of case-insensitive X-Road instances that fetching configuration anchors is allowed for. This enables federation with the listed instances if the X-Road instance is already federated at the central server level . Special value none, if present, disables all federation (the default value), while all allows all federations if none is not present. Example: allowed-federations=ee,sv allows federation with example instances EE and Sv while allowed-federations=all,none disables federation. X-Road services xroad-confclient and xroad-proxy need to be restarted (in that order) for the setting change to take effect.",
+            "global-conf-hostname-verification": "It is possible to disable the hostname verification. Does the hostname specified in the URL match the hostname specified in the Common Name (CN) of the Central Server’s TLS certificate. Should be true in production environment",
+            "global-conf-tls-cert-verification": "It is possible to disable the verification of the global configuration download TLS certificate. Should be true in production environment",
+            "downloader-connect-timeout": "Maximum time in milliseconds the Global configuration downloader waits to connect to the remote server.",
+            "downloader-read-timeout": "Maximum time in milliseconds the Global configuration downloader waits to read data from the remote server after the connection is established.",
+            "global-conf-dir": "File system path where the downloaded global configuration is stored.",
+            "update-interval": "Global configuration download interval in seconds.",
+            "configuration-anchor-file": "Absolute file name of the configuration anchor that is used to download global configuration.",
+            "configuration-anchor-storage": "Storage backend for the configuration anchor (DB or FILE).",
+            "rpc": {
+              "enabled": "Enable the configuration client gRPC server.",
+              "listen-address": "IP address on which the configuration client gRPC server listens.",
+              "port": "Port on which the configuration client gRPC server listens."
+            }
+          },
+          "env-monitor": {
+            "certificate-info-sensor-interval": "Interval of certificate information sensor in seconds. How often certificate data is collected. The first collection is always done after a delay of 10 seconds.",
+            "disk-space-sensor-interval": "Interval of disk space sensor in seconds. How often disk space data is collected.",
+            "exec-listing-sensor-interval": "Interval of exec listing sensor in seconds. How often sensor data using external command are collected.",
+            "system-metrics-sensor-interval": "Interval of systems metrics sensor in seconds. How often system metrics data is collected.",
+            "limit-remote-data-set": "On/Off switch for filtering out optional monitoring data. With flag set to true, only security server owner can request and get full data set.",
+            "rpc": {
+              "enabled": "Enable the env-monitor gRPC server.",
+              "listen-address": "IP address on which the env-monitor gRPC server listens.",
+              "port": "Port on which the env-monitor gRPC server listens."
+            }
+          },
+          "anti-dos": {
+            "max-parallel-connections": "Maximum number of parallel connections for AntiDOS.",
+            "min-free-file-handles": "Minimum amount of free file handles in the system for accepting new connections. At least one free file handle must be available to accept a new connection.",
+            "max-cpu-load": "Maximum allowed CPU load for accepting new connections. If set to > 1.0, then CPU load is not checked.",
+            "max-heap-usage": "Specifies the maximum allowed Java heap usage when accepting new connections. If set to > 1.0, then heap usage is not checked.",
+            "enabled": "Flag for enabling or disabling the AntiDOS system."
+          },
+          "common-rpc": {
+            "use-tls": "When enabled, mutual TLS is used for all gRPC communication between the Security Server internal services.",
+            "certificate-provisioning": {
+              "refresh-interval": "How often services check whether their gRPC TLS certificate needs to be renewed (e.g. 5H).",
+              "retry-delay": "Initial delay between gRPC TLS certificate provisioning retry attempts (e.g. 5S).",
+              "retry-exponential-backoff-multiplier": "Multiplier applied to the retry delay on each subsequent certificate provisioning attempt.",
+              "retry-max-attempts": "Maximum number of gRPC TLS certificate provisioning retry attempts.",
+              "retry-timeout": "Total time limit for all gRPC TLS certificate provisioning retry attempts (e.g. 60S)."
+            },
+            "channel": {
+              "proxy": {
+                "host": "Hostname used to connect to the proxy gRPC server.",
+                "port": "Port used to connect to the proxy gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the proxy times out."
+              },
+              "configuration-client": {
+                "host": "Hostname used to connect to the configuration client gRPC server.",
+                "port": "Port used to connect to the configuration client gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the configuration client times out."
+              },
+              "env-monitor": {
+                "host": "Hostname used to connect to the env-monitor gRPC server.",
+                "port": "Port used to connect to the env-monitor gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the env-monitor times out."
+              },
+              "auxiliary-service": {
+                "host": "Hostname used to connect to the auxiliary service gRPC server.",
+                "port": "Port used to connect to the auxiliary service gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the auxiliary service times out."
+              },
+              "op-monitor": {
+                "host": "Hostname used to connect to the operational monitoring daemon gRPC server.",
+                "port": "Port used to connect to the operational monitoring daemon gRPC server.",
+                "deadline-after": "Milliseconds before a gRPC call to the operational monitoring daemon times out."
+              }
+            }
+          },
+          "common-global-conf": {
+            "source": "Source backend for global configuration. Possible values: FILESYSTEM (read from local files) or DB (read from database).",
+            "refresh-rate": "How often the shared global configuration cache is refreshed from the configured source (e.g. 60S).",
+            "configuration-path": "File system path where the global configuration files are stored."
+          },
+          "common-server-conf": {
+            "cache-period": "How long (in seconds) server configuration entries are cached before being re-read.",
+            "client-cache-size": "Maximum number of entries in the server configuration client cache.",
+            "service-cache-size": "Maximum number of entries in the server configuration service cache.",
+            "service-endpoints-cache-size": "Maximum number of service endpoint entries kept in the server configuration cache.",
+            "acl-cache-size": "Maximum number of entries in the server configuration access control list (ACL) cache."
+          },
+          "common-ocsp-verifier": {
+            "cache-period": "How long (in seconds) OCSP verification results are cached before being re-checked."
+          },
+          "auxiliary-service": {
+            "backup": {
+              "location": "File system directory where backup archives are stored.",
+              "valid-filename-pattern": "Regular expression that valid backup filenames must match.",
+              "autobackup-cron-expression": "Cron expression controlling when automatic backups are created.",
+              "autobackup-script-path": "Path to the script executed when an automatic backup runs.",
+              "autobackup-delete-old-backups-cron": "Cron expression controlling when old automatic backups are deleted.",
+              "autobackup-keep-for": "Retention period for automatic backups (e.g. 30d).",
+              "script-path": "Path to the manual backup script.",
+              "restore-script-path": "Path to the backup restore script.",
+              "generate-gpg-keypair-path": "Path to the script that generates a GPG key pair for backup encryption.",
+              "create-backup-metadata-path": "Path to the script that parses an uploaded backup's tar label and writes its \".metadata\" file.",
+              "backup-format-version-file-path": "Path to the file containing the current backup format version, used to determine backup compatibility.",
+              "gpgkeys-home": "Directory used as the GNUPGHOME for backup GPG operations.",
+              "encryption-enabled": "When enabled, backup archives are encrypted with GPG.",
+              "encryption-keyids": "Comma-separated GPG key IDs used to encrypt backup archives."
+            },
+            "rpc": {
+              "enabled": "Enable the auxiliary service gRPC server.",
+              "listen-address": "IP address on which the auxiliary service gRPC server listens.",
+              "port": "Port on which the auxiliary service gRPC server listens."
+            },
+            "readiness-check": {
+              "kubernetes": {
+                "service-host": "Kubernetes API server hostname for readiness checks (leave empty to disable).",
+                "service-port": "Kubernetes API server port for readiness checks.",
+                "token-path": "File system path to the Kubernetes service account token used for readiness checks.",
+                "ca-cert-path": "File system path to the Kubernetes CA certificate used for readiness checks.",
+                "connect-timeout-ms": "Milliseconds to wait when connecting to the Kubernetes API for readiness checks.",
+                "read-timeout-ms": "Milliseconds to wait when reading a response from the Kubernetes API for readiness checks."
+              }
+            },
+            "message-log": {
+              "archive-cron": "Cron expression controlling when message log archiving runs.",
+              "clean-cron": "Cron expression controlling when old message log records are cleaned up.",
+              "command-path": "Path to the message log archiver executable."
+            }
+          },
+          "op-monitor": {
+            "listen-address": "IP address on which the operational monitoring daemon listens.",
+            "port": "TCP port on which the operational monitoring daemon listens.",
+            "scheme": "URI scheme of the operational monitoring daemon. Possible values are http and https.",
+            "xroad-tls-ciphers": "TLS ciphers (comma-separated list in preferred order) accepted on connections to the operational monitoring daemon.",
+            "keep-records-for-days": "Number of days to retain operational monitoring records before they are deleted.",
+            "clean-interval": "Cron expression controlling when old operational monitoring records are cleaned up.",
+            "max-records-in-payload": "Maximum number of operational monitoring records returned in a single response payload.",
+            "records-available-timestamp-offset-seconds": "Offset in seconds subtracted from the current time when determining the upper bound for available records.",
+            "health-statistics-period-seconds": "Period in seconds over which health statistics are aggregated.",
+            "rpc": {
+              "enabled": "Enable the operational monitoring daemon gRPC server.",
+              "listen-address": "IP address on which the operational monitoring daemon gRPC server listens.",
+              "port": "Port on which the operational monitoring daemon gRPC server listens.",
+              "max-inbound-message-size": "Maximum size in bytes of a request the operational monitoring daemon gRPC server accepts, for example a batch of stored operational data records. The minimum is 65536. If not set, the gRPC default of 4 MiB applies. Keep it above xroad.proxy.addon.op-monitor.buffer.max-message-size."
+            },
+            "tls": {
+              "certificate-provisioning": {
+                "issuance-role-name": "Vault PKI role name used when provisioning the operational monitoring daemon TLS certificate.",
+                "common-name": "Common name set on the provisioned operational monitoring daemon TLS certificate.",
+                "alt-names": "DNS subject alternative names included in the provisioned operational monitoring daemon TLS certificate.",
+                "ip-subject-alt-names": "IP subject alternative names included in the provisioned operational monitoring daemon TLS certificate.",
+                "ttl": "Time-to-live of the provisioned operational monitoring daemon TLS certificate (e.g. 3650D).",
+                "secret-store-pki-path": "Vault PKI secrets engine mount path for operational monitoring daemon TLS certificate provisioning."
+              },
+              "client-certificate-refresh-interval": "Interval at which the operational monitoring daemon refreshes its client TLS certificate (e.g. 0S to disable)."
+            }
+          },
+          "message-log-archiver": {
+            "clean-transaction-batch-size": "Maximum number of message log records removed per database transaction during clean-up.",
+            "clean-keep-records-for": "Number of days to retain archived message log records before they are deleted.",
+            "max-filesize": "Maximum size in bytes of a single message log archive file.",
+            "transaction-batch-size": "Number of message log records processed in a single archiving transaction batch.",
+            "archive-path": "Absolute path to the directory where archived message log files are stored.",
+            "archive-transfer-command": "Shell command executed after each archiving run to transfer archive files (e.g. to remote storage). Leave empty to disable.",
+            "hash-algo-id": "The algorithm identifier used for hashing in the message log archive. Possible values are SHA-224, SHA-256, SHA-384, SHA-512."
+          },
+          "message-log-encryption": {
+            "archive": {
+              "encryption-enabled": "When enabled, message log archive files are encrypted using OpenPGP (GnuPG).",
+              "default-key-id": "Default OpenPGP key ID used to encrypt message log archive files when no member-specific key is configured.",
+              "grouping-strategy": "Strategy for grouping records into archive files. Possible values: NONE (no grouping), MEMBER (group by member), SUBSYSTEM (group by subsystem)."
+            },
+            "db": {
+              "encryption-enabled": "When enabled, message bodies are stored in the database in encrypted form.",
+              "key-id": "Identifier of the encryption key used for database-level message log encryption."
+            }
+          },
+          "health-check": {
+            "memory": {
+              "threshold-percent": "Maximum allowed percentage (0-100) of heap memory usage before the liveness health check reports DOWN. Unset means the check never fails; containers default to 95."
+            }
+          },
+          "common": {
+            "temp-files-path": "Absolute path to the directory where temporary files are stored."
+          }
+        }
+      }
+    }
   },
   "tab": {
     "client": {
@@ -962,10 +1523,17 @@
       "serviceClients": "Service clients",
       "services": "Services"
     },
+    "diagnostics": {
+      "connectionTesting": "Connection Testing",
+      "overview": "Overview",
+      "traffic": "Traffic"
+    },
     "keys": {
       "apiKey": "API Keys",
+      "opMonitorTrust": "Operational Monitoring Trust",
       "signAndAuthKeys": "SIGN and AUTH Keys",
-      "ssTlsCertificate": "Security Server TLS Key"
+      "ssTlsCertificate": "Security Server TLS Key",
+      "dsTlsCertificate": "Dataspace TLS Certificate"
     },
     "main": {
       "clients": "Clients",
@@ -978,49 +1546,43 @@
       "parameters": "Service Parameters"
     },
     "settings": {
+      "adminUsers": "Admin Users",
       "backupAndRestore": "Backup And Restore",
       "systemParameters": "System Parameters"
     }
   },
+  "tlsCertificates": {
+    "downloadSuccess": "Security Server TLS certificate successfully downloaded",
+    "generateCsr": {
+      "example": "CN=mysecurityserver.example.com, O=My Organization, C=EE"
+    },
+    "generateKey": {
+      "confirmation": "Generate a new Security Server TLS key and certificate?",
+      "explanation": "The system will generate a new Security Server TLS key and a self-signed certificate, replacing the existing key and certificate.",
+      "success": "New Security Server TLS key and certificate generated successfully",
+      "title": "Security Server TLS Key"
+    },
+    "key": "TLS Key and Certificate",
+    "title": "Security Server TLS Key",
+    "uploadCertificate": {
+      "success": "Certificate imported",
+      "title": "Upload Security Server TLS certificate"
+    }
+  },
   "token": {
     "changePin": "Change the pin",
-    "pinChanged": "Token pin was changed – please log in the token with the new pin"
+    "pinChanged": "Token pin was changed – please log in the token with the new pin",
+    "tokenPinPolicy": "Software token pin is required to be at least 10 ASCII characters from at least tree character classes (lowercase letters, uppercase letters, digits, special characters).",
+    "tokenPinPolicyHeader": "Token PIN policy is enabled."
   },
   "toolbar": {
     "securityServerNodeType": {
       "PRIMARY": "Primary node",
-      "SECONDARY": "Secondary node"
+      "SECONDARY": "Secondary node",
+      "undefined": ""
     }
   },
   "validationError": {
-    "AssertFalse": "value should be 'false'",
-    "AssertTrue": "value should be 'true'",
-    "DecimalMax": "numeric value exceeds the maximum allowed",
-    "DecimalMin": "numeric value is under the miminum allowed",
-    "Digits": "value should contain only digits",
-    "Email": "value does not meet the email format",
-    "Future": "datetime value should be in the future",
-    "FutureOrPresent": "datetime value should be now or in the future",
-    "Max": "numeric value exceeds the maximum allowed",
-    "Min": "numeric value is under the minimum allowed",
-    "Negative": "numeric value should be less than zero",
-    "NegativeOrZero": "numeric value should be less or equal to zero",
-    "NoBackslashes": "value should not contain backslash (\\) symbols",
-    "NoColons": "value should not contain colon (:) symbols",
-    "NoForwardslashes": "value should not contain forward slash (/) symbols",
-    "NoPercents": "value should not contain percentage (%) symbols",
-    "NoSemicolons": "value should not contain semicolon (;) symbols",
-    "Normalized": "value should be normalized",
-    "NotBlank": "value should not be blank",
-    "NotEmpty": "value should not be empty",
-    "NotNull": "value is required",
-    "Null": "value should not be set",
-    "Past": "datetime value should be in the past",
-    "PastOrPresent": "datetime value should be now or in the past",
-    "Pattern": "value did not match the required format",
-    "Positive": "numeric value should be greater that zero",
-    "PositiveOrZero": "numeric value should be greater or equal to zero",
-    "Size": "value does not meet length requirements",
     "IdentifierChars": "invalid identifier characters"
   },
   "wizard": {
@@ -1035,12 +1597,16 @@
       "memberNameTooltip": "Name of the member organization.",
       "register": "Register client",
       "searchLabel": "Client",
-      "subsystemCodeTooltip": "Subsystem code that identifies an information system owned by the Member."
+      "subsystemCodeTooltip": "Subsystem code that identifies an information system owned by the Member.",
+      "subsystemNameTooltip": "Name of an information system owned by the Member."
     },
     "clientDetails": "Client details",
     "clientInfo1": "Specify the details of the Client you want to add.",
     "clientInfo2": "If the Client is already existing, you can select it from the Global list.",
     "finish": {
+      "acme": {
+        "infoLine": "All required information is collected. By clicking \"Submit\", the new client will be added to the Clients list and the new key and certificate will appear in the Keys and Certificates view. The certificate will be ordered from the CA's ACME Server and imported automatically. Then you can register the new client."
+      },
       "infoLine1": "All required information is collected. By clicking \"Submit\", the new client will be added to the Clients list and the new key and CSR will appear in the Keys and Certificates view.",
       "infoLine2": "In order to register the new client, please complete the following steps:",
       "note": "NOTE: if you click Cancel, all data will be lost",
@@ -1078,6 +1644,7 @@
       "subsystemExists": "Subsystem already exists"
     },
     "subsystemCode": "Subsystem Code",
+    "subsystemName": "Subsystem Name",
     "token": {
       "info": "Please select the token where you want to add the SIGN key for the new Client. Note: the token must be in Logged in state.",
       "loggedIn": "Logged in",

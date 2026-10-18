@@ -25,26 +25,19 @@
  * THE SOFTWARE.
  */
 import axios from 'axios';
-import {
-  PagedSecurityServers,
-  PagingMetadata,
-  SecurityServer,
-  SecurityServerAddress,
-} from '@/openapi-types';
+import { PagedSecurityServers, PagingMetadata, SecurityServer, SecurityServerAddress } from '@/openapi-types';
 import { defineStore } from 'pinia';
-import { DataOptions } from 'vuetify';
+import { DataQuery } from '@/ui-types';
+import { WithCurrentItem } from '@niis/shared-ui';
 
-export interface State {
-  currentSecurityServerLoading: boolean;
-  currentSecurityServer: SecurityServer | null;
+export interface State extends WithCurrentItem<SecurityServer> {
   securityServers: SecurityServer[];
   securityServerPagingOptions: PagingMetadata;
 }
 
-export const useSecurityServerStore = defineStore('securityServer', {
+export const useSecurityServer = defineStore('securityServer', {
   state: (): State => ({
-    currentSecurityServerLoading: false,
-    currentSecurityServer: null,
+    current: undefined,
     securityServers: [],
     securityServerPagingOptions: {
       total_items: 0,
@@ -55,14 +48,14 @@ export const useSecurityServerStore = defineStore('securityServer', {
   }),
   persist: true,
   actions: {
-    async find(dataOptions: DataOptions, q: string) {
+    async find(dataOptions: DataQuery) {
       const offset = dataOptions?.page == null ? 0 : dataOptions.page - 1;
       const searchUrlParams = {
         offset: offset,
         limit: dataOptions.itemsPerPage,
-        sort: dataOptions.sortBy[0],
-        desc: dataOptions.sortDesc[0],
-        q,
+        sort: dataOptions.sortBy,
+        desc: dataOptions.sortOrder === 'desc',
+        q: dataOptions.search,
       };
 
       return axios
@@ -75,32 +68,30 @@ export const useSecurityServerStore = defineStore('securityServer', {
         });
     },
     async loadById(securityServerId: string) {
-      this.currentSecurityServerLoading = true;
+      this.loadingCurrent = true;
+      this.current = undefined;
       return axios
         .get<SecurityServer>(`/security-servers/${securityServerId}`)
         .then((resp) => {
-          this.currentSecurityServer = resp.data;
+          this.current = resp.data;
         })
-        .finally(() => (this.currentSecurityServerLoading = false));
+        .finally(() => (this.loadingCurrent = false));
     },
     async updateAddress(securityServerId: string, address: string) {
-      this.currentSecurityServerLoading = true;
       const securityServerAddress: SecurityServerAddress = {
         server_address: address,
       };
+      this.loadingCurrent = true;
       return axios
-        .patch<SecurityServer>(
-          `/security-servers/${securityServerId}`,
-          securityServerAddress,
-        )
+        .patch<SecurityServer>(`/security-servers/${securityServerId}`, securityServerAddress)
         .then((resp) => {
-          this.currentSecurityServer = resp.data;
+          this.current = resp.data;
         })
-        .finally(() => (this.currentSecurityServerLoading = false));
+        .finally(() => (this.loadingCurrent = false));
     },
     async delete(securityServerId: string) {
       return axios.delete(`/security-servers/${securityServerId}`).then(() => {
-        this.currentSecurityServer = null;
+        this.current = undefined;
       });
     },
   },

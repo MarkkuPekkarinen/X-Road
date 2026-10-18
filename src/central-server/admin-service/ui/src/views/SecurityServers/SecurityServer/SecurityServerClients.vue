@@ -25,71 +25,66 @@
    THE SOFTWARE.
  -->
 <template>
-  <div data-test="security-server-clients-view">
-    <div id="clients-filter">
-      <xrd-search v-model="search" class="mb-4" />
-    </div>
+  <XrdSubView data-test="security-server-clients-view">
+    <template #header>
+      <div>
+        <XrdRoundedSearchField v-model="search" data-test="search-query-field" width="320" :label="$t('action.search')" />
+      </div>
+    </template>
+
     <!-- Table -->
     <v-data-table
+      class="xrd bg-surface-container xrd-rounded-12 border"
+      item-key="id"
+      hide-default-footer
       :loading="loading"
       :headers="headers"
       :items="clients"
+      :items-length="clients.length"
       :search="search"
       :must-sort="true"
       :items-per-page="-1"
-      class="elevation-0 data-table"
-      item-key="id"
       :loader-height="2"
-      hide-default-footer
     >
       <template #[`item.member_name`]="{ item }">
-        <div
-          v-if="hasPermissionToMemberDetails"
-          class="table-cell-member-name-action"
-          @click="toMemberDetails(item)"
-        >
-          <xrd-icon-base class="xrd-clickable mr-4">
-            <xrd-icon-folder-outline
-          /></xrd-icon-base>
-          {{ item.member_name }}
-        </div>
-
-        <div v-else class="table-cell-member-name">
-          <xrd-icon-base class="mr-4">
-            <xrd-icon-folder-outline />
-          </xrd-icon-base>
-          {{ item.member_name }}
-        </div>
-      </template>
-
-      <template #footer>
-        <div class="cs-table-custom-footer"></div>
+        <XrdLabelWithIcon
+          semi-bold
+          :icon="item.client_id.subsystem_code ? 'id_card' : 'folder__filled'"
+          :label="item.member_name"
+          :clickable="hasPermissionToMemberDetails"
+          @navigate="toMemberDetails(item)"
+        />
       </template>
     </v-data-table>
-  </div>
+  </XrdSubView>
 </template>
 
 <script lang="ts">
 /**
  * View for 'security server clients' tab
  */
-import Vue from 'vue';
-import { DataTableHeader } from 'vuetify';
+import { defineComponent } from 'vue';
 import { Client } from '@/openapi-types';
-import { mapActions, mapState, mapStores } from 'pinia';
-import { clientStore } from '@/store/modules/clients';
-import { notificationsStore } from '@/store/modules/notifications';
+import { mapState, mapStores } from 'pinia';
+import { useClient } from '@/store/modules/clients';
 import { Permissions, RouteName } from '@/global';
-import { userStore } from '@/store/modules/user';
+import { useUser } from '@/store/modules/user';
 import { toMemberId } from '@/util/helpers';
+import { XrdSubView, XrdLabelWithIcon, useNotifications } from '@niis/shared-ui';
+import { useSecurityServer } from '@/store/modules/security-servers';
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
 
-export default Vue.extend({
-  name: 'SecurityServerClients',
+export default defineComponent({
+  components: { XrdSubView, XrdLabelWithIcon },
   props: {
     serverId: {
       type: String,
       required: true,
     },
+  },
+  setup() {
+    const { addError } = useNotifications();
+    return { addError };
   },
   data() {
     return {
@@ -99,33 +94,29 @@ export default Vue.extend({
     };
   },
   computed: {
-    ...mapStores(clientStore),
-    ...mapState(userStore, ['hasPermission']),
+    ...mapStores(useClient, useSecurityServer),
+    ...mapState(useUser, ['hasPermission']),
     headers(): DataTableHeader[] {
       return [
         {
-          text: this.$t('global.memberName') as string,
+          title: this.$t('global.memberName') as string,
           align: 'start',
-          value: 'member_name',
-          class: 'xrd-table-header clients-table-header-name',
+          key: 'member_name',
         },
         {
-          text: this.$t('global.class') as string,
+          title: this.$t('global.class') as string,
           align: 'start',
-          value: 'client_id.member_class',
-          class: 'xrd-table-header clients-table-header-class',
+          key: 'client_id.member_class',
         },
         {
-          text: this.$t('global.code') as string,
+          title: this.$t('global.code') as string,
           align: 'start',
-          value: 'client_id.member_code',
-          class: 'xrd-table-header clients-table-header-code',
+          key: 'client_id.member_code',
         },
         {
-          text: this.$t('global.subsystem') as string,
+          title: this.$t('global.subsystem') as string,
           align: 'start',
-          value: 'client_id.subsystem_code',
-          class: 'xrd-table-header clients-table-header-subsystem',
+          key: 'client_id.subsystem_code',
         },
       ];
     },
@@ -133,28 +124,25 @@ export default Vue.extend({
       return this.hasPermission(Permissions.VIEW_MEMBER_DETAILS);
     },
   },
-  created() {
-    this.loading = true;
-    this.clientStore
-      .getBySecurityServerId(this.serverId)
-      .then((resp) => {
-        this.clients = resp;
-      })
-      .catch((error) => {
-        this.showError(error);
-      })
-      .finally(() => {
-        this.loading = false;
-      });
+  watch: {
+    serverId: {
+      immediate: true,
+      handler(serverId) {
+        this.loading = true;
+        this.clientStore
+          .getBySecurityServerId(serverId)
+          .then((resp) => (this.clients = resp))
+          .catch((error) => this.addError(error))
+          .finally(() => (this.loading = false));
+      },
+    },
   },
   methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
     toMemberDetails(client: Client): void {
       this.$router.push({
         name: RouteName.MemberDetails,
         params: {
-          memberid: toMemberId(client.client_id),
-          backTo: this.$router.currentRoute.path,
+          memberId: toMemberId(client.client_id),
         },
       });
     },
@@ -162,24 +150,4 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/colors';
-@import '~styles/tables';
-
-.table-cell-member-name-action {
-  color: $XRoad-Purple100;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.table-cell-member-name {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-#clients-filter {
-  display: flex;
-  justify-content: space-between;
-}
-</style>
+<style lang="scss" scoped></style>

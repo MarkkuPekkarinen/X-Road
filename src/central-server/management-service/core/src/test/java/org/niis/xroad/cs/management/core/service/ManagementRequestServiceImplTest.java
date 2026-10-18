@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,7 +26,6 @@
  */
 package org.niis.xroad.cs.management.core.service;
 
-import ee.ria.xroad.common.CodedException;
 import ee.ria.xroad.common.request.AuthCertDeletionRequestType;
 import ee.ria.xroad.common.request.ClientRequestType;
 
@@ -35,6 +34,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
 import org.niis.xroad.cs.admin.client.FeignManagementRequestsApi;
 import org.niis.xroad.cs.openapi.model.ManagementRequestDto;
 import org.niis.xroad.restapi.converter.ClientIdConverter;
@@ -45,7 +45,8 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.niis.xroad.common.managementrequest.model.ManagementRequestType.CLIENT_REGISTRATION_REQUEST;
+import static org.niis.xroad.common.managementrequest.model.ManagementRequestType.AUTH_CERT_DELETION_REQUEST;
+import static org.niis.xroad.common.managementrequest.model.ManagementRequestType.CLIENT_ENABLE_REQUEST;
 
 @ExtendWith(MockitoExtension.class)
 class ManagementRequestServiceImplTest {
@@ -68,7 +69,7 @@ class ManagementRequestServiceImplTest {
 
         ClientRequestType request = new ClientRequestType();
 
-        Integer result = managementRequestService.addManagementRequest(request, CLIENT_REGISTRATION_REQUEST);
+        Integer result = managementRequestService.addManagementRequest(request, CLIENT_ENABLE_REQUEST);
 
         assertThat(result).isEqualTo(REQUEST_ID);
     }
@@ -80,30 +81,30 @@ class ManagementRequestServiceImplTest {
 
         AuthCertDeletionRequestType request = new AuthCertDeletionRequestType();
 
-        Integer result = managementRequestService.addManagementRequest(request);
+        Integer result = managementRequestService.addManagementRequest(request, AUTH_CERT_DELETION_REQUEST);
 
         assertThat(result).isEqualTo(REQUEST_ID);
     }
 
     @Test
-    void shouldAddManagementRequestThrownCodedException() {
+    void shouldAddManagementRequestThrownXrdRuntimeException() {
         when(managementRequestsApi.addManagementRequest(any()))
                 .thenReturn(ResponseEntity.accepted().build());
 
         ClientRequestType request = new ClientRequestType();
 
-        assertThatExceptionOfType(CodedException.class)
-                .isThrownBy(() -> managementRequestService.addManagementRequest(request, CLIENT_REGISTRATION_REQUEST));
+        assertThatExceptionOfType(XrdRuntimeException.class)
+                .isThrownBy(() -> managementRequestService.addManagementRequest(request, CLIENT_ENABLE_REQUEST));
     }
 
     @Test
-    void shouldAddManagementCertDeletionRequestThrownCodedException() {
+    void shouldAddManagementCertDeletionRequestThrownXrdRuntimeException() {
         when(managementRequestsApi.addManagementRequest(any()))
                 .thenReturn(ResponseEntity.accepted().build());
 
         AuthCertDeletionRequestType request = new AuthCertDeletionRequestType();
 
-        assertThatExceptionOfType(CodedException.class)
-                .isThrownBy(() -> managementRequestService.addManagementRequest(request));
+        assertThatExceptionOfType(XrdRuntimeException.class)
+                .isThrownBy(() -> managementRequestService.addManagementRequest(request, AUTH_CERT_DELETION_REQUEST));
     }
 }

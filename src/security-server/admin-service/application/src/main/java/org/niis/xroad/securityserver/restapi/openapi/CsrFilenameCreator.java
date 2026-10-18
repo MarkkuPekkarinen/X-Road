@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -27,13 +27,13 @@ package org.niis.xroad.securityserver.restapi.openapi;
 
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
-import ee.ria.xroad.signer.protocol.message.CertificateRequestFormat;
+import ee.ria.xroad.common.util.TimeUtils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.signer.proto.CertificateRequestFormat;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -47,6 +47,7 @@ public class CsrFilenameCreator {
 
     /**
      * Create a filename for CSR
+     *
      * @param keyUsageInfo
      * @param csrFormat
      * @param memberId
@@ -54,7 +55,7 @@ public class CsrFilenameCreator {
      * @return
      */
     public String createCsrFilename(KeyUsageInfo keyUsageInfo, CertificateRequestFormat csrFormat,
-            ClientId memberId, SecurityServerId securityServerId) {
+                                    ClientId memberId, SecurityServerId securityServerId) {
         StringBuilder builder = new StringBuilder();
         if (KeyUsageInfo.AUTHENTICATION == keyUsageInfo) {
             builder.append("auth");
@@ -71,12 +72,12 @@ public class CsrFilenameCreator {
     }
 
     String createDateString() {
-        return LocalDateTime.now()
+        return TimeUtils.localDateTimeNow()
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
     }
 
     private String createIdentifier(KeyUsageInfo keyUsageInfo,
-            ClientId memberId, SecurityServerId securityServerId) {
+                                    ClientId memberId, SecurityServerId securityServerId) {
         StringBuilder builder = new StringBuilder();
         if (KeyUsageInfo.AUTHENTICATION == keyUsageInfo) {
             builder.append("securityserver_");
@@ -100,6 +101,7 @@ public class CsrFilenameCreator {
 
     /**
      * Create a simple filename with the current date for internal cert CSR
+     *
      * @return
      */
     public String createInternalCsrFilename() {

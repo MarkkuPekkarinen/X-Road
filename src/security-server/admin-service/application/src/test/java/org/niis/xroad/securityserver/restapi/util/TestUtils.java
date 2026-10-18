@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,22 +26,29 @@
  */
 package org.niis.xroad.securityserver.restapi.util;
 
-import ee.ria.xroad.common.conf.globalconf.GlobalGroupInfo;
-import ee.ria.xroad.common.conf.globalconf.MemberInfo;
-import ee.ria.xroad.common.conf.globalconf.sharedparameters.v2.ApprovedTSAType;
-import ee.ria.xroad.common.conf.serverconf.model.TspType;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.GlobalGroupId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 
 import com.google.common.collect.Ordering;
+import org.niis.xroad.common.CostType;
+import org.niis.xroad.common.core.exception.WarningDeviation;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
+import org.niis.xroad.common.identifiers.jpa.mapper.XRoadIdMapper;
+import org.niis.xroad.globalconf.model.ApprovedCAInfo;
+import org.niis.xroad.globalconf.model.CsrFormat;
+import org.niis.xroad.globalconf.model.GlobalGroupInfo;
+import org.niis.xroad.globalconf.model.MemberInfo;
+import org.niis.xroad.globalconf.model.SharedParameters;
 import org.niis.xroad.restapi.converter.ClientIdConverter;
-import org.niis.xroad.restapi.exceptions.WarningDeviation;
-import org.niis.xroad.securityserver.restapi.openapi.model.TimestampingService;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.niis.xroad.securityserver.restapi.openapi.model.CostTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.TimestampingServiceDto;
+import org.niis.xroad.serverconf.impl.entity.TimestampingServiceEntity;
+import org.niis.xroad.serverconf.model.TimestampingService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -103,7 +111,7 @@ public final class TestUtils {
     public static final String CLIENT_ID_M2_SS6 = "FI:GOV:M2:SS6";
     public static final String CLIENT_ID_INVALID_INSTANCE_IDENTIFIER = "DUMMY:PRO:M2:SS6";
     public static final String CLIENT_ID_INVALID_MEMBER_CLASS = "FI:DUMMY:M2:SS6";
-    public static final String NEW_GROUPCODE = "NEW_GROUPCODE";
+    public static final String NEW_GROUPCODE = "NEW-GROUPCODE";
     public static final String GROUP_DESC = "GROUP_DESC";
     public static final String NEW_GROUP_DESC = "NEW_GROUP_DESC";
     public static final String INVALID_GROUP_ID = "NOT_VALID";
@@ -115,6 +123,7 @@ public final class TestUtils {
     public static final String DB_LOCAL_GROUP_ID_2 = "2";
     public static final String DB_LOCAL_GROUP_CODE = "group1";
     public static final int GROUP1_ACCESS_RIGHTS_COUNT = 1;
+    public static final long DB_ENDPOINT_ID_GET_RANDOM = 1L;
     // services from initial test data: src/test/resources/data.sql
     public static final String FULL_SERVICE_XROAD_GET_RANDOM_OLD = "xroadGetRandomOld.v1";
     public static final String SERVICE_XROAD_GET_RANDOM_OLD = "xroadGetRandomOld";
@@ -194,6 +203,10 @@ public final class TestUtils {
         return new ClientIdConverter().convertId(encodedId);
     }
 
+    public static ClientIdEntity getClientIdEntity(String encodedId) {
+        return XRoadIdMapper.get().toEntity(new ClientIdConverter().convertId(encodedId));
+    }
+
     /**
      * Returns a new MemberInfo with given parameters
      *
@@ -205,7 +218,8 @@ public final class TestUtils {
      */
     public static MemberInfo getMemberInfo(String instance, String memberClass, String memberCode, String subsystem) {
         return new MemberInfo(getClientId(instance, memberClass, memberCode, subsystem),
-                subsystem != null ? NAME_FOR + subsystem : NAME_FOR + memberCode);
+                NAME_FOR + memberCode,
+                subsystem == null ? null : NAME_FOR + subsystem);
     }
 
     /**
@@ -229,7 +243,7 @@ public final class TestUtils {
     public static WarningDeviation findWarning(String code, Collection<WarningDeviation> warningDeviations) {
         if (warningDeviations != null) {
             return warningDeviations.stream()
-                    .filter(warning -> code.equals(warning.getCode()))
+                    .filter(warning -> code.equals(warning.code()))
                     .findFirst()
                     .orElse(null);
         }
@@ -243,7 +257,7 @@ public final class TestUtils {
      * @param endpointPath for example "/api/service-descriptions/12"
      * @param response
      */
-    public static void assertLocationHeader(String endpointPath, ResponseEntity response) {
+    public static <T> void assertLocationHeader(String endpointPath, ResponseEntity<T> response) {
         assertEquals(Collections.singletonList(TEST_API_URL + endpointPath),
                 response.getHeaders().get("Location"));
     }
@@ -255,7 +269,7 @@ public final class TestUtils {
      *
      * @param response
      */
-    public static void assertMissingLocationHeader(ResponseEntity response) {
+    public static <T> void assertMissingLocationHeader(ResponseEntity<T> response) {
         List<String> locationHeaders = response.getHeaders().get("Location");
         assertNull(locationHeaders);
     }
@@ -265,29 +279,27 @@ public final class TestUtils {
     public static final String API_KEY_TOKEN_WITH_ALL_ROLES = "d56e1ca7-4134-4ed4-8030-5f330bdb602a";
 
     /**
-     * Add Authentication header for API key with all roles
+     * Add Authorization header for API key with all roles to WebTestClient
      *
-     * @param testRestTemplate
+     * @param webTestClient
+     * @return mutated WebTestClient with the authorization header
      */
-    public static void addApiKeyAuthorizationHeader(TestRestTemplate testRestTemplate) {
-        addApiKeyAuthorizationHeader(testRestTemplate, API_KEY_TOKEN_WITH_ALL_ROLES);
+    public static WebTestClient addApiKeyAuthorizationHeader(WebTestClient webTestClient) {
+        return addApiKeyAuthorizationHeader(webTestClient, API_KEY_TOKEN_WITH_ALL_ROLES);
     }
 
     /**
-     * Add Authentication header for specific API key
+     * Add Authorization header for specific API key to WebTestClient
      *
-     * @param testRestTemplate
-     * @param apiKeyToken API key token
+     * @param webTestClient
+     * @param apiKeyToken   API key token
+     * @return mutated WebTestClient with the authorization header
      */
-    public static void addApiKeyAuthorizationHeader(TestRestTemplate testRestTemplate,
-            String apiKeyToken) {
-        testRestTemplate.getRestTemplate().setInterceptors(
-                Collections.singletonList((request, body, execution) -> {
-                    request.getHeaders()
-                            .add("Authorization",
-                                    API_KEY_HEADER_PREFIX + apiKeyToken);
-                    return execution.execute(request, body);
-                }));
+    public static WebTestClient addApiKeyAuthorizationHeader(WebTestClient webTestClient,
+                                                             String apiKeyToken) {
+        return webTestClient.mutate()
+                .defaultHeader("Authorization", API_KEY_HEADER_PREFIX + apiKeyToken)
+                .build();
     }
 
     /**
@@ -297,10 +309,19 @@ public final class TestUtils {
      * @param name
      * @return
      */
-    public static TspType createTspType(String url, String name) {
-        TspType tsp = new TspType();
+    public static TimestampingService createTspType(String url, String name, CostType costType) {
+        TimestampingService tsp = new TimestampingService();
         tsp.setUrl(url);
         tsp.setName(name);
+        tsp.setCostType(costType);
+        return tsp;
+    }
+
+    public static TimestampingServiceEntity createTspTypeEntity(String url, String name, String costType) {
+        TimestampingServiceEntity tsp = new TimestampingServiceEntity();
+        tsp.setUrl(url);
+        tsp.setName(name);
+        tsp.setCostType(costType);
         return tsp;
     }
 
@@ -311,11 +332,12 @@ public final class TestUtils {
      * @param name
      * @return
      */
-    public static ApprovedTSAType createApprovedTsaType(String url, String name) {
-        ApprovedTSAType approvedTSAType = new ApprovedTSAType();
-        approvedTSAType.setUrl(url);
-        approvedTSAType.setName(name);
-        return approvedTSAType;
+    public static SharedParameters.ApprovedTSA createApprovedTsaType(String url, String name, CostType costType) {
+        SharedParameters.ApprovedTSA approvedTSA = new SharedParameters.ApprovedTSA();
+        approvedTSA.setUrl(url);
+        approvedTSA.setName(name);
+        approvedTSA.setCostType(costType);
+        return approvedTSA;
     }
 
     /**
@@ -325,10 +347,11 @@ public final class TestUtils {
      * @param name
      * @return
      */
-    public static TimestampingService createTimestampingService(String url, String name) {
-        TimestampingService timestampingService = new TimestampingService();
+    public static TimestampingServiceDto createTimestampingService(String url, String name, CostTypeDto costType) {
+        TimestampingServiceDto timestampingService = new TimestampingServiceDto();
         timestampingService.setUrl(url);
         timestampingService.setName(name);
+        timestampingService.costType(costType);
         return timestampingService;
     }
 
@@ -370,11 +393,31 @@ public final class TestUtils {
 
     /**
      * Checks if the sort order of the given Set is correct.
+     *
      * @param set
      * @param comparator
      * @return
      */
     public static <T> boolean isSortOrderCorrect(Set<T> set, Comparator<? super T> comparator) {
         return Ordering.from(comparator).isOrdered(set);
+    }
+
+    public static ApprovedCAInfo approvedCa(String name, boolean authenticationOnly, String certificateProfileInfo) {
+        return approvedCa(name, authenticationOnly, certificateProfileInfo, CsrFormat.PEM, null, null, null, null);
+    }
+
+    public static ApprovedCAInfo approvedCaWithAcme(String name, boolean authenticationOnly, String certificateProfileInfo) {
+        return approvedCa(name, authenticationOnly, certificateProfileInfo, CsrFormat.PEM, "http://test-ca/acme", "123.4.5.6", "5", "6");
+    }
+
+    public static ApprovedCAInfo approvedCaWithoutDefaultCsrFormat(String name, boolean authenticationOnly, String certificateProfileInfo) {
+        return approvedCa(name, authenticationOnly, certificateProfileInfo, null, null, null, null, null);
+    }
+
+    private static ApprovedCAInfo approvedCa(String name, boolean authenticationOnly, String certificateProfileInfo,
+                                             CsrFormat csrFormat, String acmeServerDirectoryUrl, String acmeServerIpAddress,
+                                             String retryDelay, String renewalInterval) {
+        return new ApprovedCAInfo(name, authenticationOnly, certificateProfileInfo, csrFormat,
+                acmeServerDirectoryUrl, acmeServerIpAddress, retryDelay, renewalInterval);
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,19 +25,19 @@
  */
 package org.niis.xroad.cs.admin.core.service;
 
-import ee.ria.xroad.common.SystemProperties;
-import ee.ria.xroad.common.util.TokenPinPolicy;
+import ee.ria.xroad.common.util.PasswordPolicy;
 
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.core.exception.DeviationBuilder;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.cs.admin.api.facade.SignerProxyFacade;
 import org.niis.xroad.cs.admin.api.service.TokenPinValidator;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_WEAK_PIN;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.TOKEN_INVALID_CHARACTERS;
-import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.TOKEN_WEAK_PIN;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_PIN_MIN_CHAR_CLASSES;
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_PIN_MIN_LENGTH;
 
@@ -47,24 +47,23 @@ import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_METADATA_PI
 @RequiredArgsConstructor
 public class TokenPinValidatorImpl implements TokenPinValidator {
     private static final Object[] DEFAULT_WEAK_PIN_METADATA = new String[]{
-            ERROR_METADATA_PIN_MIN_LENGTH,
-            String.valueOf(TokenPinPolicy.MIN_PASSWORD_LENGTH),
-            ERROR_METADATA_PIN_MIN_CHAR_CLASSES,
-            String.valueOf(TokenPinPolicy.MIN_CHARACTER_CLASS_COUNT)
+            DeviationBuilder.TRANSLATABLE_PREFIX + ERROR_METADATA_PIN_MIN_LENGTH,
+            String.valueOf(PasswordPolicy.MIN_PASSWORD_LENGTH),
+            DeviationBuilder.TRANSLATABLE_PREFIX + ERROR_METADATA_PIN_MIN_CHAR_CLASSES,
+            String.valueOf(PasswordPolicy.MIN_CHARACTER_CLASS_COUNT)
     };
 
-    @Setter
-    private boolean isTokenPinEnforced = SystemProperties.shouldEnforceTokenPinPolicy();
+    private final SignerProxyFacade signerProxyFacade;
 
     @Override
-    public void validateSoftwareTokenPin(char[] softwareTokenPin) throws ValidationFailureException {
-        if (isTokenPinEnforced) {
-            TokenPinPolicy.Description description = TokenPinPolicy.describe(softwareTokenPin);
+    public void validateSoftwareTokenPin(char[] softwareTokenPin) throws BadRequestException {
+        if (signerProxyFacade.isEnforcedTokenPinPolicy()) {
+            PasswordPolicy.Description description = PasswordPolicy.describe(softwareTokenPin);
             if (!description.isValid()) {
                 if (description.hasInvalidCharacters()) {
-                    throw new ValidationFailureException(TOKEN_INVALID_CHARACTERS);
+                    throw new BadRequestException(TOKEN_INVALID_CHARACTERS.build());
                 }
-                throw new ValidationFailureException(TOKEN_WEAK_PIN, DEFAULT_WEAK_PIN_METADATA);
+                throw new BadRequestException(TOKEN_WEAK_PIN.build(DEFAULT_WEAK_PIN_METADATA));
             }
         }
     }

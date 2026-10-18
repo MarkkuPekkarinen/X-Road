@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -40,6 +40,11 @@ public enum RestApiAuditEvent {
     API_KEY_UPDATE("API key update"),
     API_KEY_REMOVE("API key remove"),
 
+    ADMIN_USER_ADD("Add admin user"),
+    ADMIN_USER_EDIT_ROLES("Edit admin user roles"),
+    ADMIN_USER_CHANGE_PASSWORD("Change admin user password"),
+    ADMIN_USER_DELETE("Remove admin user"),
+
     INIT_ANCHOR("Initialize anchor"),
     INIT_SERVER_CONFIGURATION("Initialize server configuration"),
     INIT_CENTRAL_SERVER("Initialize central server"),
@@ -73,6 +78,9 @@ public enum RestApiAuditEvent {
     ADD_LOCAL_GROUP_MEMBERS("Add members to group"),
     REMOVE_LOCAL_GROUP_MEMBERS("Remove members from group"),
     DELETE_LOCAL_GROUP("Delete group"),
+    DISABLE_CLIENT("Disable client"),
+    ENABLE_CLIENT("Enable client"),
+    RENAME_SUBSYSTEM("Rename subsystem"),
 
     // system parameters
     GENERATE_INTERNAL_TLS_CSR("Generate certificate request for TLS"),
@@ -89,6 +97,9 @@ public enum RestApiAuditEvent {
     EDIT_TIMESTAMP_SERVICE("Edit timestamping service"),
     GENERATE_INTERNAL_TLS_KEY_CERT("Generate new internal TLS key and certificate"),
     EDIT_CENTRAL_SERVER_ADDRESS("Edit central server address"),
+    ENABLE_MAINTENANCE_MODE("Enable maintenance mode of the security server"),
+    DISABLE_MAINTENANCE_MODE("Disable maintenance mode of the security server"),
+    UPDATE_CONFIGURATION_PROPERTY("Update configuration property"),
 
     // keys and certificates events
     LOGIN_TOKEN("Log in to token"),
@@ -102,6 +113,7 @@ public enum RestApiAuditEvent {
     GENERATE_CSR("Generate CSR"),
     DELETE_CSR("Delete CSR"),
     GENERATE_KEY_AND_CSR("Generate key and CSR"),
+    ACME_ORDER_CERTIFICATE("Acme order certificate"),
     ACTIVATE_SIGNING_KEY("Activate signing key"),
     ACTIVATE_INTERNAL_CONFIGURATION_SIGNING_KEY("Activate internal configuration signing key"),
     ACTIVATE_EXTERNAL_CONFIGURATION_SIGNING_KEY("Activate external configuration signing key"),
@@ -122,6 +134,7 @@ public enum RestApiAuditEvent {
     UPDATE_TOKEN_NAME("Set friendly name to token"),
     UPDATE_KEY_NAME("Set friendly name to key"),
     DELETE_SECURITY_SERVER_AUTH_CERT("Delete authentication certificate of security server"),
+    DELETE_TOKEN("Delete token"),
 
     // backup and restore events
     BACKUP("Back up configuration"),
@@ -151,6 +164,12 @@ public enum RestApiAuditEvent {
     ADD_CERTIFICATION_SERVICE_INTERMEDIATE_CA("Add intermediate CA"),
     ADD_INTERMEDIATE_CA_OCSP_RESPONDER("Add OCSP responder of intermediate CA"),
     EDIT_OCSP_RESPONDER("Edit OCSP responder"),
+
+    ADD_DS_TLS_CERTIFICATION_AUTHORITY("Add DS TLS certification authority"),
+    DELETE_DS_TLS_CERTIFICATION_AUTHORITY("Delete DS TLS certification authority"),
+    EDIT_DS_TLS_CERTIFICATION_AUTHORITY_SETTINGS("Edit DS TLS certification authority settings"),
+    ADD_DS_TLS_CERTIFICATION_AUTHORITY_INTERMEDIATE_CA("Add DS TLS intermediate CA"),
+    DELETE_DS_TLS_INTERMEDIATE_CA("Delete DS TLS intermediate CA"),
     ADD_GLOBAL_GROUP("Add global group"),
     ADD_GLOBAL_GROUP_MEMBERS("Add members to global group"),
     DELETE_GLOBAL_GROUP("Delete global group"),
@@ -161,15 +180,28 @@ public enum RestApiAuditEvent {
     ADD_MEMBER("Add member"),
     DELETE_MEMBER("Delete member"),
     EDIT_MEMBER_NAME("Edit member name"),
+    UNREGISTER_MEMBER("Unregister member as security server client"),
 
     ADD_SUBSYSTEM("Add subsystem"),
     UNREGISTER_SUBSYSTEM("Unregister subsystem as security server client"),
     DELETE_SUBSYSTEM("Delete subsystem"),
+    EDIT_SUBSYSTEM("Edit subsystem"),
     DELETE_INTERMEDIATE_CA("Delete intermediate CA"),
     DELETE_OCSP_RESPONDER("Delete OCSP responder"),
 
     REGISTER_MANAGEMENT_SERVICES_PROVIDER("Register management service provider as security server client"),
-    EDIT_MANAGEMENT_SERVICES_PROVIDER("Edit provider of management services");
+    EDIT_MANAGEMENT_SERVICES_PROVIDER("Edit provider of management services"),
+    GENERATE_MANAGEMENT_SERVICE_TLS_CSR("Generate management service TLS certificate signing request"),
+    GENERATE_MANAGEMENT_SERVICE_TLS_KEY_CERT("Generate management service TLS key and self-sign certificate"),
+    UPLOAD_MANAGEMENT_SERVICE_TLS_CERT("Upload management service TLS certificate"),
+
+    GENERATE_DS_TLS_KEY("Generate data space TLS key"),
+    GENERATE_DS_TLS_CSR("Generate data space TLS certificate signing request"),
+    UPLOAD_DS_TLS_CERT("Upload data space TLS certificate"),
+    ORDER_DS_TLS_CERT("Order data space TLS certificate via ACME"),
+
+    UPLOAD_OP_MONITOR_CA("Upload op-monitor CA certificate"),
+    DELETE_OP_MONITOR_CA("Delete op-monitor CA certificate");
     private final String eventName;
 
     RestApiAuditEvent(String eventName) {

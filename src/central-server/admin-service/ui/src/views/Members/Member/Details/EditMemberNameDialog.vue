@@ -26,79 +26,77 @@
  -->
 
 <template>
-  <xrd-sub-view-container>
-    <xrd-simple-dialog
-      :dialog="true"
-      :loading="loading"
-      title="members.member.details.editMemberName"
-      save-button-text="action.save"
-      cancel-button-text="action.cancel"
-      :disable-save="newMemberName === '' || newMemberName === oldMemberName"
-      @cancel="cancelEdit"
-      @save="saveNewMemberName"
-    >
-      <template #content>
-        <div class="dlg-input-width">
+  <XrdSimpleDialog
+    :loading="loading"
+    title="members.member.details.editMemberName"
+    save-button-text="action.save"
+    save-button-icon="check"
+    cancel-button-text="action.cancel"
+    submittable
+    :disable-save="!meta.valid || !meta.dirty"
+    @cancel="cancelEdit"
+    @save="saveNewMemberName"
+  >
+    <template #content>
+      <XrdFormBlock>
+        <XrdFormBlockRow>
           <v-text-field
-            v-model="newMemberName"
-            outlined
+            v-model="memberName"
+            v-bind="memberNameRef"
             data-test="edit-member-name"
-          ></v-text-field>
-        </div>
-      </template>
-    </xrd-simple-dialog>
-  </xrd-sub-view-container>
+            class="xrd"
+            autofocus
+            :label="$t('global.memberName')"
+            :error-messages="errors.memberName"
+          />
+        </XrdFormBlockRow>
+      </XrdFormBlock>
+    </template>
+  </XrdSimpleDialog>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { mapActions, mapStores } from 'pinia';
-import { memberStore } from '@/store/modules/members';
+<script lang="ts" setup>
+import { useMember } from '@/store/modules/members';
 import { Client } from '@/openapi-types';
-import { notificationsStore } from '@/store/modules/notifications';
 import { toIdentifier } from '@/util/helpers';
+import { PropType, ref } from 'vue';
+import { useForm } from 'vee-validate';
+import { XrdSimpleDialog, XrdFormBlock, XrdFormBlockRow, useNotifications } from '@niis/shared-ui';
 
-export default Vue.extend({
-  name: 'EditMemberNameDialog',
-  props: {
-    member: {
-      type: Object as () => Client,
-      required: true,
-    },
+const props = defineProps({
+  member: {
+    type: Object as PropType<Client>,
+    required: true,
   },
-  data() {
-    return {
-      loading: false,
-      newMemberName: this.member.member_name,
-      oldMemberName: this.member.member_name,
-    };
-  },
-  computed: {
-    ...mapStores(memberStore),
-  },
-  methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
-    cancelEdit(): void {
-      this.$emit('cancel');
-    },
-    saveNewMemberName(): void {
-      this.loading = true;
-      this.memberStore
-        .editMemberName(toIdentifier(this.member.client_id), {
-          member_name: this.newMemberName,
-        })
-        .then(() => {
-          this.showSuccess(this.$t('members.member.details.memberNameSaved'));
-          this.$emit('nameChanged');
-        })
-        .catch((error) => {
-          this.showError(error);
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-    },
-  },
+});
+
+const emits = defineEmits(['save', 'cancel']);
+
+const { defineField, errors, meta, handleSubmit } = useForm({
+  validationSchema: { memberName: 'required' },
+  initialValues: { memberName: props.member.member_name },
+});
+const [memberName, memberNameRef] = defineField('memberName');
+
+const { editMemberName } = useMember();
+const { addError, addSuccessMessage } = useNotifications();
+const loading = ref(false);
+
+function cancelEdit() {
+  emits('cancel');
+}
+
+const saveNewMemberName = handleSubmit((values) => {
+  loading.value = true;
+  editMemberName(toIdentifier(props.member.client_id), {
+    member_name: values.memberName,
+  })
+    .then(() => {
+      addSuccessMessage('members.member.details.memberNameSaved');
+      emits('save');
+    })
+    .catch((error) => addError(error))
+    .finally(() => (loading.value = false));
 });
 </script>
 

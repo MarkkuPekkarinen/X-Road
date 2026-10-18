@@ -1,21 +1,21 @@
-/**
+/*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,7 +30,6 @@ import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.common.junit.helper.WithInOrder;
 
-import io.vavr.control.Option;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -41,6 +40,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.niis.xroad.common.exception.NotFoundException;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.MemberIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.SecurityServerIdEntity;
 import org.niis.xroad.cs.admin.api.domain.AuthenticationCertificateDeletionRequest;
 import org.niis.xroad.cs.admin.api.domain.ClientDeletionRequest;
 import org.niis.xroad.cs.admin.api.domain.FlattenedSecurityServerClientView;
@@ -51,16 +53,14 @@ import org.niis.xroad.cs.admin.api.domain.Request;
 import org.niis.xroad.cs.admin.api.domain.SecurityServer;
 import org.niis.xroad.cs.admin.api.dto.SecurityServerAuthenticationCertificateDetails;
 import org.niis.xroad.cs.admin.api.paging.Page;
+import org.niis.xroad.cs.admin.api.paging.PageRequestDto;
 import org.niis.xroad.cs.admin.api.service.ClientService;
 import org.niis.xroad.cs.admin.api.service.GlobalGroupMemberService;
 import org.niis.xroad.cs.admin.api.service.SubsystemService;
 import org.niis.xroad.cs.admin.core.converter.CertificateConverter;
 import org.niis.xroad.cs.admin.core.entity.AuthCertEntity;
-import org.niis.xroad.cs.admin.core.entity.ClientIdEntity;
 import org.niis.xroad.cs.admin.core.entity.MemberClassEntity;
-import org.niis.xroad.cs.admin.core.entity.MemberIdEntity;
 import org.niis.xroad.cs.admin.core.entity.SecurityServerEntity;
-import org.niis.xroad.cs.admin.core.entity.SecurityServerIdEntity;
 import org.niis.xroad.cs.admin.core.entity.ServerClientEntity;
 import org.niis.xroad.cs.admin.core.entity.XRoadMemberEntity;
 import org.niis.xroad.cs.admin.core.entity.mapper.SecurityServerMapper;
@@ -139,6 +139,9 @@ class SecurityServerServiceImplTest implements WithInOrder {
     @DisplayName("findSecurityServerRegistrationStatus(SecurityServerId serverId)")
     class SecurityServerRegStatusMethod implements WithInOrder {
 
+        @Captor
+        private ArgumentCaptor<PageRequestDto> pageRequestCaptor;
+
         @Test
         @DisplayName("should find management status approved")
         void shouldReturnStatusApproved() {
@@ -151,6 +154,24 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
             assertNotNull(result);
             assertEquals(ManagementRequestStatus.APPROVED, result);
+        }
+
+        @Test
+        @DisplayName("should query only the latest registration request so stale revoked requests are ignored")
+        void shouldQueryOnlyLatestRegistrationRequest() {
+            Page<ManagementRequestView> managementRequestViews = new PageDto<>(new PageImpl<>(List.of(managementRequestView)));
+            doReturn(managementRequestViews).when(managementRequestService)
+                    .findRequests(any(), pageRequestCaptor.capture());
+            doReturn(ManagementRequestStatus.APPROVED).when(managementRequestView).getStatus();
+
+            ManagementRequestStatus result = securityServerService.findSecurityServerClientRegistrationStatus(serverId, clientId);
+
+            assertEquals(ManagementRequestStatus.APPROVED, result);
+            PageRequestDto pageRequest = pageRequestCaptor.getValue();
+            assertEquals("id", pageRequest.getJpaSort());
+            assertEquals(Boolean.TRUE, pageRequest.getDesc());
+            assertEquals(1, pageRequest.getLimit());
+            assertEquals(0, pageRequest.getOffset());
         }
 
         @Test
@@ -171,7 +192,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         @Test
         void find() {
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.of(securityServerEntity));
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.of(securityServerEntity));
             when(securityServerMapper.toTarget(securityServerEntity)).thenReturn(securityServer);
 
             final Optional<SecurityServer> result = securityServerService.find(serverId);
@@ -181,7 +202,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         @Test
         void findShouldReturnEmpty() {
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.none());
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.empty());
 
             final Optional<SecurityServer> result = securityServerService.find(serverId);
 
@@ -202,7 +223,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         @Test
         void findClients() {
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.of(securityServerEntity));
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.of(securityServerEntity));
             when(securityServerEntity.getId()).thenReturn(securityServerId);
             when(clientService.find(any(ClientService.SearchParameters.class)))
                     .thenReturn(List.of(securityServerClientView1, securityServerClientView2));
@@ -216,11 +237,11 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         @Test
         void findClientsShouldThrowExceptionWhenSecurityServerNotFound() {
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.none());
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> securityServerService.findClients(serverId))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessage("Security server not found");
+                    .hasMessage("Error[code=security_server_not_found, metadata=[serverId]]");
 
             verifyNoInteractions(clientService);
         }
@@ -235,7 +256,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
         void shouldUpdateSecurityServerAddress() {
             String newAddress = "http://localhost:443";
             when(serverId.getOwner()).thenReturn(ownerId);
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.of(securityServerEntity));
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.of(securityServerEntity));
             when(securityServerMapper.toTarget(securityServerEntity)).thenReturn(securityServer);
             when(securityServer.getAddress()).thenReturn(newAddress);
 
@@ -253,7 +274,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
         void securityServerNotFound() {
             String newAddress = "http://localhost:443";
             when(serverId.getOwner()).thenReturn(ownerId);
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.none());
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.empty());
 
             var result = securityServerService.updateSecurityServerAddress(serverId, newAddress);
 
@@ -275,7 +296,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
             var certificateDetailsMock = new SecurityServerAuthenticationCertificateDetails(1);
             AuthCertEntity authCertMock = new AuthCertEntity();
             authCertMock.setCert("test".getBytes());
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.of(securityServerEntity));
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.of(securityServerEntity));
             when(securityServerEntity.getAuthCerts()).thenReturn(Set.of(authCertMock));
             when(certificateConverter.toCertificateDetails(authCertMock)).thenReturn(certificateDetailsMock);
             var result = securityServerService.findAuthCertificates(serverId);
@@ -284,7 +305,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         @Test
         void securityServerNotFound() {
-            when(securityServerRepository.findBy(serverId)).thenReturn(Option.none());
+            when(securityServerRepository.findBy(serverId)).thenReturn(Optional.empty());
 
             assertThrows(NotFoundException.class, () -> securityServerService.findAuthCertificates(serverId));
         }
@@ -306,7 +327,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         @Test
         void delete() {
-            when(securityServerRepository.findBy(id)).thenReturn(Option.of(securityServerEntity));
+            when(securityServerRepository.findBy(id)).thenReturn(Optional.of(securityServerEntity));
             when(securityServerEntity.getServerId()).thenReturn(securityServerIdEntity);
             when(securityServerEntity.getServerClients()).thenReturn(
                     Set.of(serverClientEntity("client-1"), serverClientEntity("client-2")));
@@ -332,8 +353,8 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         private void verifyAuthCertDeleteRequest(List<Request> requests) {
             final AuthenticationCertificateDeletionRequest request = requests.stream()
-                    .filter(req -> req instanceof AuthenticationCertificateDeletionRequest)
-                    .map(req -> (AuthenticationCertificateDeletionRequest) req)
+                    .filter(AuthenticationCertificateDeletionRequest.class::isInstance)
+                    .map(AuthenticationCertificateDeletionRequest.class::cast)
                     .findFirst().orElseThrow();
 
             assertThat(request.getOrigin()).isEqualTo(CENTER);
@@ -344,8 +365,8 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         private void verifyClientDeletionRequest(List<Request> requests, String code) {
             final ClientDeletionRequest request = requests.stream()
-                    .filter(req -> req instanceof ClientDeletionRequest)
-                    .map(req -> (ClientDeletionRequest) req)
+                    .filter(ClientDeletionRequest.class::isInstance)
+                    .map(ClientDeletionRequest.class::cast)
                     .filter(req -> code.equals(req.getClientId().getMemberCode()))
                     .findFirst().orElseThrow();
 
@@ -366,11 +387,11 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
         @Test
         void deleteShouldThrowSecurityServerNotFound() {
-            when(securityServerRepository.findBy(id)).thenReturn(Option.none());
+            when(securityServerRepository.findBy(id)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> securityServerService.delete(id))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessage("Security server not found");
+                    .hasMessage("Error[code=security_server_not_found, metadata=[SERVER:INSTANCE/CLASS/MEMBER/SERVER-CODE]]");
 
             verifyAudit();
             verifyNoMoreInteractions(securityServerRepository);
@@ -408,7 +429,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
             assertThatThrownBy(() -> securityServerService.deleteAuthCertificate(securityServerId, certificateId))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessage("Security server not found");
+                    .hasMessage("Error[code=security_server_not_found, metadata=[SERVER:INSTANCE/CLASS/CODE/SERVER-CODE]]");
 
             verify(auditDataHelper).put(OWNER_CLASS, memberClass);
             verify(auditDataHelper).put(OWNER_CODE, memberCode);
@@ -425,7 +446,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
             assertThatThrownBy(() -> securityServerService.deleteAuthCertificate(securityServerId, certificateId))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessage("Authentication certificate not found");
+                    .hasMessage("Error[code=ss_auth_certificate_not_found]");
 
             verify(auditDataHelper).put(OWNER_CLASS, memberClass);
             verify(auditDataHelper).put(OWNER_CODE, memberCode);
@@ -443,7 +464,7 @@ class SecurityServerServiceImplTest implements WithInOrder {
 
             assertThatThrownBy(() -> securityServerService.deleteAuthCertificate(securityServerId, certificateId))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessage("Authentication certificate not found");
+                    .hasMessage("Error[code=ss_auth_certificate_not_found]");
 
             verify(auditDataHelper).put(OWNER_CLASS, memberClass);
             verify(auditDataHelper).put(OWNER_CODE, memberCode);

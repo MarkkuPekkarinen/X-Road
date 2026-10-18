@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,25 +25,19 @@
    THE SOFTWARE.
  -->
 <template>
-  <div>
-    <sub-tabs :tab="currentTab">
-      <v-tab v-for="tab in tabs" :key="tab.key" :to="tab.to">{{
-        $t(tab.name)
-      }}</v-tab>
-    </sub-tabs>
-  </div>
+  <XrdViewNavigation :allowed-tabs="tabs" />
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
+import { defineComponent } from 'vue';
 import { Permissions, RouteName } from '@/global';
-import { Tab } from '@/ui-types';
-import SubTabs from '@/components/layout/SubTabs.vue';
+import { Tab, XrdViewNavigation } from '@niis/shared-ui';
 import { mapState } from 'pinia';
 import { useUser } from '@/store/modules/user';
-export default Vue.extend({
+
+export default defineComponent({
   components: {
-    SubTabs,
+    XrdViewNavigation,
   },
   props: {
     id: {
@@ -62,6 +57,7 @@ export default Vue.extend({
         {
           key: 'details',
           name: 'tab.client.details',
+          icon: 'list_alt',
           to: {
             name: RouteName.MemberDetails,
             params: { id: this.id },
@@ -70,6 +66,7 @@ export default Vue.extend({
         {
           key: 'internalServers',
           name: 'tab.client.internalServers',
+          icon: 'host',
           to: {
             name: RouteName.MemberServers,
             params: { id: this.id },

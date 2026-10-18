@@ -28,7 +28,7 @@
 package org.niis.xroad.cs.admin.rest.api.openapi;
 
 import lombok.RequiredArgsConstructor;
-import org.niis.xroad.common.exception.ServiceException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.cs.openapi.OpenapiApi;
 import org.niis.xroad.restapi.openapi.ControllerUtil;
 import org.springframework.core.io.Resource;
@@ -38,7 +38,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static org.apache.commons.io.IOUtils.toByteArray;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.ERROR_READING_OPENAPI_FILE;
+import static org.niis.xroad.common.core.exception.ErrorCode.ERROR_READING_OPENAPI_FILE;
 import static org.niis.xroad.restapi.openapi.ControllerUtil.createAttachmentResourceResponse;
 
 @Controller
@@ -55,7 +55,7 @@ public class OpenapiApiController implements OpenapiApi {
             byte[] bytes = toByteArray(resourceLoader.getResource(OPENAPI_DEFINITION_PATH).getInputStream());
             return createAttachmentResourceResponse(bytes, "openapi.yaml");
         } catch (Exception e) {
-            throw new ServiceException(ERROR_READING_OPENAPI_FILE, e);
+            throw new InternalServerErrorException(e, ERROR_READING_OPENAPI_FILE.build());
         }
     }
 

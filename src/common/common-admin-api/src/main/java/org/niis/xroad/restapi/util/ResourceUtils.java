@@ -29,13 +29,14 @@ package org.niis.xroad.restapi.util;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.commons.io.IOUtils;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.springframework.core.io.Resource;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.ERROR_RESOURCE_READ;
+import static org.niis.xroad.common.core.exception.ErrorCode.ERROR_RESOURCE_READ;
 
 
 /**
@@ -46,18 +47,31 @@ public final class ResourceUtils {
 
     /**
      * Read bytes from {@link Resource}. Also handles closing the stream.
-     *
      * @param resource resource
      * @return byte array
-     * @throws org.niis.xroad.common.exception.ValidationFailureException
+     * @throws BadRequestException in case bytes cannot be read
      */
     public static byte[] springResourceToBytesOrThrowBadRequest(Resource resource) {
         byte[] resourceBytes;
         try (InputStream is = resource.getInputStream()) {
             resourceBytes = IOUtils.toByteArray(is);
         } catch (IOException ex) {
-            throw new ValidationFailureException(ERROR_RESOURCE_READ, ex);
+            throw new BadRequestException(ex, ERROR_RESOURCE_READ.build());
         }
         return resourceBytes;
+    }
+
+    /**
+     * Read bytes from {@link MultipartFile}.
+     * @param file file
+     * @return byte array
+     * @throws BadRequestException in case bytes cannot be read
+     */
+    public static byte[] springResourceToBytesOrThrowBadRequest(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException ex) {
+            throw new BadRequestException(ex, ERROR_RESOURCE_READ.build());
+        }
     }
 }

@@ -29,46 +29,40 @@
 Startpoint of the Vue application.
 Sets up plugins and 3rd party components that the app uses.
 Creates a new Vue instance with the Vue function.
-Initialises the app root component.
+Initializes the app root component.
 */
-import Vue from 'vue';
+import { createApp } from 'vue';
+
 import axios from 'axios';
-import Router from 'vue-router';
-import SharedComponents from '@niis/shared-ui';
-Vue.use(SharedComponents); // This must be done before importing Vuetify
-import vuetify from './plugins/vuetify';
-import './plugins/vee-validate';
-import './filters';
-import App from './App.vue';
+
+import { pinia, setupAddErrorNavigation } from '@niis/shared-ui';
+
+import { createFilters } from '@/filters';
+import { RouteName } from '@/global';
+import { createLanguageHelper } from '@/plugins/i18n';
+import { createValidators } from '@niis/shared-ui/src/plugins/vee-validate';
+import vuetify from '@/plugins/vuetify'; //
 import router from './router/router';
-import '@fontsource/open-sans/800.css';
-import '@fontsource/open-sans/700.css';
-import '@fontsource/open-sans';
-import i18n from './i18n';
-import { createPinia, PiniaVuePlugin } from 'pinia';
-import VueCompositionAPI from '@vue/composition-api';
-import { createPersistedState } from 'pinia-plugin-persistedstate';
 
-Vue.use(VueCompositionAPI);
-Vue.use(PiniaVuePlugin);
+import App from './App.vue';
 
-const pinia = createPinia();
-pinia.use(
-  createPersistedState({
-    storage: sessionStorage,
-  }),
-);
-Vue.config.productionTip = false;
-
-axios.defaults.baseURL = process.env.VUE_APP_BASE_URL;
+axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 axios.defaults.headers.get.Accepts = 'application/json';
 
-Vue.use(Router);
+setupAddErrorNavigation(router, {
+  404: {
+    name: RouteName.NotFound,
+  },
+});
 
-new Vue({
-  router,
-  i18n,
-  vuetify,
-  pinia,
-  render: (h) => h(App),
-}).$mount('#app');
+const app = createApp(App);
+app.use(pinia);
+app.use(router);
+app.use(vuetify);
+app.use(createValidators());
+app.use(createFilters());
+
+// translations
+createLanguageHelper()
+  .then((plugin) => app.use(plugin))
+  .finally(() => app.mount('#app'));

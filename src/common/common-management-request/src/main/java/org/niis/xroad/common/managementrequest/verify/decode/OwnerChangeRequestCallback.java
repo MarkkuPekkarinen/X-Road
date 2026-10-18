@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,15 +26,31 @@
  */
 package org.niis.xroad.common.managementrequest.verify.decode;
 
+import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.SecurityServerId;
+import ee.ria.xroad.common.request.ClientRequestType;
+
 import lombok.extern.slf4j.Slf4j;
 import org.niis.xroad.common.managementrequest.model.ManagementRequestType;
 import org.niis.xroad.common.managementrequest.verify.ManagementRequestVerifier;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.globalconf.impl.ocsp.OcspVerifierFactory;
 
 @Slf4j
-public class OwnerChangeRequestCallback extends BaseClientRequestCallback {
+public class OwnerChangeRequestCallback extends BaseClientRequestCallback<ClientRequestType> {
 
-    public OwnerChangeRequestCallback(ManagementRequestVerifier.DecoderCallback rootCallback) {
-        super(rootCallback, ManagementRequestType.OWNER_CHANGE_REQUEST);
+    public OwnerChangeRequestCallback(GlobalConfProvider globalConfProvider, OcspVerifierFactory ocspVerifierFactory,
+                                      ManagementRequestVerifier.DecoderCallback rootCallback) {
+        super(globalConfProvider, ocspVerifierFactory, rootCallback, ManagementRequestType.OWNER_CHANGE_REQUEST);
     }
 
+    @Override
+    protected SecurityServerId getServer() {
+        return getRequest().getServer();
+    }
+
+    @Override
+    protected ClientId getClient() {
+        return getRequest().getClient();
+    }
 }

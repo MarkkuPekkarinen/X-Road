@@ -1,21 +1,21 @@
-/**
+/*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,20 +26,25 @@
  */
 package org.niis.xroad.cs.admin.core.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreRemove;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.niis.xroad.common.identifiers.jpa.ClientIdEntityFactory;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
-import javax.persistence.Table;
+import static jakarta.persistence.FetchType.EAGER;
+import static jakarta.persistence.FetchType.LAZY;
 
 @Entity
 @Table(name = GlobalGroupMemberEntity.TABLE_NAME)
@@ -55,17 +60,27 @@ public class GlobalGroupMemberEntity extends AuditableEntity {
     @Setter
     private int id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = LAZY)
     @JoinColumn(name = "global_group_id")
     @Getter
     @Setter
     private GlobalGroupEntity globalGroup;
 
-    @ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
+    @ManyToOne(fetch = EAGER)
     @JoinColumn(name = "group_member_id")
     @Getter
     @Setter
     private ClientIdEntity identifier;
+
+    // When a global group member is added, removed or updated, also should change the global group's updatedAt timestamp
+    @PrePersist
+    @PreRemove
+    @PreUpdate
+    private void triggerGlobalGroupChange() {
+        if (globalGroup != null) {
+            globalGroup.triggerChange();
+        }
+    }
 
     protected GlobalGroupMemberEntity() {
         //JPA
@@ -73,15 +88,13 @@ public class GlobalGroupMemberEntity extends AuditableEntity {
 
     public GlobalGroupMemberEntity(GlobalGroupEntity globalGroup, ee.ria.xroad.common.identifier.ClientId identifier) {
         this.globalGroup = globalGroup;
-        this.identifier = ClientIdEntity.ensure(identifier);
+        this.identifier = ClientIdEntityFactory.ensure(identifier);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof GlobalGroupMemberEntity)) return false;
-
-        final GlobalGroupMemberEntity member = (GlobalGroupMemberEntity) o;
+        if (!(o instanceof GlobalGroupMemberEntity member)) return false;
 
         return identifier.equals(member.identifier);
     }

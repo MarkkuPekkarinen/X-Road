@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -26,13 +26,12 @@
 package org.niis.xroad.securityserver.restapi.util;
 
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
 
 import org.bouncycastle.asn1.x509.CRLReason;
 import org.bouncycastle.cert.ocsp.RevokedStatus;
 import org.bouncycastle.cert.ocsp.UnknownStatus;
 import org.junit.Test;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,7 +68,7 @@ public class ClientUtilsTest {
     }
 
     @Test
-    public void hasValidLocalSignCertTest() throws Exception {
+    public void hasValidLocalSignCertTest() {
         // Valid sign cert found
         ClientId.Conf clientId = ClientId.Conf.create("FI", "GOV", "M1");
         assertTrue(ClientUtils.hasValidLocalSignCert(clientId,
@@ -83,8 +82,7 @@ public class ClientUtilsTest {
         assertFalse(ClientUtils.hasValidLocalSignCert(clientId, Collections.singletonList(cert)));
 
         // Null ocsp response status – should return false
-        CertificateInfo nullCert = certBuilder.clientId(clientId).build();
-        ReflectionTestUtils.setField(nullCert, "ocspBytes", null);
+        CertificateInfo nullCert = certBuilder.clientId(clientId).addOcspBytes(false).build();
         assertFalse(ClientUtils.hasValidLocalSignCert(clientId, Collections.singletonList(nullCert)));
 
         // No valid sign cert for the client

@@ -24,71 +24,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import Router, { NavigationGuardNext, Route } from 'vue-router';
-import routes from './routes';
+import { createXrdRouter } from '@niis/shared-ui';
+
 import { RouteName } from '@/global';
-import { notificationsStore } from '@/store/modules/notifications';
-import { userStore } from '@/store/modules/user';
-import { systemStore } from '@/store/modules/system';
+import { useSystem } from '@/store/modules/system';
+import { useUser } from '@/store/modules/user';
 
-// Create the router
-const router = new Router({
-  routes: routes,
+import routes from './routes';
+
+export default createXrdRouter({
+  forbiddenRouteName: RouteName.Forbidden,
+  initialisationRouteName: RouteName.Initialisation,
+  loginRouteName: RouteName.Login,
+  hasAnyOfPermissions(permissions: string[]): boolean {
+    return useUser().hasAnyOfPermissions(permissions);
+  },
+  isAuthenticated(): boolean {
+    return useUser().isAuthenticated;
+  },
+  isServerInitialized(): boolean {
+    return useSystem().isServerInitialized;
+  },
+  routes,
 });
-
-router.beforeEach(async (to: Route, from: Route, next: NavigationGuardNext) => {
-  // Going to login
-  if (to.name === RouteName.Login) {
-    next();
-    return;
-  }
-
-  // Pinia stores
-  const user = userStore();
-  const notifications = notificationsStore();
-  const system = systemStore();
-
-  // User is allowed to access any other view than login only after authenticated information has been fetched
-  // Session alive information is fetched before any view is accessed. This prevents UI flickering by not allowing
-  // user to be redirected to a view that contains api calls (s)he is not allowed.
-  if (user.isSessionAlive && user.isAuthenticated) {
-    // Server is not initialized
-    if (
-      !system.isServerInitialized &&
-      to.name != RouteName.Initialisation &&
-      from.name != RouteName.Initialisation
-    ) {
-      next({
-        name: RouteName.Initialisation,
-      });
-    } else {
-      // Clear success, error and continue init notifications when the route changed, except when coming from Initialization.
-      if (from.name !== RouteName.Initialisation) {
-        notifications.resetNotifications();
-      }
-      /*
-    Check permissions here
-    */
-      if (!to?.meta?.permissions) {
-        next();
-      } else if (user.hasAnyOfPermissions(to.meta.permissions)) {
-        // This route is allowed
-        next();
-      } else {
-        // This route is not allowed
-        next({
-          name: RouteName.Forbidden,
-        });
-      }
-      next();
-    }
-
-    return;
-  } else {
-    next({
-      name: RouteName.Login,
-    });
-  }
-});
-
-export default router;

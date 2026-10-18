@@ -1,21 +1,21 @@
 /*
  * The MIT License
- * <p>
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,36 +27,37 @@
 
 package org.niis.xroad.cs.admin.globalconf.generator;
 
-import ee.ria.xroad.common.SystemProperties;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Builder;
-import lombok.RequiredArgsConstructor;
-import lombok.Value;
-import lombok.extern.jackson.Jacksonized;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.properties.config.XRoadConfig;
+import org.niis.xroad.common.properties.config.keys.CsAdminServiceConfigKeys;
 import org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus;
 import org.niis.xroad.cs.admin.api.service.GlobalConfGenerationStatusService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 
-import static java.time.Instant.now;
+import static ee.ria.xroad.common.util.TimeUtils.now;
 import static org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus.GlobalConfGenerationStatusEnum.FAILURE;
 import static org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus.GlobalConfGenerationStatusEnum.SUCCESS;
 import static org.niis.xroad.cs.admin.api.dto.GlobalConfGenerationStatus.GlobalConfGenerationStatusEnum.UNKNOWN;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class GlobalConfGenerationStatusServiceImpl implements GlobalConfGenerationStatusService {
 
     static final String STATUS_FILE_NAME = ".global_conf_gen_status";
 
     private final ObjectMapper objectMapper;
+    private final String logPath;
+
+    public GlobalConfGenerationStatusServiceImpl(ObjectMapper objectMapper, XRoadConfig config) {
+        this.objectMapper = objectMapper;
+        this.logPath = config.value(CsAdminServiceConfigKeys.APP_LOG_PATH);
+    }
 
     @EventListener
     public void handleGlobalConfGenerationEvent(GlobalConfGenerationEvent event) {
@@ -68,20 +69,20 @@ public class GlobalConfGenerationStatusServiceImpl implements GlobalConfGenerati
     }
 
     private void saveSuccess() {
-        writeFile(GlobalConfGenerationStatusInternal.builder().success(true).time(now()).build());
+        writeFile(new GlobalConfGenerationStatusInternal(now(), true));
     }
 
     private void saveFailure() {
         final GlobalConfGenerationStatus lastStatus = get();
 
         if (lastStatus.getStatus() != FAILURE) {
-            writeFile(GlobalConfGenerationStatusInternal.builder().time(now()).success(false).build());
+            writeFile(new GlobalConfGenerationStatusInternal(now(), false));
         }
     }
 
     private void writeFile(GlobalConfGenerationStatusInternal status) {
         try {
-            Files.writeString(Paths.get(SystemProperties.getLogPath(), STATUS_FILE_NAME),
+            Files.writeString(Paths.get(logPath, STATUS_FILE_NAME),
                     objectMapper.writeValueAsString(status));
         } catch (Exception e) {
             log.warn("Failed to write global conf generation status file", e);
@@ -91,22 +92,17 @@ public class GlobalConfGenerationStatusServiceImpl implements GlobalConfGenerati
     @Override
     public GlobalConfGenerationStatus get() {
         try {
-            final String content = Files.readString(Paths.get(SystemProperties.getLogPath(), STATUS_FILE_NAME));
+            final String content = Files.readString(Paths.get(logPath, STATUS_FILE_NAME));
             final GlobalConfGenerationStatusInternal statusInternal =
                     objectMapper.readValue(content, GlobalConfGenerationStatusInternal.class);
-            return new GlobalConfGenerationStatus(statusInternal.isSuccess() ? SUCCESS : FAILURE, statusInternal.getTime());
+            return new GlobalConfGenerationStatus(statusInternal.success() ? SUCCESS : FAILURE, statusInternal.time());
         } catch (Exception e) {
             log.warn("Failed to read global conf generation status file", e);
             return new GlobalConfGenerationStatus(UNKNOWN, null);
         }
     }
 
-    @Value
-    @Jacksonized
-    @Builder
-    private static class GlobalConfGenerationStatusInternal {
-        Instant time;
-        boolean success;
+    private record GlobalConfGenerationStatusInternal(Instant time, boolean success) {
     }
 
 }

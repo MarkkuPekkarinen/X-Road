@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,25 +25,26 @@
  */
 package org.niis.xroad.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.DeviationAwareException;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.exceptions.WarningDeviation;
+import org.niis.xroad.common.core.exception.ErrorDeviation;
+import org.niis.xroad.common.core.exception.WarningDeviation;
+import org.niis.xroad.common.core.exception.XrdException;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_WARNINGS_DETECTED;
 
 /**
  * If warnings were detected and they were not ignored
  */
-public class UnhandledWarningsException extends DeviationAwareException {
+public class UnhandledWarningsException extends XrdException {
+
     public UnhandledWarningsException(Collection<WarningDeviation> warningDeviations) {
-        super(new ErrorDeviation(ERROR_WARNINGS_DETECTED), warningDeviations);
+        super("Warnings detected", new ErrorDeviation(ERROR_WARNINGS_DETECTED), warningDeviations);
     }
 
     public UnhandledWarningsException(WarningDeviation warningDeviation) {
-        super(new ErrorDeviation(ERROR_WARNINGS_DETECTED), Collections.singletonList(warningDeviation));
+        this(List.of(warningDeviation));
     }
 
 }

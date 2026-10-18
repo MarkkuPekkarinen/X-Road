@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,22 +25,35 @@
  */
 package org.niis.xroad.securityserver.restapi.config;
 
+
 import org.junit.runner.RunWith;
-import org.niis.xroad.securityserver.restapi.facade.GlobalConfFacade;
-import org.niis.xroad.securityserver.restapi.facade.SignerProxyFacade;
+import org.niis.xroad.auxiliaryservice.proto.AuxiliaryServiceRpcClient;
+import org.niis.xroad.common.acme.AcmeClient;
+import org.niis.xroad.common.acme.AcmeService;
+import org.niis.xroad.confclient.rpc.ConfClientRpcClient;
+import org.niis.xroad.globalconf.GlobalConfProvider;
+import org.niis.xroad.monitor.rpc.MonitorRpcClient;
+import org.niis.xroad.opmonitor.client.OpMonitorClient;
+import org.niis.xroad.proxy.proto.ProxyRpcClient;
+import org.niis.xroad.securityserver.restapi.cache.SubsystemNameStatus;
 import org.niis.xroad.securityserver.restapi.service.ManagementRequestSenderService;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.niis.xroad.serverconf.ServerConfProvider;
+import org.niis.xroad.serverconf.impl.ServerConfDatabaseCtx;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Base for all tests that mock GlobalConfFacade, ManagementRequestSenderService, and SignerProxyFacade.
+ * Base for all tests that mock GlobalConfProvider, ManagementRequestSenderService, and SignerProxyFacade.
  * Tests usually always want to do this, since they want to make sure they do not (accidentally) attempt to
- * read global configuration from filesystem, send actual management requests, or send Akka requests to signer.
- *
+ * read global configuration from filesystem, send actual management requests, or send rpc requests to signer.
+ * <p>
  * Extending this base class also helps in keeping mock injections standard, and reduce number of different
  * application contexts built for testing.
  */
@@ -49,12 +62,32 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureTestDatabase
 @Transactional
 @WithMockUser
+@ActiveProfiles("test")
 public abstract class AbstractFacadeMockingTestContext {
-    @MockBean
-    protected GlobalConfFacade globalConfFacade;
-    @MockBean
+    @MockitoBean
+    protected GlobalConfProvider globalConfProvider;
+    @MockitoBean
+    protected ServerConfProvider serverConfProvider;
+    @MockitoBean
     protected ManagementRequestSenderService managementRequestSenderService;
-    @MockBean
-    protected SignerProxyFacade signerProxyFacade;
-
+    @MockitoBean
+    protected SignerRpcClient signerRpcClient;
+    @MockitoBean
+    protected OpMonitorClient opMonitorClient;
+    @MockitoBean
+    protected AcmeService acmeService;
+    @MockitoBean
+    protected AcmeClient acmeClient;
+    @MockitoSpyBean
+    protected SubsystemNameStatus subsystemNameStatus;
+    @MockitoBean
+    MonitorRpcClient monitorClient;
+    @MockitoBean
+    protected ProxyRpcClient proxyRpcClient;
+    @MockitoBean
+    protected ConfClientRpcClient confClientRpcClient;
+    @MockitoBean
+    protected AuxiliaryServiceRpcClient auxiliaryServiceRpcClient;
+    @MockitoBean
+    protected ServerConfDatabaseCtx databaseCtx;
 }

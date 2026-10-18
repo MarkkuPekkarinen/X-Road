@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,16 +26,17 @@
  -->
 <template>
   <div>
-    <xrd-button
+    <XrdBtn
       data-test="unregister-client-button"
-      outlined
+      variant="outlined"
+      text="action.unregister"
+      prepend-icon="do_not_disturb_on"
       @click="confirmUnregisterClient = true"
-      >{{ $t('action.unregister') }}</xrd-button
-    >
+    />
 
     <!-- Confirm dialog for unregister client -->
-    <xrd-confirm-dialog
-      :dialog="confirmUnregisterClient"
+    <XrdConfirmDialog
+      v-if="confirmUnregisterClient"
       :loading="unregisterLoading"
       title="client.action.unregister.confirmTitle"
       text="client.action.unregister.confirmText"
@@ -45,18 +47,23 @@
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import * as api from '@/util/api';
-import { encodePathParameter } from '@/util/api';
-import { mapActions } from 'pinia';
-import { useNotifications } from '@/store/modules/notifications';
+import { defineComponent } from 'vue';
+import { XrdBtn, useNotifications, XrdConfirmDialog } from '@niis/shared-ui';
+import { useClient } from '@/store/modules/client';
 
-export default Vue.extend({
+export default defineComponent({
+  components: { XrdBtn, XrdConfirmDialog },
   props: {
     id: {
       type: String,
       required: true,
     },
+  },
+  emits: ['done'],
+  setup() {
+    const { addError, addSuccessMessage } = useNotifications();
+    const { unregisterClient: apiUnregisterClient } = useClient();
+    return { addError, addSuccessMessage, apiUnregisterClient };
   },
   data() {
     return {
@@ -64,21 +71,12 @@ export default Vue.extend({
       unregisterLoading: false as boolean,
     };
   },
-
   methods: {
-    ...mapActions(useNotifications, ['showError', 'showSuccess']),
     unregisterClient(): void {
       this.unregisterLoading = true;
-      api
-        .put(`/clients/${encodePathParameter(this.id)}/unregister`, {})
-        .then(
-          () => {
-            this.showSuccess(this.$t('client.action.unregister.success'));
-          },
-          (error) => {
-            this.showError(error);
-          },
-        )
+      this.apiUnregisterClient(this.id)
+        .then(() => this.addSuccessMessage('client.action.unregister.success'))
+        .catch((error) => this.addError(error))
         .finally(() => {
           this.$emit('done', this.id);
           this.confirmUnregisterClient = false;

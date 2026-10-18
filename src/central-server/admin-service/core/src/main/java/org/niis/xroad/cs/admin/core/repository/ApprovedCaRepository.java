@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -26,7 +26,10 @@
 package org.niis.xroad.cs.admin.core.repository;
 
 import org.niis.xroad.cs.admin.core.entity.ApprovedCaEntity;
+import org.niis.xroad.cs.admin.core.entity.CaInfoEntity;
+
+import java.util.Optional;
 
 public interface ApprovedCaRepository extends GenericRepository<ApprovedCaEntity, Integer> {
-
+    Optional<Integer> findApprovedCaIdByCaId(CaInfoEntity caInfoEntity);
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,34 +25,30 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.NotFoundException;
-
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_CERTIFICATE_NOT_FOUND;
+import lombok.NonNull;
+import org.niis.xroad.common.core.exception.ErrorDeviation;
+import org.niis.xroad.common.exception.NotFoundException;
+import org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage;
 
 public class CertificateNotFoundException extends NotFoundException {
-
-    /**
-     * default error
-     * @return
-     */
-    private static ErrorDeviation createDefaultError() {
-        return new ErrorDeviation(ERROR_CERTIFICATE_NOT_FOUND);
+    public CertificateNotFoundException(Throwable cause, @NonNull final ErrorDeviation errorDeviation) {
+        super(cause, errorDeviation);
     }
 
-    public CertificateNotFoundException(ErrorDeviation errorDeviation) {
-        super(errorDeviation);
-    }
-    public CertificateNotFoundException(Throwable t, ErrorDeviation errorDeviation) {
-        super(t, errorDeviation);
-    }
-    public CertificateNotFoundException(String s) {
-        super(s, createDefaultError());
-    }
     public CertificateNotFoundException() {
-        super(createDefaultError());
+        super(ErrorMessage.CERTIFICATE_NOT_FOUND.build());
     }
-    public CertificateNotFoundException(Throwable t) {
-        super(t, createDefaultError());
+
+    public CertificateNotFoundException(String message) {
+        super(ErrorMessage.CERTIFICATE_NOT_FOUND.build(message));
     }
+
+    public CertificateNotFoundException(Throwable cause) {
+        super(cause, ErrorMessage.CERTIFICATE_NOT_FOUND.build());
+    }
+
+    public CertificateNotFoundException(String message, Throwable cause) {
+        super(cause, ErrorMessage.CERTIFICATE_NOT_FOUND.build(message));
+    }
+
 }

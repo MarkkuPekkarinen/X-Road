@@ -25,160 +25,111 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-simple-dialog
-    :disable-save="!formReady"
-    :dialog="showDialog"
+  <XrdSimpleDialog
+    :disable-save="!meta.valid"
     :loading="loading"
     cancel-button-text="action.cancel"
     title="members.addMember"
+    submittable
     @cancel="cancel"
     @save="add"
   >
     <template #content>
-      <div class="dlg-input-width">
-        <v-text-field
-          v-model="memberName"
-          :label="$t('global.memberName')"
-          outlined
-          autofocus
-          data-test="add-member-name-input"
-        ></v-text-field>
-      </div>
-
-      <v-select
-        v-model="memberClass"
-        :items="memberClasses"
-        :label="$t('global.memberClass')"
-        item-text="code"
-        outlined
-        data-test="add-member-class-input"
-      ></v-select>
-
-      <div class="dlg-input-width">
-        <ValidationProvider
-          ref="memberCodeVP"
-          v-slot="{ errors }"
-          rules="required"
-          name="memberCode"
-          class="validation-provider"
-        >
+      <XrdFormBlock>
+        <XrdFormBlockRow>
+          <v-text-field
+            v-model="memberName"
+            v-bind="memberNameAttrs"
+            data-test="add-member-name-input"
+            class="xrd"
+            autofocus
+            :label="$t('global.memberName')"
+          />
+        </XrdFormBlockRow>
+        <XrdFormBlockRow>
+          <v-select
+            v-model="memberClass"
+            v-bind="memberClassAttrs"
+            data-test="add-member-class-input"
+            class="xrd"
+            item-title="code"
+            item-value="code"
+            menu-icon="keyboard_arrow_down"
+            :items="memberClasses"
+            :label="$t('global.memberClass')"
+          />
+        </XrdFormBlockRow>
+        <XrdFormBlockRow>
           <v-text-field
             v-model="memberCode"
-            :label="$t('global.memberCode')"
-            outlined
+            v-bind="memberCodeAttrs"
             data-test="add-member-code-input"
-            :error-messages="errors"
-          ></v-text-field>
-        </ValidationProvider>
-      </div>
+            class="xrd"
+            :label="$t('global.memberCode')"
+          />
+        </XrdFormBlockRow>
+      </XrdFormBlock>
     </template>
-  </xrd-simple-dialog>
+  </XrdSimpleDialog>
 </template>
 
-<script lang="ts">
-import Vue, {VueConstructor} from 'vue';
-import {mapActions, mapState, mapStores} from 'pinia';
-import {ErrorInfo, MemberClass} from '@/openapi-types';
-import {clientStore} from '@/store/modules/clients';
-import {memberStore} from '@/store/modules/members';
-import {systemStore} from '@/store/modules/system';
-import {notificationsStore} from '@/store/modules/notifications';
-import {useMemberClassStore} from '@/store/modules/member-class';
-import {getErrorInfo, getTranslatedFieldErrors, isFieldError,} from '@/util/helpers';
-import {AxiosError} from 'axios';
-import {ValidationProvider} from 'vee-validate';
+<script lang="ts" setup>
+import { computed } from 'vue';
+import { useMember } from '@/store/modules/members';
+import { useMemberClass } from '@/store/modules/member-class';
+import { useForm } from 'vee-validate';
+import { useBasicForm, XrdFormBlock, XrdFormBlockRow, XrdSimpleDialog } from '@niis/shared-ui';
 
-export default (
-  Vue as VueConstructor<
-    Vue & {
-      $refs: {
-        memberCodeVP: InstanceType<typeof ValidationProvider>;
-      };
-    }
-  >
-).extend({
-  name: 'AddMemberDialog',
-  components: { ValidationProvider },
-  props: {
-    showDialog: {
-      type: Boolean,
-      required: true,
-    },
-  },
-
-  data() {
-    return {
-      loading: false,
-      memberName: '',
-      memberClass: '',
-      memberCode: '',
-    };
-  },
-  computed: {
-    ...mapStores(clientStore, memberStore, useMemberClassStore),
-    ...mapState(systemStore, ['getSystemStatus']),
-    memberClasses(): MemberClass[] {
-      return this.memberClassStore.memberClasses;
-    },
-    formReady(): boolean {
-      return !!(this.memberName && this.memberClass && this.memberCode);
-    },
-  },
-  created() {
-    this.memberClassStore.fetchAll();
-  },
-  methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
-    cancel(): void {
-      this.$emit('cancel');
-      this.clearForm();
-    },
-    clearForm(): void {
-      this.memberName = '';
-      this.memberClass = '';
-      this.memberCode = '';
-    },
-    add(): void {
-      this.loading = true;
-      const instanceId: string = this.getSystemStatus?.initialization_status
-        ?.instance_identifier as string;
-      this.memberStore
-        .add({
-          member_name: this.memberName,
-          member_id: {
-            member_class: this.memberClass,
-            member_code: this.memberCode,
-          },
-        })
-        .then(() => {
-          this.showSuccess(
-            this.$t('members.memberSuccessfullyAdded', {
-              memberName: this.memberName,
-            }),
-          );
-          this.$emit('save');
-          this.clearForm();
-        })
-        .catch((error) => {
-          const errorInfo: ErrorInfo = getErrorInfo(error as AxiosError);
-          if (isFieldError(errorInfo)) {
-            let fieldErrors = errorInfo.error?.validation_errors;
-            if (fieldErrors && this.$refs?.memberCodeVP) {
-              this.$refs.memberCodeVP.setErrors(
-                getTranslatedFieldErrors(
-                  'memberAddDto.memberId.memberCode',
-                  fieldErrors,
-                ),
-              );
-            }
-          } else {
-            this.showError(error);
-          }
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-    },
+const emits = defineEmits(['save', 'cancel']);
+const { defineField, setFieldError, meta, resetForm, handleSubmit } = useForm({
+  validationSchema: {
+    memberCode: 'required',
+    memberName: 'required',
+    memberClass: 'required',
   },
 });
+const [memberCode, memberCodeAttrs] = defineField('memberCode', {
+  props: (state) => ({ 'error-messages': state.errors }),
+});
+const [memberName, memberNameAttrs] = defineField('memberName', {
+  props: (state) => ({ 'error-messages': state.errors }),
+});
+const [memberClass, memberClassAttrs] = defineField('memberClass', {
+  props: (state) => ({ 'error-messages': state.errors }),
+});
+
+const { add: addMember } = useMember();
+const memberClassStore = useMemberClass();
+const { addSuccessMessage, loading, showOrTranslateErrors } = useBasicForm(setFieldError, {
+  memberCode: 'memberAddDto.memberId.memberCode',
+});
+
+const memberClasses = computed(() => memberClassStore.memberClasses);
+
+function cancel() {
+  emits('cancel');
+  resetForm();
+}
+
+const add = handleSubmit((values) => {
+  loading.value = true;
+  addMember({
+    member_name: values.memberName,
+    member_id: {
+      member_class: values.memberClass,
+      member_code: values.memberCode,
+    },
+  })
+    .then(() => {
+      addSuccessMessage('members.memberSuccessfullyAdded', {
+        memberName: values.memberName,
+      });
+      emits('save');
+      resetForm();
+    })
+    .catch((error) => showOrTranslateErrors(error))
+    .finally(() => (loading.value = false));
+});
+
+memberClassStore.fetchAll();
 </script>

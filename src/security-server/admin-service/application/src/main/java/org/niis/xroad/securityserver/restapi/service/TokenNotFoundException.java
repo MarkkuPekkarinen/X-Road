@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,20 +25,16 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.NotFoundException;
+import org.niis.xroad.common.exception.NotFoundException;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_TOKEN_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.TOKEN_NOT_FOUND;
 
 /**
  * If token was not found
  */
 public class TokenNotFoundException extends NotFoundException {
     public TokenNotFoundException(Throwable t) {
-        super(t, createError());
+        super(t, TOKEN_NOT_FOUND.build());
     }
 
-    private static ErrorDeviation createError() {
-        return new ErrorDeviation(ERROR_TOKEN_NOT_FOUND);
-    }
 }

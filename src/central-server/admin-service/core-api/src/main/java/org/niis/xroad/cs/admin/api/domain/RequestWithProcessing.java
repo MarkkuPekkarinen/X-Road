@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -33,7 +33,9 @@ import lombok.Setter;
 
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public abstract class RequestWithProcessing extends Request {
+@SuppressWarnings("javaarchitecture:S7027")
+public abstract sealed class RequestWithProcessing extends Request
+        permits AuthenticationCertificateRegistrationRequest, ClientRegistrationRequest, OwnerChangeRequest {
     @Getter
     @Setter
     private ManagementRequestStatus processingStatus;

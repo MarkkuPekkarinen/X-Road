@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,29 +25,29 @@
    THE SOFTWARE.
  -->
 <template>
-  <tr>
-    <td class="pl-8">
-      <div class="name-wrap-top">
-        <i class="icon-Key key-icon" />
-        <div class="clickable-link identifier-wrap" @click="keyClick">
-          <span v-if="!tokenKey.name || tokenKey.name === ''">{{
-            tokenKey.id
-          }}</span>
-          <span v-else>{{ tokenKey.name }}</span>
-        </div>
-      </div>
+  <tr data-test="key-row">
+    <td class="pl-4">
+      <XrdLabelWithIcon
+        icon="key"
+        clickable
+        semi-bold
+        spacing12
+        :label="tokenKey.name ? tokenKey.name : tokenKey.id"
+        @navigate="keyClick"
+      />
     </td>
-    <td colspan="4"></td>
-    <td class="td-align-right">
-      <xrd-button
+    <td colspan="5"></td>
+    <td class="text-end">
+      <XrdBtn
         v-if="showGenerateCsr"
+        data-test="generate-csr-button"
         class="table-button-fix"
-        :outlined="false"
-        text
+        variant="text"
+        text="keys.generateCsr"
+        color="tertiary"
         :disabled="disableGenerateCsr"
         @click="generateCsr"
-        >{{ $t('keys.generateCsr') }}</xrd-button
-      >
+      />
     </td>
   </tr>
 </template>
@@ -55,29 +56,26 @@
 /**
  * Table component for an array of keys
  */
-import Vue from 'vue';
-import { Prop } from 'vue/types/options';
-import {
-  Key,
-  PossibleAction,
-  TokenCertificate,
-  KeyUsageType,
-} from '@/openapi-types';
+import { defineComponent, PropType } from 'vue';
+import { Key, PossibleAction, KeyUsageType } from '@/openapi-types';
 import { Permissions } from '@/global';
 import { mapState } from 'pinia';
+import { XrdLabelWithIcon, XrdBtn } from '@niis/shared-ui';
 
 import { useUser } from '@/store/modules/user';
 
-export default Vue.extend({
+export default defineComponent({
+  components: { XrdLabelWithIcon, XrdBtn },
   props: {
     tokenKey: {
-      type: Object as Prop<Key>,
+      type: Object as PropType<Key>,
       required: true,
     },
     tokenLoggedIn: {
       type: Boolean,
     },
   },
+  emits: ['key-click', 'generate-csr'],
   computed: {
     ...mapState(useUser, ['hasPermission']),
     showGenerateCsr(): boolean {
@@ -89,21 +87,14 @@ export default Vue.extend({
       }
 
       // If key doesn't have a usage type it is in the "unknown" category. Then any permission is fine.
-      return (
-        this.hasPermission(Permissions.GENERATE_AUTH_CERT_REQ) ||
-        this.hasPermission(Permissions.GENERATE_SIGN_CERT_REQ)
-      );
+      return this.hasPermission(Permissions.GENERATE_AUTH_CERT_REQ) || this.hasPermission(Permissions.GENERATE_SIGN_CERT_REQ);
     },
 
     disableGenerateCsr(): boolean {
       // Check if the generate csr action should be disabled
       if (
-        this.tokenKey.possible_actions?.includes(
-          PossibleAction.GENERATE_AUTH_CSR,
-        ) ||
-        this.tokenKey.possible_actions?.includes(
-          PossibleAction.GENERATE_SIGN_CSR,
-        )
+        this.tokenKey.possible_actions?.includes(PossibleAction.GENERATE_AUTH_CSR) ||
+        this.tokenKey.possible_actions?.includes(PossibleAction.GENERATE_SIGN_CSR)
       ) {
         return false;
       }
@@ -115,9 +106,6 @@ export default Vue.extend({
     keyClick(): void {
       this.$emit('key-click');
     },
-    certificateClick(cert: TokenCertificate, key: Key): void {
-      this.$emit('certificate-click', { cert, key });
-    },
     generateCsr(): void {
       this.$emit('generate-csr');
     },
@@ -125,34 +113,4 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/tables';
-
-.table-button-fix {
-  margin-left: auto;
-  margin-right: 0;
-}
-
-.td-align-right {
-  text-align: right;
-}
-
-.clickable-link {
-  color: $XRoad-Purple100;
-  cursor: pointer;
-}
-
-.key-icon {
-  margin-right: 18px;
-  color: $XRoad-Purple100;
-}
-
-.name-wrap-top {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  align-content: center;
-  margin-top: 5px;
-  margin-bottom: 5px;
-}
-</style>
+<style lang="scss" scoped></style>

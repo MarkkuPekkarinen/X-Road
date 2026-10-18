@@ -2,8 +2,8 @@
 
 **Technical Specification** <!-- omit in toc -->
 
-Version: 1.15 
-01.06.2023
+Version: 1.20
+11.11.2025
 <!-- 15 pages -->
 Doc. ID: ARC-SS
 
@@ -35,6 +35,13 @@ Doc. ID: ARC-SS
 | 03.05.2022 | 1.13    | Update `xroad-addon-messagelog` process section                                                      | Petteri Kivimäki   |
 | 01.06.2023 | 1.14    | Update references                                                                                    | Petteri Kivimäki   |
 | 20.06.2023 | 1.15    | Fixed Security Server Admin API OpenAPI specification link                                           | Madis Loitmaa      |
+| 03.10.2023 | 1.16    | Remove Akka references                                                                               | Ričardas Bučiūnas  |
+| 12.06.2024 | 1.17    | Add information about ACME support                                                                   | Petteri Kivimäki   |
+| 23.09.2024 | 1.18    | Added mail server connection                                                                         | Mikk-Erik Bachmann |
+| 21.03.2025 | 1.19    | Syntax and styling                                                                                   | Pauline Dimmek     |
+| 11.11.2025 | 1.20    | Drop JMX interfaces                                                                                  | Justas Samuolis    |
+
+
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -120,7 +127,6 @@ Doc. ID: ARC-SS
   - [4.10 Store Operational Monitoring Data](#410-store-operational-monitoring-data)
   - [4.11 Operational Monitoring Query](#411-operational-monitoring-query)
   - [4.12 Environmental Monitoring Protocol](#412-environmental-monitoring-protocol)
-  - [4.13 Environmental Monitoring JMX](#413-environmental-monitoring-jmx)
 - [5 Deployment View](#5-deployment-view)
   - [5.1 Simple Deployment](#51-simple-deployment)
   - [5.2 Redundant Deployment](#52-redundant-deployment)
@@ -209,6 +215,8 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 26. <a id="Ref_REST_UI-API" class="anchor"></a>\[REST_UI-API\] X-Road Security Server Admin API OpenAPI Specification, <https://github.com/nordic-institute/X-Road/blob/develop/src/security-server/openapi-model/src/main/resources/META-INF/openapi-definition.yaml>.
 
+27. <a id="Ref_ACME" class="anchor"></a>\[ACME\] RFC8555: Automatic Certificate Management Environment (ACME), <https://datatracker.ietf.org/doc/html/rfc8555>
+
 ## 2 Component View
 
 [Figure 1](#Ref_Security_server_component_diagram) shows the main components and interfaces of the X-Road security server. The components and the interfaces are described in detail in the following sections.
@@ -259,7 +267,7 @@ The component is a proxy addon.
 ### 2.5 Opmonitor
 
 Opmonitor component collects operational monitoring information such as which services have been called, how many times, what was the size of the response, etc. 
-The monitoring data is published via SOAP XML and (optional) JMX interfaces.
+The monitoring data is published via SOAP XML.
 
 The component is a separate daemon process.
 
@@ -295,12 +303,15 @@ These endpoints are used by the user interface frontend, and can be used by stan
 The management REST API is packaged in an executable Spring Boot\[[2](#Ref_2)\] *jar* archive.
 This Spring Boot application starts an embedded Tomcat\[[3](#Ref_3)\] servlet engine, which also serves the resources for the user interface frontend.
 Embedded Tomcat listens on a fixed port that is configured in internal configuration files.
+In addition, the application listens to incoming \[[ACME](#Ref_ACME)\] challenge requests from the ACME server on port 80.
 
 Management REST API endpoints are documented using an OpenAPI 3 definition: \[[REST_UI-API](#Ref_REST_UI-API)\].
 For more information on OpenAPI 3, see \[[OPENAPI](#Ref_OPENAPI)\].
 
 
 Certain API operations attempt to modify the X-Road global configuration and require management requests to be sent to the X-Road central server. These requests need to be approved by the central server administrator before they are reflected in the global configuration.
+
+Some operations might also trigger sending an e-mail notification to the mail server which must be configured beforehand in /etc/xroad/conf.d/mail.yml (e.g. host, port, username etc.).
 
 User action events that change the system state or configuration are logged into the audit log. The actions are logged regardless of whether the outcome was a success or a failure. The complete list of the audit log events is described in \[[SPEC-AL](#Ref_SPEC-AL)\].
 
@@ -332,13 +343,13 @@ The SSCD needs to be a PKCS \#11 (see \[[PKCS11](#Ref_PKCS11)\]) compliant hardw
 
 ### 2.13 Environmental Monitoring Service
 
-Provides method that can be used by X-Road participants to get environmental data of the security server. It requests the data from the local monitoring service via Akka interface and translates it to a SOAP XML response.
+Provides methods that can be used by X-Road participants to get environmental data of the security server. It requests the data from the local monitoring service via gRPC interface and translates it to a SOAP XML response.
 
 The component is a proxy addon.
 
 ### 2.14 Monitor
 
-Monitor component collects environmental monitoring information such as running processes, available disk space, installed packages etc. The monitoring data is published via Akka and (optional) JMX interfaces.
+Monitor component collects environmental monitoring information such as running processes, available disk space, installed packages etc. The monitoring data is published via gRPC.
 
 The component is a separate daemon process.
 
@@ -353,7 +364,7 @@ Figure 2. Security server process diagram
 
 #### 3.1.1 Role and responsibilities
 
-Xroad-proxy-ui-api provides the Security Server user interface. It also provides the REST API that can be used for management operations.
+Xroad-proxy-ui-api provides the Security Server user interface. It also provides the REST API that can be used for management operations. In addition, it provides the \[[ACME](#Ref_ACME)\] interface for receiving incoming ACME challenge requests from the ACME server.
 
 #### 3.1.2 Encapsulated data
 
@@ -372,6 +383,14 @@ Xroad-proxy-ui-api accepts https traffic to interface A in \[[Figure 2](#Ref_Sec
 Interface A handles both requests to serve content for the UI and requests for REST API calls.
 Interface A is directly exposed to outside world.
 
+Xroad-proxy-ui-api accepts http traffic to interface E in \[[Figure 2](#Ref_Security_Server_process_diagram)\].
+Interface E handles incoming ACME challenge requests from the Certificate Authority's ACME server (see \[[ACME](#Ref_ACME)\]).
+Interface E is directly exposed to outside world.
+
+Xroad-proxy-ui-api communicates with certificate authority's ACME interface R (see \[[ACME](#Ref_ACME)\]).
+
+Xroad-proxy-ui-api communicates with a mail server interface Q when sending notifications about ACME automatic certificate renewal process. The connection can use either STARTTLS or SSL/TLS protocol for added security.
+
 Xroad-proxy-ui-api communicates with Central Server's management services interface M (see \[[PR-MSERV](#Ref_PR-MSERV)\]).
 
 Global configuration is downloaded from Central Server (or Configuration Proxy in some cases) utilizing xroad-confclient and stored on disk.
@@ -388,13 +407,17 @@ Finally Xroad-proxy-ui-api reads/writes data to postgresql interface D.
 
 #### 3.1.4 Input/output ports
 
-Xroad-proxy-ui-api has a listening port for incoming https traffic. The Security Server ports are described in \[[IG-SS](#Ref_IG-SS)\] and \[[IG-SS-RHEL](#Ref_IG-SS-RHEL)\].
+Xroad-proxy-ui-api has listening ports for incoming https traffic. The Security Server ports are described in \[[IG-SS](#Ref_IG-SS)\] and \[[IG-SS-RHEL](#Ref_IG-SS-RHEL)\].
 
 Xroad-proxy-ui-api accesses xroad-confclient's admin port to command it to download global configuration. The output port is internal and specified in xroad-confclient's source code.
 
 Xroad-proxy-ui-api accesses xroad-signer's admin and signer protocol ports. Both ports are internal and must be looked up in the xroad-signer's source code.
 
 Xroad-proxy-ui-api accesses postgresql using the port specified in /etc/xroad/db.properties.
+
+Xroad-proxy-ui-api accesses certificate authority's ACME interface R (see \[[ACME](#Ref_ACME)\]) to manage authentication and sign certificates. The output port is defined on the Central Server and distributed to the Security Servers using global configuration.
+
+Xroad-proxy-ui-api accesses mail server interface Q when sending notifications about ACME automatic certificate renewal process. The output port is specified in the /etc/xroad/conf.d/mail.yml configuration file.
 
 #### 3.1.5 Persistent data
 
@@ -421,7 +444,7 @@ Xroad-signer encapsulates keyconf, which tracks the configuration related to tok
 
 #### 3.2.3 Messaging
 
-Xroad-signer fetches information from certificate authority's OCSP responder.
+Xroad-signer fetches information from certificate authority's OCSP responder using interface U.
 
 Xroad-signer offers interface S in \[[Figure 2](#Ref_Security_Server_process_diagram)\] for signing requests. It is used by xroad-proxy-ui-api and xroad-proxy. Additionally xroad-proxy is accessing directly the keyconf.xml encapsulated by xroad-signer.
 
@@ -529,13 +552,9 @@ The sensor data is stored in memory of the xroad-monitor process.
 
 Xroad-monitor's sensor data is queried by xroad-proxy using interface Q in \[[Figure 2](#Ref_Security_Server_process_diagram)\].
 
-Sensor data is also accessible via JMX protocol through interface J.
-
 #### 3.6.4 Input/output ports
 
 The input port for querying sensor data is internal and can be found from the source code.
-
-The input port for accessing sensor data through JMX protocol is closed by default and must be opened separately by editing /etc/xroad/services/monitor.conf.
 
 #### 3.6.5 Persistent data
 
@@ -555,11 +574,9 @@ Xroad-opmonitor stores the operational data in postgresql database. There is als
 
 Xroad-opmonitor communicates with xroad-proxy through operational monitoring query and store interfaces Q and S respectively in \[[Figure 2](#Ref_Security_Server_process_diagram)\]. The protocols are described in \[[PR-OPMON](#Ref_PR-OPMON)\].
 
-Operational monitoring data is also made available via JMX protocol through interface J.
-
 #### 3.7.4 Input/output ports
 
-The input ports for query, store, and JMX access of operational monitoring data are specified in \[[UG-OPMONSYSPAR](#Ref_UG-OPMONSYSPAR)\].
+The input ports for query, store operational monitoring data are specified in \[[UG-OPMONSYSPAR](#Ref_UG-OPMONSYSPAR)\].
 
 #### 3.7.5 Persistent data
 
@@ -678,11 +695,6 @@ The interface is described in more detail in \[[ARC-OPMOND](#Ref_ARC-OPMOND)\].
 ### 4.12 Environmental Monitoring Protocol
 
 The Environmental Monitoring Protocol can be used by the external monitoring systems to gather environmental monitoring information about the security server.
-
-
-### 4.13 Environmental Monitoring JMX
-
-Monitor JMX interface publishes local security server environmental monitoring data gathered by environmental monitoring service.
 
 
 ## 5 Deployment View

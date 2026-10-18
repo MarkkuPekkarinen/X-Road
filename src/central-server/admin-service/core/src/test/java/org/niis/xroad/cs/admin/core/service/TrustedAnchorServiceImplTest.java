@@ -34,8 +34,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.InternalServerErrorException;
 import org.niis.xroad.common.exception.NotFoundException;
-import org.niis.xroad.common.exception.ValidationFailureException;
 import org.niis.xroad.cs.admin.api.domain.TrustedAnchor;
 import org.niis.xroad.cs.admin.core.entity.AnchorUrlCertEntity;
 import org.niis.xroad.cs.admin.core.entity.AnchorUrlEntity;
@@ -53,7 +54,7 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
 
-import static ee.ria.xroad.common.util.CryptoUtils.DEFAULT_ANCHOR_HASH_ALGORITHM_ID;
+import static ee.ria.xroad.common.crypto.Digests.DEFAULT_ANCHOR_HASH_ALGORITHM_ID;
 import static java.lang.ClassLoader.getSystemResource;
 import static java.nio.file.Files.readAllBytes;
 import static java.util.Optional.empty;
@@ -68,7 +69,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.niis.xroad.common.exception.util.CommonDeviationMessage.CONF_VERIFICATION_UNREACHABLE;
+import static org.niis.xroad.common.core.exception.ErrorCode.CONF_VERIFICATION_UNREACHABLE;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.ANCHOR_FILE_HASH;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.ANCHOR_FILE_HASH_ALGORITHM;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.ANCHOR_URLS;
@@ -115,8 +116,8 @@ class TrustedAnchorServiceImplTest {
         @Test
         void previewShouldThrowValidationFailure() {
             assertThatThrownBy(() -> trustedAnchorService.preview(new byte[0]))
-                    .isInstanceOf(ValidationFailureException.class)
-                    .hasMessage("Malformed anchor file");
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("Error[code=malformed_anchor]");
         }
     }
 
@@ -137,7 +138,7 @@ class TrustedAnchorServiceImplTest {
             verify(auditDataHelper).calculateAndPutAnchorHash(bytes);
             verify(auditDataHelper).put(INSTANCE_IDENTIFIER, "CS0");
             verify(auditDataHelper).putDate(GENERATED_AT, anchorDate);
-            verify(auditDataHelper).put(ANCHOR_URLS, Set.of("http://cs0/internalconf?version=2"));
+            verify(auditDataHelper).put(ANCHOR_URLS, Set.of("http://cs0/internalconf"));
 
             verify(configurationVerifier).verifyConfiguration(any(), any());
 
@@ -153,18 +154,18 @@ class TrustedAnchorServiceImplTest {
         void uploadNewVerificationShouldFail() throws Exception {
             final byte[] bytes = readAllBytes(Paths.get(getSystemResource("trusted-anchor/trusted-anchor.xml").toURI()));
 
-            doThrow(new ConfigurationVerifier.ConfigurationVerificationException(CONF_VERIFICATION_UNREACHABLE))
+            doThrow(new InternalServerErrorException(CONF_VERIFICATION_UNREACHABLE.build()))
                     .when(configurationVerifier).verifyConfiguration(any(), any());
 
             assertThatThrownBy(() -> trustedAnchorService.upload(bytes))
-                    .isInstanceOf(ValidationFailureException.class)
-                    .hasMessage("Trusted anchor file verification failed");
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("Error[code=trusted_anchor_verification_failed]");
 
             final Date anchorDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").parse("2023-02-15T09:26:34.235Z");
             verify(auditDataHelper).calculateAndPutAnchorHash(bytes);
             verify(auditDataHelper).put(INSTANCE_IDENTIFIER, "CS0");
             verify(auditDataHelper).putDate(GENERATED_AT, anchorDate);
-            verify(auditDataHelper).put(ANCHOR_URLS, Set.of("http://cs0/internalconf?version=2"));
+            verify(auditDataHelper).put(ANCHOR_URLS, Set.of("http://cs0/internalconf"));
 
             verifyNoMoreInteractions(trustedAnchorRepository);
         }
@@ -199,7 +200,8 @@ class TrustedAnchorServiceImplTest {
 
             assertThatThrownBy(() -> trustedAnchorService.delete(ANCHOR_HASH))
                     .isInstanceOf(NotFoundException.class)
-                    .hasMessage("Trusted anchor not found");
+                    .hasMessage("Error[code=trusted_anchor_not_found, "
+                            + "metadata=[40:2A:4F:94:05:D2:9B:ED:C9:EE:A2:6D:EC:EC:11:94:5D:C9:A8:3E:29:1F:B2:92:A6:E4:DF:1D]]");
 
             verifyNoInteractions(auditDataHelper);
             verifyNoMoreInteractions(trustedAnchorRepository);

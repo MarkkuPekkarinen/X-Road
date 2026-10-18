@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,128 +25,145 @@
    THE SOFTWARE.
  -->
 <template>
-  <ValidationObserver ref="form" v-slot="{ valid }">
-    <xrd-simple-dialog
-      :dialog="dialog"
-      :width="620"
-      title="services.addRest"
-      :disable-save="!valid"
-      @save="save"
-      @cancel="cancel"
-    >
-      <div slot="content">
-        <div class="dlg-edit-row">
-          <div class="dlg-row-title">{{ $t('services.serviceType') }}</div>
-
-          <ValidationProvider
-            v-slot="{ errors }"
-            rules="required"
+  <XrdSimpleDialog
+    :width="840"
+    title="services.addRest"
+    submittable
+    :loading="saving"
+    :disable-save="!meta.valid"
+    @save="save"
+    @cancel="cancel"
+  >
+    <template #content>
+      <XrdFormBlock>
+        <XrdFormBlockRow full-length>
+          <v-radio-group
+            v-model="serviceTypeMdl"
+            v-bind="serviceTypeAttr"
             name="serviceType"
-            class="validation-provider dlg-row-input"
+            class="xrd"
+            inline
+            :label="$t('services.serviceType')"
           >
-            <v-radio-group
-              v-model="serviceType"
-              name="serviceType"
-              :error-messages="errors"
-              row
-            >
-              <v-radio
-                name="REST"
-                :label="$t('services.restApiBasePath')"
-                value="REST"
-              ></v-radio>
-              <v-radio
-                name="OPENAPI3"
-                :label="$t('services.OpenApi3Description')"
-                value="OPENAPI3"
-              ></v-radio>
-            </v-radio-group>
-          </ValidationProvider>
-        </div>
-
-        <div class="pt-3 dlg-input-width">
-          <ValidationProvider
-            v-slot="{ errors }"
-            rules="required|restUrl"
-            name="serviceUrl"
-            class="validation-provider"
-          >
-            <v-text-field
-              v-model="url"
-              :placeholder="$t('services.urlPlaceholder')"
-              :label="$t('services.url')"
-              name="serviceUrl"
-              outlined
-              autofocus
-              :error-messages="errors"
-            ></v-text-field>
-          </ValidationProvider>
-        </div>
-
-        <div class="pt-3 dlg-input-width">
-          <ValidationProvider
-            v-slot="{ errors }"
-            rules="required|xrdIdentifier"
-            name="serviceCode"
-            class="validation-provider"
-          >
-            <v-text-field
-              v-model="serviceCode"
-              outlined
-              name="serviceCode"
-              :label="$t('services.serviceCode')"
-              type="text"
-              :placeholder="$t('services.serviceCodePlaceholder')"
-              :maxlength="255"
-              :error-messages="errors"
-            ></v-text-field>
-          </ValidationProvider>
-        </div>
-      </div>
-    </xrd-simple-dialog>
-  </ValidationObserver>
+            <v-radio data-test="rest-radio-button" class="xrd" value="REST" :label="$t('services.restApiBasePath')" />
+            <v-radio data-test="openapi3-radio-button" class="xrd ml-6" value="OPENAPI3" :label="$t('services.OpenApi3Description')" />
+          </v-radio-group>
+        </XrdFormBlockRow>
+        <XrdFormBlockRow full-length>
+          <v-text-field
+            v-model="serviceUrlMdl"
+            v-bind="serviceUrlAttr"
+            data-test="service-url-text-field"
+            class="xrd"
+            autofocus
+            :label="$t('services.url')"
+          />
+        </XrdFormBlockRow>
+        <XrdFormBlockRow full-length>
+          <v-text-field
+            v-model="serviceCodeMdl"
+            v-bind="serviceCodeAttr"
+            data-test="service-code-text-field"
+            class="xrd"
+            :label="$t('services.serviceCode')"
+            :maxlength="255"
+          ></v-text-field>
+        </XrdFormBlockRow>
+      </XrdFormBlock>
+    </template>
+  </XrdSimpleDialog>
+  <ServiceWarningDialog
+    v-if="warningDialog"
+    :warnings="warningInfo"
+    :loading="saving"
+    @cancel="warningDialog = false"
+    @accept="saveWithWarning"
+  />
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { ValidationProvider, ValidationObserver } from 'vee-validate';
+<script lang="ts" setup>
+import { useForm } from 'vee-validate';
+import {
+  XrdFormBlock,
+  XrdFormBlockRow,
+  useNotifications,
+  DialogSaveHandler,
+  XrdSimpleDialog,
+  veeDefaultFieldConfig,
+} from '@niis/shared-ui';
+import { ref } from 'vue';
+import { CodeWithDetails } from '@/openapi-types';
+import ServiceWarningDialog from '@/components/service/ServiceWarningDialog.vue';
+import { useServiceDescriptions } from '@/store/modules/service-descriptions';
 
-export default Vue.extend({
-  components: { ValidationProvider, ValidationObserver },
-  props: {
-    dialog: {
-      type: Boolean,
-      required: true,
-    },
-  },
-  data() {
-    return {
-      serviceType: '',
-      url: '',
-      serviceCode: '',
-    };
-  },
-  methods: {
-    cancel(): void {
-      this.$emit('cancel');
-      this.clear();
-    },
-    save(): void {
-      this.$emit('save', this.serviceType, this.url, this.serviceCode);
-      this.clear();
-    },
-    clear(): void {
-      this.url = '';
-      this.serviceCode = '';
-      this.serviceType = '';
-      requestAnimationFrame(() => {
-        (this.$refs.form as InstanceType<typeof ValidationObserver>).reset();
-      });
-    },
+const props = defineProps({
+  clientId: {
+    type: String,
+    required: true,
   },
 });
+
+const emit = defineEmits(['cancel', 'save']);
+
+const { addSuccessMessage } = useNotifications();
+const { saveRest } = useServiceDescriptions();
+
+const warningDialog = ref(false);
+const saving = ref(false);
+const warningInfo = ref<CodeWithDetails[]>([]);
+const dialogHandler = ref<DialogSaveHandler | undefined>(undefined);
+
+const { meta, resetForm, values, defineField } = useForm({
+  validationSchema: {
+    serviceType: 'required',
+    serviceUrl: 'required|max:255|restUrl',
+    serviceCode: 'required|max:255|xrdIdentifier',
+  },
+});
+const componentConfig = veeDefaultFieldConfig();
+const [serviceTypeMdl, serviceTypeAttr] = defineField('serviceType', componentConfig);
+const [serviceUrlMdl, serviceUrlAttr] = defineField('serviceUrl', componentConfig);
+const [serviceCodeMdl, serviceCodeAttr] = defineField('serviceCode', componentConfig);
+
+function cancel(): void {
+  warningDialog.value = false;
+  emit('cancel');
+  clear();
+}
+
+function save(evt: Event, handler: DialogSaveHandler): void {
+  dialogHandler.value = handler;
+  saving.value = true;
+  warningDialog.value = false;
+  saveRest(props.clientId, values.serviceUrl, values.serviceCode, values.serviceType)
+    .then(() => addSuccessMessage(values.serviceType === 'OPENAPI3' ? 'services.openApi3Added' : 'services.restAdded'))
+    .then(() => emit('save'))
+    .catch((error) => {
+      if (error?.response?.data?.warnings) {
+        warningInfo.value = error.response.data.warnings;
+        warningDialog.value = true;
+      } else {
+        handler.addError(error);
+      }
+    })
+    .finally(() => (saving.value = false));
+}
+
+function saveWithWarning(): void {
+  saving.value = true;
+  warningDialog.value = false;
+  saveRest(props.clientId, values.serviceUrl, values.serviceCode, values.serviceType, true)
+    .then(() => addSuccessMessage(values.serviceType === 'OPENAPI3' ? 'services.openApi3Added' : 'services.restAdded'))
+    .then(() => emit('save'))
+    .catch((error) => dialogHandler.value?.addError(error))
+    .finally(() => (saving.value = false));
+}
+
+function clear(): void {
+  requestAnimationFrame(() => {
+    resetForm();
+  });
+}
 </script>
 
-<style lang="scss" scoped>
-@import '../../../assets/dialogs';
-</style>
+<style lang="scss" scoped></style>

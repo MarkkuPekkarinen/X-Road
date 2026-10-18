@@ -25,102 +25,105 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-simple-dialog
-    :disable-save="!formReady"
-    :dialog="showDialog"
-    :loading="loading"
-    cancel-button-text="action.cancel"
+  <XrdSimpleDialog
     title="members.member.subsystems.addClient"
+    cancel-button-text="action.cancel"
+    submittable
+    :loading="loading"
+    :disable-save="!meta.valid"
     @cancel="cancel"
     @save="add"
   >
     <template #content>
-      <div class="dlg-input-width">
-        <v-text-field
-          v-model="subsystemCode"
-          :label="$t('members.member.subsystems.subsystemcode')"
-          outlined
-          autofocus
-          data-test="add-subsystem-input"
-        ></v-text-field>
-      </div>
+      <XrdFormBlock>
+        <XrdFormBlockRow>
+          <v-text-field
+            v-model="subsystemCode"
+            v-bind="subsystemCodeAttrs"
+            data-test="add-subsystem-input"
+            class="xrd"
+            autofocus
+            :label="$t('members.member.subsystems.subsystemcode')"
+          />
+        </XrdFormBlockRow>
+        <XrdFormBlockRow>
+          <v-text-field
+            v-model="subsystemName"
+            v-bind="subsystemNameAttrs"
+            data-test="add-subsystem-name-input"
+            class="xrd"
+            :label="$t('members.member.subsystems.subsystemname')"
+          />
+        </XrdFormBlockRow>
+      </XrdFormBlock>
     </template>
-  </xrd-simple-dialog>
+  </XrdSimpleDialog>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { mapActions, mapState, mapStores } from 'pinia';
-import { XRoadId } from '@/openapi-types';
-import { clientStore } from '@/store/modules/clients';
-import { memberStore } from '@/store/modules/members';
-import { systemStore } from '@/store/modules/system';
-import { notificationsStore } from '@/store/modules/notifications';
-import { subsystemStore } from '@/store/modules/subsystems';
+<script lang="ts" setup>
+import { PropType, ref } from 'vue';
+import { ClientId } from '@/openapi-types';
+import { useSubsystem } from '@/store/modules/subsystems';
+import { useForm } from 'vee-validate';
+import { XrdFormBlock, XrdFormBlockRow, useNotifications, XrdSimpleDialog } from '@niis/shared-ui';
 
-export default Vue.extend({
-  name: 'AddMemberSubsystemDialog',
-  props: {
-    showDialog: {
-      type: Boolean,
-      required: true,
-    },
+const props = defineProps({
+  member: {
+    type: Object as PropType<{ client_id: ClientId }>,
+    required: true,
   },
+});
 
-  data() {
-    return {
-      loading: false,
-      subsystemCode: '',
-    };
-  },
-  computed: {
-    ...mapStores(clientStore, memberStore, subsystemStore),
-    ...mapState(systemStore, ['getSystemStatus']),
-    formReady(): boolean {
-      return !!this.subsystemCode;
+const emits = defineEmits(['save', 'cancel']);
+
+const { defineField, meta, handleSubmit, resetForm } = useForm({
+  validationSchema: { subsystemCode: 'required' },
+  initialValues: { subsystemCode: '', subsystemName: '' },
+});
+
+const { addSubsystem } = useSubsystem();
+const { addError, addSuccessMessage } = useNotifications();
+
+const [subsystemCode, subsystemCodeAttrs] = defineField('subsystemCode', {
+  props: (state) => ({
+    'error-messages': state.errors,
+  }),
+});
+
+const [subsystemName, subsystemNameAttrs] = defineField('subsystemName', {
+  props: (state) => ({
+    'error-messages': state.errors,
+  }),
+});
+
+const loading = ref(false);
+
+function cancel() {
+  emits('cancel');
+  resetForm();
+}
+
+const add = handleSubmit((values) => {
+  loading.value = true;
+  addSubsystem({
+    subsystem_name: values.subsystemName,
+    subsystem_id: {
+      member_class: props.member.client_id.member_class,
+      member_code: props.member.client_id.member_code,
+      subsystem_code: values.subsystemCode,
     },
-  },
-  created() {
-    this.memberStore.currentMember;
-  },
-  methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
-    cancel(): void {
-      this.$emit('cancel');
-      this.clearForm();
-    },
-    clearForm(): void {
-      this.subsystemCode = '';
-    },
-    add(): void {
-      this.loading = true;
-      const instanceId: string = this.getSystemStatus?.initialization_status
-        ?.instance_identifier as string;
-      this.subsystemStore
-        .addSubsystem({
-          subsystem_id: {
-            member_class: this.memberStore.currentMember.client_id.member_class,
-            member_code: this.memberStore.currentMember.client_id.member_code,
-            subsystem_code: this.subsystemCode,
-          },
-        })
-        .then(() => {
-          this.showSuccess(
-            this.$t('members.member.subsystems.subsystemSuccessfullyAdded', {
-              subsystemCode: this.subsystemCode,
-            }),
-          );
-          this.$emit('addedSubsystem');
-          this.clearForm();
-        })
-        .catch((error) => {
-          this.showError(error);
-          this.$emit('cancel');
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-    },
-  },
+  })
+    .then(() => {
+      addSuccessMessage('members.member.subsystems.subsystemSuccessfullyAdded', {
+        subsystemCode: values.subsystemCode,
+      });
+      emits('save');
+      resetForm();
+    })
+    .catch((error) => {
+      addError(error);
+      emits('cancel');
+    })
+    .finally(() => (loading.value = false));
 });
 </script>

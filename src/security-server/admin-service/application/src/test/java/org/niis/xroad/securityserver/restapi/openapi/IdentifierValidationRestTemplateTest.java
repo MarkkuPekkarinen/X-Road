@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -27,46 +28,42 @@ package org.niis.xroad.securityserver.restapi.openapi;
 
 import ee.ria.xroad.common.identifier.ClientId;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.niis.xroad.restapi.config.IdentifierValidationConfiguration;
 import org.niis.xroad.restapi.openapi.model.ErrorInfo;
 import org.niis.xroad.restapi.openapi.validator.IdentifierValidationErrorInfo;
-import org.niis.xroad.securityserver.restapi.openapi.model.Client;
-import org.niis.xroad.securityserver.restapi.openapi.model.ClientAdd;
-import org.niis.xroad.securityserver.restapi.openapi.model.ClientStatus;
-import org.niis.xroad.securityserver.restapi.openapi.model.CsrGenerate;
-import org.niis.xroad.securityserver.restapi.openapi.model.Endpoint;
-import org.niis.xroad.securityserver.restapi.openapi.model.EndpointUpdate;
-import org.niis.xroad.securityserver.restapi.openapi.model.InitialServerConf;
-import org.niis.xroad.securityserver.restapi.openapi.model.KeyLabel;
-import org.niis.xroad.securityserver.restapi.openapi.model.KeyLabelWithCsrGenerate;
-import org.niis.xroad.securityserver.restapi.openapi.model.KeyName;
-import org.niis.xroad.securityserver.restapi.openapi.model.KeyUsageType;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroup;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupAdd;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupDescription;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescriptionAdd;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescriptionUpdate;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceType;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceUpdate;
-import org.niis.xroad.securityserver.restapi.openapi.model.TokenName;
-import org.niis.xroad.securityserver.restapi.service.AnchorNotFoundException;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientStatusDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CsrGenerateDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.EndpointDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.EndpointUpdateDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.InitialServerConfDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyLabelDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyLabelWithCsrGenerateDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyNameDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyUsageTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupDescriptionDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescriptionAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescriptionUpdateDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceUpdateDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.TokenNameDto;
+import org.niis.xroad.securityserver.restapi.service.InitializationService;
 import org.niis.xroad.securityserver.restapi.util.TestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,14 +85,16 @@ import static org.niis.xroad.securityserver.restapi.util.TestUtils.addApiKeyAuth
 /**
  * test validation of identifier parameters with real requests
  * (can't test binders with regular integration tests, for some reason)
- *
- * TestRestTemplate requests will not be rolled back so the context will need to be reloaded after this test class
+ * <p>
+ * WebTestClient requests will not be rolled back so the context will need to be reloaded after this test class
  */
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class IdentifierValidationRestTemplateTest extends AbstractApiControllerTestContext {
 
     @Autowired
-    TestRestTemplate restTemplate;
+    WebTestClient webTestClient;
+
+    private WebTestClient client;
 
     public static final String HAS_COLON = "aa:bb";
     public static final String HAS_SEMICOLON = "aa;bb";
@@ -104,25 +103,25 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
     public static final String HAS_BACKSLASH = "aa\\bb";
     public static final String HAS_CONTROL_CHAR = "aa​bb"; // zero-width-space in the middle
 
-    public static final String FIELD_CLIENTADD_MEMBER_CODE = "clientAdd.client.memberCode";
-    public static final String FIELD_CLIENTADD_SUBSYSTEM_CODE = "clientAdd.client.subsystemCode";
-    public static final String FIELD_LOCALGROUPADD_CODE = "localGroupAdd.code";
-    public static final String FIELD_SERVICEUPDATE_URL = "serviceUpdate.url";
-    public static final String FIELD_KEYLABEL_LABEL = "keyLabel.label";
-    public static final String FIELD_TOKENNAME_NAME = "tokenName.name";
-    public static final String FIELD_KEYNAME_NAME = "keyName.name";
-    public static final String FIELD_ENDPOINTUPDATE_PATH = "endpointUpdate.path";
-    public static final String FIELD_ENDPOINT_PATH = "endpoint.path";
-    public static final String FIELD_KEYLABELWITHCSRGENERATE_KEYLABEL = "keyLabelWithCsrGenerate.keyLabel";
-    public static final String FIELD_KEYLABELWITHCSRGENERATE_CSRGENERATEREQUEST
-            = "keyLabelWithCsrGenerate.csrGenerateRequest";
-    public static final String FIELD_LOCALGROUPADD_DESCRIPTION = "localGroupAdd.description";
-    public static final String FIELD_LOCALGROUPDESCRIPTION = "localGroupDescription.description";
+    public static final String FIELD_CLIENTADD_MEMBER_CODE = "clientAddDto.client.memberCode";
+    public static final String FIELD_CLIENTADD_SUBSYSTEM_CODE = "clientAddDto.client.subsystemCode";
+    public static final String FIELD_LOCALGROUPADD_CODE = "localGroupAddDto.code";
+    public static final String FIELD_SERVICEUPDATE_URL = "serviceUpdateDto.url";
+    public static final String FIELD_KEYLABEL_LABEL = "keyLabelDto.label";
+    public static final String FIELD_TOKENNAME_NAME = "tokenNameDto.name";
+    public static final String FIELD_KEYNAME_NAME = "keyNameDto.name";
+    public static final String FIELD_ENDPOINTUPDATE_PATH = "endpointUpdateDto.path";
+    public static final String FIELD_ENDPOINT_PATH = "endpointDto.path";
+    public static final String FIELD_KEYLABELWITHCSRGENERATE_KEYLABEL = "keyLabelWithCsrGenerateDto.keyLabel";
+    public static final String FIELD_LOCALGROUPADD_DESCRIPTION = "localGroupAddDto.description";
+    public static final String FIELD_LOCALGROUPDESCRIPTION = "localGroupDescriptionDto.description";
+
+    private static final String PATTERN_ERROR_CODE = "Pattern";
 
     private static final List<String> MEMBER_CLASSES = Arrays.asList(TestUtils.MEMBER_CLASS_GOV,
             TestUtils.MEMBER_CLASS_PRO);
 
-    private ObjectMapper testObjectMapper = new ObjectMapper();
+    private ObjectMapper testObjectMapper = JsonMapper.builder().build();
 
     @TestConfiguration
     static class TestConf {
@@ -135,9 +134,9 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
 
     @Before
     public void setup() throws Exception {
-        addApiKeyAuthorizationHeader(restTemplate);
-        when(globalConfFacade.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
-        when(globalConfFacade.getMemberName(any())).thenAnswer((Answer<String>) invocation -> {
+        client = addApiKeyAuthorizationHeader(webTestClient);
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
+        when(globalConfProvider.getMemberName(any())).thenAnswer((Answer<String>) invocation -> {
             Object[] args = invocation.getArguments();
             ClientId identifier = (ClientId) args[0];
             return identifier.getSubsystemCode() != null ? TestUtils.NAME_FOR + identifier.getSubsystemCode()
@@ -149,8 +148,8 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         when(currentSecurityServerId.getServerId()).thenReturn(OWNER_SERVER_ID);
         when(systemService.isAnchorImported()).thenReturn(false);
         when(urlValidator.isValidUrl(any())).thenReturn(true);
-        doThrow(new AnchorNotFoundException(""))
-                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean());
+        doThrow(new InitializationService.AnchorNotFoundException("err"))
+                .when(initializationService).initialize(any(), any(), any(), any(), anyBoolean(), any());
     }
 
     @Test
@@ -170,23 +169,26 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         assertAddClientValidationError("aa", HAS_CONTROL_CHAR);
 
         // these ids should be fine by validation rules
-        ResponseEntity<Object> response = createTestClient("aa.bb.列.ä", "aa.bb.列.ä");
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        client.post().uri("/api/v1/clients")
+                .bodyValue(createClientAddDto("aa.bb.列.ä", "aa.bb.列.ä"))
+                .exchange()
+                .expectStatus().isCreated();
     }
 
     private void assertAddClientValidationError(String memberCode, String subsystemCode) {
-        ResponseEntity<Object> response = createTestClient(memberCode, subsystemCode);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        client.post().uri("/api/v1/clients")
+                .bodyValue(createClientAddDto(memberCode, subsystemCode))
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 
-    private ResponseEntity<Object> createTestClient(String memberCode, String subsystemCode) {
-        Client client = new Client()
+    private ClientAddDto createClientAddDto(String memberCode, String subsystemCode) {
+        ClientDto clientDto = new ClientDto()
                 .memberClass("GOV")
                 .memberCode(memberCode)
                 .subsystemCode(subsystemCode)
-                .status(ClientStatus.SAVED);
-        ClientAdd clientAdd = new ClientAdd().client(client);
-        return restTemplate.postForEntity("/api/v1/clients", clientAdd, Object.class);
+                .status(ClientStatusDto.SAVED);
+        return new ClientAddDto().client(clientDto);
     }
 
     @Test
@@ -199,28 +201,30 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         assertAddClientServiceDescriptionValidationError(HAS_BACKSLASH);
         assertAddClientServiceDescriptionValidationError(HAS_CONTROL_CHAR);
 
-        ResponseEntity<Object> response = createClientServiceDescription("http://www.google.com",
-                "aa.bb.列.ä");
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        ResponseEntity<Object> invalidUrlResponse
-                = createClientServiceDescription("http://www.goo" + HAS_CONTROL_CHAR + "gle.com",
-                "validServiceCode");
-        assertEquals(HttpStatus.BAD_REQUEST, invalidUrlResponse.getStatusCode());
+        client.post().uri("/api/v1/clients/FI:GOV:M1:SS1/service-descriptions")
+                .bodyValue(createServiceDescriptionAdd("http://www.google.com", "aa.bb.列.ä"))
+                .exchange()
+                .expectStatus().isCreated();
+
+        client.post().uri("/api/v1/clients/FI:GOV:M1:SS1/service-descriptions")
+                .bodyValue(createServiceDescriptionAdd("http://www.goo" + HAS_CONTROL_CHAR + "gle.com",
+                        "validServiceCode"))
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 
-    private ResponseEntity<Object> createClientServiceDescription(String url, String restServiceCode) {
-        ServiceDescriptionAdd serviceDescriptionAdd = new ServiceDescriptionAdd()
+    private ServiceDescriptionAddDto createServiceDescriptionAdd(String url, String restServiceCode) {
+        return new ServiceDescriptionAddDto()
                 .url(url)
                 .restServiceCode(restServiceCode)
-                .type(ServiceType.REST);
-        return restTemplate.postForEntity("/api/v1/clients/FI:GOV:M1:SS1/service-descriptions",
-                serviceDescriptionAdd, Object.class);
+                .type(ServiceTypeDto.REST);
     }
 
     private void assertAddClientServiceDescriptionValidationError(String restServiceCode) {
-        ResponseEntity<Object> response = createClientServiceDescription("http://www.google.com",
-                restServiceCode);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        client.post().uri("/api/v1/clients/FI:GOV:M1:SS1/service-descriptions")
+                .bodyValue(createServiceDescriptionAdd("http://www.google.com", restServiceCode))
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 
     @Test
@@ -229,7 +233,7 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         Map<String, List<String>> expectedFieldValidationErrors = new HashMap<>();
         expectedFieldValidationErrors.put(FIELD_SERVICEUPDATE_URL,
                 Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
-        ServiceUpdate serviceUpdate = new ServiceUpdate().url("http://www.goo" + HAS_CONTROL_CHAR + "gle.com")
+        ServiceUpdateDto serviceUpdate = new ServiceUpdateDto().url("http://www.goo" + HAS_CONTROL_CHAR + "gle.com")
                 .timeout(60).sslAuth(false);
         assertUpdateServiceValidationError("1", serviceUpdate, expectedFieldValidationErrors);
     }
@@ -247,23 +251,24 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
                 "validServiceCode");
     }
 
-    /**
-     * @return response body as a Map
-     */
-    private Object updateServiceDescription(String url, String restServiceCode) {
-        ServiceDescriptionUpdate serviceDescriptionUpdate = new ServiceDescriptionUpdate()
+    private Map updateServiceDescription(String url, String restServiceCode) {
+        ServiceDescriptionUpdateDto serviceDescriptionUpdate = new ServiceDescriptionUpdateDto()
                 .url(url)
                 .restServiceCode("asdf")
                 .newRestServiceCode(restServiceCode)
-                .type(ServiceType.REST);
+                .type(ServiceTypeDto.REST);
 
-        return restTemplate.patchForObject("/api/v1/service-descriptions/1", serviceDescriptionUpdate, Object.class);
+        return client.patch().uri("/api/v1/service-descriptions/1")
+                .bodyValue(serviceDescriptionUpdate)
+                .exchange()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
     }
 
     private void assertUpdateServiceDescriptionValidationFailure(String url, String restServiceCode) {
-        Map<String, Object> response =
-                (Map<String, Object>) updateServiceDescription(url, restServiceCode);
-        assertEquals(new Integer(HttpStatus.BAD_REQUEST.value()), response.get("status"));
+        Map<String, Object> response = updateServiceDescription(url, restServiceCode);
+        assertEquals(Integer.valueOf(HttpStatus.BAD_REQUEST.value()), response.get("status"));
         Map<String, Object> errors = (Map<String, Object>) response.get("error");
         assertEquals("validation_failure", errors.get("code"));
     }
@@ -291,25 +296,28 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         assertInitialServerConfValidationError("aa", "aa", HAS_CONTROL_CHAR);
 
         // these should pass validation but in the end initializing fails because of missing configuration anchor
-        ResponseEntity<Object> response = createInitialServerConf("aa.bb.列.ä", "aa.bb.列.ä", "aa.bb.列.ä");
-        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        client.post().uri("/api/v1/initialization")
+                .bodyValue(createInitialServerConfDto("aa.bb.列.ä", "aa.bb.列.ä",
+                        "aa.bb.列.ä"))
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
     }
 
-    private ResponseEntity<Object> createInitialServerConf(String securityServerCode, String ownerMemberClass,
-            String ownerMemberCode) {
-        InitialServerConf initialServerConf = new InitialServerConf()
+    private InitialServerConfDto createInitialServerConfDto(String securityServerCode, String ownerMemberClass,
+                                                            String ownerMemberCode) {
+        return new InitialServerConfDto()
                 .securityServerCode(securityServerCode)
                 .ownerMemberClass(ownerMemberClass)
                 .ownerMemberCode(ownerMemberCode)
                 .softwareTokenPin("1234");
-        return restTemplate.postForEntity("/api/v1/initialization", initialServerConf, Object.class);
     }
 
     private void assertInitialServerConfValidationError(String securityServerCode, String ownerMemberClass,
-            String ownerMemberCode) {
-        ResponseEntity<Object> response = createInitialServerConf(securityServerCode, ownerMemberClass,
-                ownerMemberCode);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+                                                        String ownerMemberCode) {
+        client.post().uri("/api/v1/initialization")
+                .bodyValue(createInitialServerConfDto(securityServerCode, ownerMemberClass, ownerMemberCode))
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 
     @Test
@@ -339,9 +347,15 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
     }
 
     private void assertAddClientFieldValidationErrorMessages(String memberCode, String subsystemCode,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        ResponseEntity<Object> response = createTestClient(memberCode, subsystemCode);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+                                                             Map<String, List<String>> expectedFieldValidationErrors) {
+        Map responseBody = client.post().uri("/api/v1/clients")
+                .bodyValue(createClientAddDto(memberCode, subsystemCode))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
     @Test
@@ -359,7 +373,7 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         Map<String, List<String>> expectedFieldValidationErrors = new HashMap<>();
         expectedFieldValidationErrors.put(FIELD_KEYNAME_NAME,
                 Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
-        assertKeyNameValidationError("1", new KeyName().name(HAS_CONTROL_CHAR), expectedFieldValidationErrors);
+        assertKeyNameValidationError("1", new KeyNameDto().name(HAS_CONTROL_CHAR), expectedFieldValidationErrors);
     }
 
     @Test
@@ -368,8 +382,8 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         Map<String, List<String>> expectedFieldValidationErrors = new HashMap<>();
         expectedFieldValidationErrors.put(FIELD_ENDPOINTUPDATE_PATH,
                 Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
-        EndpointUpdate endpointUpdate = new EndpointUpdate()
-                .method(EndpointUpdate.MethodEnum.GET).path(HAS_CONTROL_CHAR);
+        EndpointUpdateDto endpointUpdate = new EndpointUpdateDto()
+                .method(EndpointUpdateDto.MethodEnum.GET).path(HAS_CONTROL_CHAR);
         assertEndpointUpdateValidationError("1", endpointUpdate, expectedFieldValidationErrors);
     }
 
@@ -379,7 +393,7 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         Map<String, List<String>> expectedFieldValidationErrors = new HashMap<>();
         expectedFieldValidationErrors.put(FIELD_ENDPOINT_PATH,
                 Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
-        Endpoint endpoint = new Endpoint().path(HAS_CONTROL_CHAR).serviceCode("foobar").method(Endpoint.MethodEnum.GET);
+        EndpointDto endpoint = new EndpointDto().path(HAS_CONTROL_CHAR).serviceCode("foobar").method(EndpointDto.MethodEnum.GET);
         assertEndpointValidationError("1", endpoint, expectedFieldValidationErrors);
     }
 
@@ -398,8 +412,8 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         Map<String, List<String>> expectedFieldValidationErrors = new HashMap<>();
         expectedFieldValidationErrors.put(FIELD_KEYLABELWITHCSRGENERATE_KEYLABEL,
                 Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
-        CsrGenerate csrGenerate = new CsrGenerate().keyUsageType(KeyUsageType.AUTHENTICATION).caName("foobar");
-        KeyLabelWithCsrGenerate keyLabelWithCsrGenerate = new KeyLabelWithCsrGenerate().keyLabel(HAS_CONTROL_CHAR)
+        CsrGenerateDto csrGenerate = new CsrGenerateDto().keyUsageType(KeyUsageTypeDto.AUTHENTICATION).caName("foobar");
+        KeyLabelWithCsrGenerateDto keyLabelWithCsrGenerate = new KeyLabelWithCsrGenerateDto().keyLabel(HAS_CONTROL_CHAR)
                 .csrGenerateRequest(csrGenerate);
         assertAddKeyAndCsrValidationError("1", keyLabelWithCsrGenerate, expectedFieldValidationErrors);
     }
@@ -410,18 +424,18 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         Map<String, List<String>> expectedFieldValidationErrors = new HashMap<>();
         // LocalGroupAdd code with control char
         expectedFieldValidationErrors.put(FIELD_LOCALGROUPADD_CODE,
-                Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
+                Collections.singletonList(IdentifierValidationErrorInfo.IDENTIFIERS_CHAR.getErrorCode()));
         assertAddLocalGroupValidationError(HAS_CONTROL_CHAR, "aa", expectedFieldValidationErrors);
 
         // LocalGroupAdd desc with control char
         expectedFieldValidationErrors.remove(FIELD_LOCALGROUPADD_CODE);
         expectedFieldValidationErrors.put(FIELD_LOCALGROUPADD_DESCRIPTION,
-                Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
+                List.of(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode(), PATTERN_ERROR_CODE));
         assertAddLocalGroupValidationError("aa", HAS_CONTROL_CHAR, expectedFieldValidationErrors);
 
         // LocalGroupAdd code and desc with control char
         expectedFieldValidationErrors.put(FIELD_LOCALGROUPADD_CODE,
-                Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
+                Collections.singletonList(IdentifierValidationErrorInfo.IDENTIFIERS_CHAR.getErrorCode()));
         assertAddLocalGroupValidationError(HAS_CONTROL_CHAR, HAS_CONTROL_CHAR, expectedFieldValidationErrors);
     }
 
@@ -431,107 +445,136 @@ public class IdentifierValidationRestTemplateTest extends AbstractApiControllerT
         Map<String, List<String>> expectedFieldValidationErrors = new HashMap<>();
         // Update LocalGroupDescription with control char
         expectedFieldValidationErrors.put(FIELD_LOCALGROUPDESCRIPTION,
-                Collections.singletonList(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode()));
+                List.of(IdentifierValidationErrorInfo.CONTROL_CHAR.getErrorCode(), PATTERN_ERROR_CODE));
         assertUpdateLocalGroupDescValidationError(HAS_CONTROL_CHAR, expectedFieldValidationErrors);
     }
 
     private void assertAddLocalGroupValidationError(String localGroupCode, String localGroupDescription,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        ResponseEntity<Object> response = createTestLocalGroup(localGroupCode, localGroupDescription);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+                                                    Map<String, List<String>> expectedFieldValidationErrors) {
+        Map responseBody = createTestLocalGroup(localGroupCode, localGroupDescription);
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
     private void assertAddKeyValidationError(String tokenIdParam, String keyLabelParam,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        KeyLabel keyLabel = new KeyLabel().label(keyLabelParam);
-        ResponseEntity<Object> response =
-                restTemplate.postForEntity("/api/v1/tokens/" + tokenIdParam + "/keys", keyLabel, Object.class);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+                                             Map<String, List<String>> expectedFieldValidationErrors) {
+        KeyLabelDto keyLabel = new KeyLabelDto().label(keyLabelParam);
+        Map responseBody = client.post().uri("/api/v1/tokens/" + tokenIdParam + "/keys")
+                .bodyValue(keyLabel)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
-    private void assertKeyNameValidationError(String idParam, KeyName keyNameParam,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        HttpEntity<KeyName> keyNameEntity = new HttpEntity<>(keyNameParam);
-        ResponseEntity<Object> response = restTemplate.exchange("/api/v1/keys/" + idParam,
-                HttpMethod.PATCH,
-                keyNameEntity,
-                Object.class);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+    private void assertKeyNameValidationError(String idParam, KeyNameDto keyNameParam,
+                                              Map<String, List<String>> expectedFieldValidationErrors) {
+        Map responseBody = client.patch().uri("/api/v1/keys/" + idParam)
+                .bodyValue(keyNameParam)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
     private void assertTokenNameValidationError(String tokenIdParam, String tokenNameParam,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        TokenName tokenName = new TokenName().name(tokenNameParam);
-        HttpEntity<TokenName> tokenNameEntity = new HttpEntity<>(tokenName);
-        ResponseEntity<Object> response = restTemplate.exchange("/api/v1/tokens/" + tokenIdParam,
-                HttpMethod.PATCH,
-                tokenNameEntity,
-                Object.class);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+                                                Map<String, List<String>> expectedFieldValidationErrors) {
+        TokenNameDto tokenName = new TokenNameDto().name(tokenNameParam);
+        Map responseBody = client.patch().uri("/api/v1/tokens/" + tokenIdParam)
+                .bodyValue(tokenName)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
     private void assertAddKeyAndCsrValidationError(String tokenIdParam,
-            KeyLabelWithCsrGenerate keyLabelWithCsrGenerateParam, Map<String,
-            List<String>> expectedFieldValidationErrors) {
-        ResponseEntity<Object> response =
-                restTemplate.postForEntity("/api/v1/tokens/" + tokenIdParam + "/keys-with-csrs",
-                        keyLabelWithCsrGenerateParam, Object.class);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+                                                   KeyLabelWithCsrGenerateDto keyLabelWithCsrGenerateParam, Map<String,
+                    List<String>> expectedFieldValidationErrors) {
+        Map responseBody = client.post().uri("/api/v1/tokens/" + tokenIdParam + "/keys-with-csrs")
+                .bodyValue(keyLabelWithCsrGenerateParam)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
     private void assertUpdateLocalGroupDescValidationError(String localGroupDescription,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        ResponseEntity<Object> response = updateLocalGroupDesc(localGroupDescription);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+                                                           Map<String, List<String>> expectedFieldValidationErrors) {
+        Map responseBody = updateLocalGroupDesc(localGroupDescription);
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
-    private ResponseEntity<Object> updateLocalGroupDesc(String newLocalGroupDescription) {
-        LocalGroupDescription localGroupDescription = new LocalGroupDescription()
+    private Map updateLocalGroupDesc(String newLocalGroupDescription) {
+        LocalGroupDescriptionDto localGroupDescription = new LocalGroupDescriptionDto()
                 .description(newLocalGroupDescription);
-        HttpEntity<LocalGroupDescription> localGroupDescriptionEntity = new HttpEntity<>(localGroupDescription);
-        ParameterizedTypeReference<LocalGroup> typeRef = new ParameterizedTypeReference<LocalGroup>() {
-        };
-        return restTemplate.exchange("/api/v1/local-groups/0", HttpMethod.PATCH, localGroupDescriptionEntity,
-                Object.class);
+        return client.patch().uri("/api/v1/local-groups/0")
+                .bodyValue(localGroupDescription)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
     }
 
-    private ResponseEntity<Object> createTestLocalGroup(String localGroupCode, String localGroupDescription) {
-        LocalGroupAdd localGroupAdd = new LocalGroupAdd().code(localGroupCode).description(localGroupDescription);
-        return restTemplate.postForEntity("/api/v1/clients/FI:GOV:M1:SS1/local-groups", localGroupAdd, Object.class);
+    private Map createTestLocalGroup(String localGroupCode, String localGroupDescription) {
+        LocalGroupAddDto localGroupAdd = new LocalGroupAddDto().code(localGroupCode).description(localGroupDescription);
+        return client.post().uri("/api/v1/clients/FI:GOV:M1:SS1/local-groups")
+                .bodyValue(localGroupAdd)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
     }
 
-    private void assertUpdateServiceValidationError(String idParam, ServiceUpdate serviceUpdate,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        HttpEntity<ServiceUpdate> serviceUpdateEntity = new HttpEntity<>(serviceUpdate);
-        ResponseEntity<Object> response = restTemplate.exchange("/api/v1/services/" + idParam,
-                HttpMethod.PATCH,
-                serviceUpdateEntity,
-                Object.class);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+    private void assertUpdateServiceValidationError(String idParam, ServiceUpdateDto serviceUpdate,
+                                                    Map<String, List<String>> expectedFieldValidationErrors) {
+        Map responseBody = client.patch().uri("/api/v1/services/" + idParam)
+                .bodyValue(serviceUpdate)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
-    private void assertEndpointUpdateValidationError(String idParam, EndpointUpdate update,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        HttpEntity<EndpointUpdate> updateEntity = new HttpEntity<>(update);
-        ResponseEntity<Object> response = restTemplate.exchange("/api/v1/endpoints/" + idParam,
-                HttpMethod.PATCH,
-                updateEntity,
-                Object.class);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+    private void assertEndpointUpdateValidationError(String idParam, EndpointUpdateDto update,
+                                                     Map<String, List<String>> expectedFieldValidationErrors) {
+        Map responseBody = client.patch().uri("/api/v1/endpoints/" + idParam)
+                .bodyValue(update)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
-    private void assertEndpointValidationError(String idParam, Endpoint endpoint,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        ResponseEntity<Object> response =
-                restTemplate.postForEntity("/api/v1/services/" + idParam + "/endpoints",
-                        endpoint, Object.class);
-        assertValidationErrors(response, expectedFieldValidationErrors);
+    private void assertEndpointValidationError(String idParam, EndpointDto endpoint,
+                                               Map<String, List<String>> expectedFieldValidationErrors) {
+        Map responseBody = client.post().uri("/api/v1/services/" + idParam + "/endpoints")
+                .bodyValue(endpoint)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        assertValidationErrors(responseBody, expectedFieldValidationErrors);
     }
 
-    private void assertValidationErrors(ResponseEntity<Object> response,
-            Map<String, List<String>> expectedFieldValidationErrors) {
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        ErrorInfo errorResponse = testObjectMapper.convertValue(response.getBody(), ErrorInfo.class);
+    private void assertValidationErrors(Map responseBody,
+                                        Map<String, List<String>> expectedFieldValidationErrors) {
+        assertNotNull(responseBody);
+        ErrorInfo errorResponse = testObjectMapper.convertValue(responseBody, ErrorInfo.class);
         assertNotNull(errorResponse);
         Map<String, List<String>> actualFieldValidationErrors = errorResponse.getError().getValidationErrors();
         assertEquals(expectedFieldValidationErrors, actualFieldValidationErrors);

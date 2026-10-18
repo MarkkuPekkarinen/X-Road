@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -27,9 +28,9 @@ import Vue, { VNode } from 'vue';
 
 declare global {
   namespace JSX {
-    // tslint:disable no-empty-interface
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     interface Element extends VNode {}
-    // tslint:disable no-empty-interface
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     interface ElementClass extends Vue {}
     interface IntrinsicElements {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

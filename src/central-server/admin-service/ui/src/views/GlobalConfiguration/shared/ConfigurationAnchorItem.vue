@@ -25,49 +25,37 @@
    THE SOFTWARE.
  -->
 <template>
-  <article id="anchor" class="mt-4">
-    <v-card flat>
-      <div class="card-top">
-        <div class="card-main-title">{{ title }}</div>
-        <div class="card-corner-button pr-4">
-          <slot></slot>
-        </div>
-      </div>
-      <v-card-text class="px-0">
-        <v-data-table
-          v-if="anchors"
-          :headers="headers"
-          :items="anchors"
-          :items-per-page="-1"
-          :loading="loading"
-          item-key="hash"
-          hide-default-footer
-          class="anchors-table"
-        >
-          <template #[`item.hash`]="{ item }">
-            <xrd-icon-base class="internal-conf-icon">
-              <XrdIconCertificate />
-            </xrd-icon-base>
-            <span data-test="anchor-hash">{{ item.hash }}</span>
-          </template>
-          <template #[`item.createdAt`]="{ item }">
-            <span data-test="anchor-created-at">{{
-              item.createdAt | formatDateTimeSeconds
-            }}</span>
-          </template>
-          <template #footer>
-            <div class="custom-footer"></div>
-          </template>
-        </v-data-table>
-      </v-card-text>
-    </v-card>
-  </article>
+  <XrdCard data-test="anchor" :translated-title="title">
+    <template #title-actions>
+      <slot />
+    </template>
+    <v-data-table
+      v-if="anchors"
+      class="xrd"
+      hide-default-footer
+      :headers="headers"
+      :items="anchors"
+      :items-per-page="-1"
+      :loading="loading"
+      item-key="hash"
+    >
+      <template #[`item.hash`]="{ item }">
+        <XrdLabelWithIcon data-test="anchor-hash" icon="tag" icon-color="tertiary" label-color="primary" semi-bold :label="item.hash" />
+      </template>
+      <template #[`item.createdAt`]="{ item }">
+        <XrdDateTime data-test="anchor-created-at" :value="item.createdAt" with-seconds />
+      </template>
+    </v-data-table>
+  </XrdCard>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { DataTableHeader } from 'vuetify';
-import { Prop } from 'vue/types/options';
+<script lang="ts" setup>
+import { computed, PropType } from 'vue';
+
+import { useI18n } from 'vue-i18n';
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
+
+import { XrdCard, XrdDateTime, XrdLabelWithIcon } from '@niis/shared-ui';
 
 export interface Anchor {
   title: string;
@@ -75,87 +63,34 @@ export interface Anchor {
   createdAt?: string;
 }
 
-export default Vue.extend({
-  props: {
-    loading: {
-      type: Boolean,
-      default: false,
-    },
-    anchor: {
-      type: Object as Prop<Anchor>,
-      default: null,
-    },
+const props = defineProps({
+  loading: {
+    type: Boolean,
+    default: false,
   },
-  data() {
-    return {};
+  anchor: {
+    type: Object as PropType<Anchor>,
+    default: null,
   },
-  computed: {
-    title(): string {
-      return this.anchor ? this.anchor.title : '';
-    },
-    anchors(): Anchor[] {
-      return this.anchor ? [this.anchor] : [];
-    },
-    headers(): DataTableHeader[] {
-      return [
-        {
-          text: this.$t('globalConf.anchor.certificateHash') as string,
-          align: 'start',
-          value: 'hash',
-          class: 'xrd-table-header text-uppercase',
-        },
-        {
-          text: this.$t('globalConf.anchor.created') as string,
-          align: 'start',
-          value: 'createdAt',
-          class: 'xrd-table-header text-uppercase',
-        },
-      ];
-    },
-  },
-
-  methods: {},
 });
+
+const { t } = useI18n();
+
+const title = computed(() => props.anchor?.title || ''),
+  anchors = computed(() => (props.anchor ? [props.anchor] : [])),
+  headers = computed(
+    () =>
+      [
+        {
+          title: t('globalConf.anchor.certificateHash') as string,
+          align: 'start',
+          key: 'hash',
+        },
+        {
+          title: t('globalConf.anchor.created') as string,
+          align: 'start',
+          key: 'createdAt',
+        },
+      ] as DataTableHeader[],
+  );
 </script>
-
-<style lang="scss" scoped>
-@import '~styles/colors';
-
-.card-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  color: $XRoad-Black70;
-  font-weight: bold;
-  padding-top: 5px;
-  padding-bottom: 5px;
-}
-
-.card-main-title {
-  color: $XRoad-Black100;
-  font-style: normal;
-  font-weight: bold;
-  font-size: 18px;
-  line-height: 24px;
-  margin-left: 16px;
-}
-
-.card-top {
-  padding-top: 15px;
-  margin-bottom: 10px;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.internal-conf-icon {
-  margin-right: 15px;
-  color: $XRoad-Purple100;
-}
-
-.custom-footer {
-  border-top: thin solid rgba(0, 0, 0, 0.12); /* Matches the color of the Vuetify table line */
-  height: 16px;
-}
-</style>

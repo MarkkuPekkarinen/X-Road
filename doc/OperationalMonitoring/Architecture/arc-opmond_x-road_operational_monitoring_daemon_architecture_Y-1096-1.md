@@ -1,18 +1,25 @@
 # X-Road: Operational Monitoring Daemon Architecture <!-- omit in toc -->
 
-Version: 1.2  
+Version: 1.9  
 Document ID: ARC-OPMOND
 
-| Date       | Version | Description                                                         | Author           |
-|------------|---------|---------------------------------------------------------------------|------------------|
-|            | 0.5     | Initial version                                                     |                  |
-| 23.01.2017 | 0.6     | Added license text, table of contents and version history           | Sami Kallio      |
-| 02.02.2018 | 0.7     | Technology matrix moved to the ARC-TEC-file                         | Antti Luoma      |
-| 05.03.2018 | 0.8     | Added terms and abbreviations reference and moved terms to term doc | Tatu Repo        |
-| 18.02.2019 | 0.9     | New optional field: xRequestId (string)                             | Caro Hautamäki   |
-| 12.12.2019 | 1.0     | Update appendix A.2 with the updated fields                         | Ilkka Seppälä    |
-| 25.06.2020 | 1.1     | Update section 3.3 with the instructions how to enable JMX          | Petteri Kivimäki |
-| 01.06.2023 | 1.2     | Update references                                                   | Petteri Kivimäki |
+| Date       | Version | Description                                                           | Author             |
+|------------|---------|-----------------------------------------------------------------------|--------------------|
+|            | 0.5     | Initial version                                                       |                    |
+| 23.01.2017 | 0.6     | Added license text, table of contents and version history             | Sami Kallio        |
+| 02.02.2018 | 0.7     | Technology matrix moved to the ARC-TEC-file                           | Antti Luoma        |
+| 05.03.2018 | 0.8     | Added terms and abbreviations reference and moved terms to term doc   | Tatu Repo          |
+| 18.02.2019 | 0.9     | New optional field: xRequestId (string)                               | Caro Hautamäki     |
+| 12.12.2019 | 1.0     | Update appendix A.2 with the updated fields                           | Ilkka Seppälä      |
+| 25.06.2020 | 1.1     | Update section 3.3 with the instructions how to enable JMX            | Petteri Kivimäki   |
+| 01.06.2023 | 1.2     | Update references                                                     | Petteri Kivimäki   |
+| 02.10.2024 | 1.3     | Update schema file locations                                          | Justas Samuolis    |
+| 05.12.2024 | 1.4     | Add endpoint level statistics gathering support                       | Eneli Reimets      |
+| 17.03.2025 | 1.5     | Syntax and styling                                                    | Pauline Dimmek     |
+| 26.03.2025 | 1.6     | Added field xRoadVersion and example for producer side REST request   | Eneli Reimets      |
+| 10.07.2025 | 1.7     | Added info about operational data query in fixed intervals using gRPC | Mikk-Erik Bachmann |
+| 11.11.2025 | 1.8     | Drop JMX interface                                                    | Justas Samuolis    |
+| 15.01.2026 | 1.9     | Update schema file locations                                          | Mohamed Elbeltagy  |
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -27,11 +34,12 @@ Document ID: ARC-OPMOND
   - [2.1 Operational Monitoring Daemon Main](#21-operational-monitoring-daemon-main)
     - [2.1.1 Operational Monitoring Database](#211-operational-monitoring-database)
     - [2.1.2 Operational Monitoring Service](#212-operational-monitoring-service)
+    - [2.1.3 Operational Monitoring gRPC Service](#213-operational-monitoring-grpc-service)
   - [2.2 Configuration Client](#22-configuration-client)
 - [3 Protocols and Interfaces](#3-protocols-and-interfaces)
   - [3.1 Store Operational Monitoring Data](#31-store-operational-monitoring-data)
   - [3.2 Operational Monitoring Query](#32-operational-monitoring-query)
-  - [3.3 Operational Monitoring JMX](#33-operational-monitoring-jmx)
+  - [3.3 Operational Monitoring Query in Fixed Intervals](#33-operational-monitoring-query-in-fixed-intervals)
   - [3.4 Download Configuration](#34-download-configuration)
 - [4 Deployment View](#4-deployment-view)
 - [Appendix A Store Operational Monitoring Data Messages](#appendix-a-store-operational-monitoring-data-messages)
@@ -48,7 +56,7 @@ This document is licensed under the Creative Commons Attribution-ShareAlike 3.0 
 
 ## 1 Introduction
 
-The X-Road monitoring solution is conceptually split into two parts: environmental and operational monitoring. The operational monitoring processes operational statistics (such as which services have been called, how many times, what was the size of the response, etc.) of the security servers.
+The X-Road monitoring solution is conceptually split into two parts: environmental and operational monitoring. The operational monitoring processes operational statistics (such as which services or endpoints have been called, how many times, what was the size of the response, etc.) of the security servers.
 
 This document describes the architecture of the X-Road operational monitoring daemon. It presents an overview of the components of the monitoring daemon and its interfaces.
 
@@ -66,21 +74,20 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 ### 1.3 References
 
-<a name="ARC-G"></a>**ARC-G** -- X-Road Architecture. Document ID: [ARC-G](../../Architecture/arc-g_x-road_arhitecture.md).  
-<a name="PR-GCONF"></a>**PR-GCONF** -- X-Road: Protocol for Downloading Configuration. Document ID: [PR-GCONF](../../Protocols/pr-gconf_x-road_protocol_for_downloading_configuration.md).  
-<a name="PR-MESS"></a>**PR-MESS** -- X-Road: Message Transport Protocol v4.0. Document ID: [PR-MESS](../../Protocols/pr-mess_x-road_message_protocol.md).  
-<a name="PR-OPMON"></a>**PR-OPMON** -- X-Road: Operational Monitoring Protocol. Document ID: [PR-OPMON](../Protocols/pr-opmon_x-road_operational_monitoring_protocol_Y-1096-2.md).   
-<a name="PR-OPMONJMX"></a>**PR-OPMONJMX** -- X-Road: Operational Monitoring JMX Protocol. Document ID: [PR-OPMONJMX](../Protocols/pr-opmonjmx_x-road_operational_monitoring_jmx_protocol_Y-1096-3.md).  
-<a name="PSQL"></a>**PSQL** -- PostgreSQL, https://www.postgresql.org/  
-<a name="ARC-TEC"></a>**ARC-TEC** -- X-Road technologies. Document ID: [ARC-TEC](../../Architecture/arc-tec_x-road_technologies.md).  
-<a name="Ref_TERMS" class="anchor"></a>**TA-TERMS** -- X-Road Terms and Abbreviations. Document ID: [TA-TERMS](../../terms_x-road_docs.md).
+<a name="ARC-G"/>**ARC-G** -- X-Road Architecture. Document ID: [ARC-G](../../Architecture/arc-g_x-road_arhitecture.md).  
+<a name="PR-GCONF"/>**PR-GCONF** -- X-Road: Protocol for Downloading Configuration. Document ID: [PR-GCONF](../../Protocols/pr-gconf_x-road_protocol_for_downloading_configuration.md).  
+<a name="PR-MESS"/>**PR-MESS** -- X-Road: Message Transport Protocol v4.0. Document ID: [PR-MESS](../../Protocols/pr-mess_x-road_message_protocol.md).  
+<a name="PR-OPMON"/>**PR-OPMON** -- X-Road: Operational Monitoring Protocol. Document ID: [PR-OPMON](../Protocols/pr-opmon_x-road_operational_monitoring_protocol_Y-1096-2.md).   
+<a name="PSQL"/>**PSQL** -- PostgreSQL, https://www.postgresql.org/  
+<a name="ARC-TEC"/>**ARC-TEC** -- X-Road technologies. Document ID: [ARC-TEC](../../Architecture/arc-tec_x-road_technologies.md).  
+<a name="Ref_TERMS" class="anchor"/>**TA-TERMS** -- X-Road Terms and Abbreviations. Document ID: [TA-TERMS](../../terms_x-road_docs.md).
 
 
 ## 2 Component View
 
 Figure 1 shows the main components and interfaces of the monitoring daemon. The components and the interfaces are described in detail in the following sections.
 
-![Operational monitoring daemon component diagram](x-road_operational_monitoring_daemon_components.png)
+![Operational monitoring daemon component diagram](img/x-road_operational_monitoring_daemon_components.svg)
 
 Technologies used in the operational monitoring daemon can be found here: [[ARC-TEC]](#ARC-TEC)
 
@@ -92,7 +99,7 @@ The operational monitoring daemon main is a standalone Java daemon application t
 
 #### 2.1.1 Operational Monitoring Database
 
-The operational monitoring database component collects operational monitoring data of the X-Road security server(s) via *store operational monitoring data* interface. Operational data is stored in a PostgreSQL [[PSQL]](#PSQL) database. Additionally operational health data statistics are updated and made available via JMXMP.
+The operational monitoring database component collects operational monitoring data of the X-Road security server(s) via *store operational monitoring data* interface. Operational data is stored in a PostgreSQL [[PSQL]](#PSQL) database.
 
 Outdated data records are deleted periodically from the database according to the monitoring daemon configuration.
 
@@ -103,6 +110,10 @@ The operational monitoring service receives and processes operational monitoring
 In case the sender of the *get operational monitoring data* request is a regular client, only operational monitoring data records associated with that client are returned. In case the request sender is the central monitoring client (described in the global configuration) or owner of the current security server (described in the global configuration), it has access to all the records.
 
 For performance purposes, the operational monitoring service limits the size of the *get operational monitoring data* response message. The maximum response size is configurable (however, all the records having the same timestamp as the last queried record are still included into the response). In case some queried records still do not fit into the response, the timestamp of the first excluded record is returned in the response to indicate overflow.
+
+#### 2.1.3 Operational Monitoring gRPC Service
+
+The operational monitoring gRPC service is used to retrieve the number of successful and failed requests in fixed time intervals which can be used to visualize the request traffic in a graph. 
 
 ### 2.2 Configuration Client
 
@@ -128,19 +139,9 @@ The operational monitoring query interface is used by the security server to ret
 
 The monitoring of the security servers is not the main functionality of the X-Road system, therefore the availability and responsiveness of this service is not paramount. Operational data records are held in the database and are available for configured days.
 
-### 3.3 Operational Monitoring JMX
+### 3.3 Operational Monitoring query in fixed intervals
 
-This interface is used by a local monitoring system (e.g. Zabbix) to gather local operational health data of the security server via JMXMP. The interface is described in more detail in [[PR-OPMONJMX]](#PR-OPMONJMX).
-
-With the default configuration, JMX is disabled. JMX is enabled by adding the required configuration in `/etc/xroad/services/local.properties` file. The file is opened for editing and changes are made on the `XROAD_OPMON_PARAMS` variable value. After the `XROAD_OPMON_PARAMS` variable value has been updated, the `xroad-opmonitor` service must be restarted.
-                                                 
-The example configuration below enables JMX, binds it to port `9011` on any available interface with SSL and password authentication enabled:
- 
- ```bash
-XROAD_OPMON_PARAMS=-Djava.rmi.server.hostname=0.0.0.0 -Dcom.sun.management.jmxremote.port=9011 -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.ssl=true
- ```
-
-The monitoring of the security servers is not the main functionality of the X-Road system, therefore the availability and responsiveness of this service is not paramount.
+This query is used by the Security Server to retrieve operational monitoring data in fixed intervals so that it can be used to visualize the request traffic in the UI. It will return the count of successful and failed requests in each time interval. GRPC is used to make this query by other services.
 
 ### 3.4 Download Configuration
 
@@ -154,21 +155,22 @@ The interface is described in more detail in [[ARC-G]](#ARC-G) and [[PR-GCONF]]
 
 Figure 2 shows the deployment diagram.
 
-<img src="x-road_operational_monitoring_daemon_deployment.png" width="40%" />
+![Operational monitoring daemon deployment diagram](img/x-road_operational_monitoring_daemon_deployment.png)
 
 **Figure 2. Operational monitoring daemon deployment**
 
 
-<a name="AppendixA"/></a>
+<a name="AppendixA"/>
+
 ## Appendix A Store Operational Monitoring Data Messages
 
 ### A.1 JSON-Schema for Store Operational Monitoring Data Request
 
-The schema is located in the file *src/op-monitor-daemon/src/main/resources/store_operational_data_request_schema.yaml* of the X-Road source code.
+The schema is located in the file *src/service/op-monitor/op-monitor-core/src/main/resources/store_operational_data_request_schema.yaml* of the X-Road source code.
 
 ### A.2 Example Store Operational Monitoring Data Request
 
-The first record of the store request reflects successfully mediated request, the second one unsuccessfully mediated request.
+The first record of the store request reflects successfully mediated SOAP request, the second and the third one successfully mediated REST client and producer side requests and the fourth one unsuccessfully mediated request.
 
 ```json
 {
@@ -203,7 +205,73 @@ The first record of the store request reflects successfully mediated request, th
       "responseAttachmentCount": 0,
       "succeeded": true,
       "xRequestId": "d4490e7f-305e-44c3-b869-beaaeda694e7",
+      "xRoadVersion": "7.6.2",
       "serviceType": "WSDL"
+    },
+    {
+      "monitoringDataTs": 1733404603,
+      "securityServerInternalIp": "fd42:2642:2cb3:31ac:216:3eff:fedf:85c%eth0",
+      "securityServerType": "Client",
+      "requestInTs": 1742471252081,
+      "requestOutTs": 1742471252151,
+      "responseInTs": 1742471252329,
+      "responseOutTs": 1742471252379,
+      "clientXRoadInstance": "FI",
+      "clientMemberClass": "COM",
+      "clientMemberCode": "111",
+      "clientSubsystemCode": "CLIENT",
+      "serviceXRoadInstance": "FI",
+      "serviceMemberClass": "COM",
+      "serviceMemberCode": "111",
+      "serviceSubsystemCode": "SERVICE",
+      "serviceCode": "pets",
+      "restMethod": "GET",
+      "messageId": "1234",
+      "messageProtocolVersion": "1",
+      "clientSecurityServerAddress": "ss1",
+      "serviceSecurityServerAddress": "ss1",
+      "requestSize": 214,
+      "responseSize": 462,
+      "requestAttachmentCount": 0,
+      "responseAttachmentCount": 0,
+      "succeeded": true,
+      "statusCode": 200,
+      "xRequestId": "1244d018-9300-4f1b-8c2b-9b7f2bc4e933",
+      "xRoadVersion": "7.6.2",
+      "serviceType": "REST"
+    },
+    {
+      "monitoringDataTs": 1733404603,
+      "securityServerInternalIp": "fd42:2642:2cb3:31ac:216:3eff:fedf:85c%eth0",
+      "securityServerType": "Producer",
+      "requestInTs": 1742471252251,
+      "requestOutTs": 1742471252251,
+      "responseInTs": 1742471252364,
+      "responseOutTs": 1742471252364,
+      "clientXRoadInstance": "FI",
+      "clientMemberClass": "COM",
+      "clientMemberCode": "111",
+      "clientSubsystemCode": "CLIENT",
+      "serviceXRoadInstance": "FI",
+      "serviceMemberClass": "COM",
+      "serviceMemberCode": "111",
+      "serviceSubsystemCode": "SERVICE",
+      "serviceCode": "pets",
+      "restMethod": "GET",
+      "restPath": "/cat/*",
+      "messageId": "1234",
+      "messageProtocolVersion": "1",
+      "clientSecurityServerAddress": "ss1",
+      "serviceSecurityServerAddress": "ss1",
+      "requestSize": 214,
+      "responseSize": 462,
+      "requestAttachmentCount": 0,
+      "responseAttachmentCount": 0,
+      "succeeded": true,
+      "statusCode": 200,
+      "xRequestId": "1244d018-9300-4f1b-8c2b-9b7f2bc4e933",
+      "xRoadVersion": "7.6.2",
+      "serviceType": "REST"
     },
     {
       "monitoringDataTs": 1576134508,
@@ -231,6 +299,7 @@ The first record of the store request reflects successfully mediated request, th
       "faultCode": "Server.ServerProxy.OpMonitor.InvalidClientIdentifier",
       "faultString": "Missing required subsystem code",
       "xRequestId": "2c51b181-47cd-4ff2-b5df-6463f968fd0c",
+      "xRoadVersion": "7.6.2",
       "serviceType": "WSDL"
     }   
   ]
@@ -239,7 +308,7 @@ The first record of the store request reflects successfully mediated request, th
 
 ### A.3 JSON-Schema for Store Operational Monitoring Data Response
 
-The schema is located in the file *src/op-monitor-daemon/src/main/resources/store_operational_data_response_schema.yaml* of the X-Road source code.
+The schema is located in the file *src/service/op-monitor/op-monitor-core/src/main/resources/store_operational_data_response_schema.yaml* of the X-Road source code.
 
 ### A.4 Example Store Operational Monitoring Data Responses
 

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,5 +25,5 @@
 package org.niis.xroad.restapi.common.backup.service;
 
 public enum BackupRestoreEvent {
-    START, END;
+    START, END
 }

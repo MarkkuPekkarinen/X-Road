@@ -1,0 +1,87 @@
+/*
+ * The MIT License
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.niis.xroad.opmonitor.core.jpa;
+
+import ee.ria.xroad.common.db.DatabaseCtx;
+
+import jakarta.annotation.PreDestroy;
+import jakarta.inject.Singleton;
+import org.hibernate.Interceptor;
+import org.hibernate.type.Type;
+import org.niis.xroad.opmonitor.api.OperationalDataTruncationPolicy;
+import org.niis.xroad.opmonitor.core.config.OpMonitorDbProperties;
+import org.niis.xroad.opmonitor.core.jpa.entity.OperationalDataRecordEntity;
+
+@Singleton
+public class OpMonitorDatabaseCtx extends DatabaseCtx {
+    public static final String NAME = "op-monitor";
+
+    public OpMonitorDatabaseCtx(OpMonitorDbProperties opMonitorProperties) {
+        super(NAME, opMonitorProperties.hibernate(), new StringValueTruncator());
+    }
+
+    @PreDestroy
+    @Override
+    public void destroy() {
+        super.destroy();
+    }
+
+    private static final class StringValueTruncator implements Interceptor {
+
+        @Override
+        public boolean onFlushDirty(Object entity, Object id,
+                                    Object[] currentState, Object[] previousState,
+                                    String[] propertyNames, Type[] types) {
+            if (entity instanceof OperationalDataRecordEntity) {
+                truncateStringProperties(currentState, propertyNames, types);
+                return true;
+            }
+
+            return false;
+        }
+
+        @Override
+        public boolean onSave(Object entity, Object id, Object[] state,
+                              String[] propertyNames, Type[] types) {
+            if (entity instanceof OperationalDataRecordEntity) {
+                truncateStringProperties(state, propertyNames, types);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void truncateStringProperties(Object[] state,
+                                                     String[] propertyNames, Type[] types) {
+            for (int i = 0; i < types.length; i++) {
+                if (types[i].getReturnedClass() == String.class) {
+                    state[i] = OperationalDataTruncationPolicy.truncate(propertyNames[i], (String) state[i]);
+                }
+            }
+        }
+
+    }
+}

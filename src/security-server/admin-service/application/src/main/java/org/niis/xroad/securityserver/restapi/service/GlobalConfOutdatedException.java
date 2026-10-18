@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,13 +25,12 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
+import org.niis.xroad.common.exception.ConflictException;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_OUTDATED_GLOBALCONF;
+import static org.niis.xroad.common.core.exception.ErrorCode.GLOBAL_CONF_OUTDATED;
 
-public class GlobalConfOutdatedException extends ServiceException {
+public class GlobalConfOutdatedException extends ConflictException {
     public GlobalConfOutdatedException(Throwable t) {
-        super(t, new ErrorDeviation(ERROR_OUTDATED_GLOBALCONF));
+        super(t, GLOBAL_CONF_OUTDATED.build());
     }
 }

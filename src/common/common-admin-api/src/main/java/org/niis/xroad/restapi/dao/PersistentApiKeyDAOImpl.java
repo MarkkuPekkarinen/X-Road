@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,9 +25,10 @@
  */
 package org.niis.xroad.restapi.dao;
 
-import org.hibernate.Query;
+
 import org.hibernate.Session;
-import org.niis.xroad.restapi.domain.PersistentApiKeyType;
+import org.hibernate.query.Query;
+import org.niis.xroad.restapi.entity.ApiKeyEntity;
 
 import java.util.List;
 
@@ -36,25 +37,24 @@ import java.util.List;
  */
 public class PersistentApiKeyDAOImpl {
 
-    public PersistentApiKeyType findById(Session session, Long id) {
-        return (PersistentApiKeyType) session.get(PersistentApiKeyType.class, id);
+    public ApiKeyEntity findById(Session session, Long id) {
+        return session.get(ApiKeyEntity.class, id);
     }
 
-    @SuppressWarnings("unchecked")
-    public List<PersistentApiKeyType> findAll(Session session) {
-        Query query = session.createQuery("from " + PersistentApiKeyType.class.getName());
+    public List<ApiKeyEntity> findAll(Session session) {
+        Query<ApiKeyEntity> query = session.createQuery("from " + ApiKeyEntity.class.getName(), ApiKeyEntity.class);
         return query.list();
     }
 
-    public void insert(Session session, PersistentApiKeyType apiKeyType) {
+    public void insert(Session session, ApiKeyEntity apiKeyType) {
         session.persist(apiKeyType);
     }
 
-    public void delete(Session session, PersistentApiKeyType apiKeyType) {
-        session.delete(apiKeyType);
+    public void delete(Session session, ApiKeyEntity apiKeyType) {
+        session.remove(apiKeyType);
     }
 
-    public void update(Session session, PersistentApiKeyType apiKeyType) {
+    public void update(Session session, ApiKeyEntity apiKeyType) {
         session.merge(apiKeyType);
     }
 }

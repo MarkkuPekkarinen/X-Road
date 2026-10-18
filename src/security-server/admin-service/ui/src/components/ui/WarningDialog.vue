@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,45 +25,44 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-simple-dialog
-    :dialog="dialog"
+  <XrdSimpleDialog
     title="warning"
+    hide-close
     :cancel-button-text="cancelButtonText"
     :save-button-text="acceptButtonText"
-    :show-close="false"
     :loading="loading"
     @save="accept"
     @cancel="cancel"
   >
-    <div slot="content" data-test="dialog-content-text">
-      <div v-for="warning in warnings" :key="warning.code">
-        <!-- Create the localisation key from warning code -->
-        <div class="dlg-warning-header">
-          {{ $t(localizationParent + '.' + warning.code) }}
+    <template #content>
+      <div data-test="dialog-content-text">
+        <div v-for="warning in warnings" :key="warning.code">
+          <!-- Create the localisation key from warning code -->
+          <div class="dlg-warning-header">
+            {{ $t(localizationParent + '.' + warning.code) }}
+          </div>
+          <div v-for="meta in warning.metadata" :key="meta">{{ meta }}</div>
         </div>
-        <div v-for="meta in warning.metadata" :key="meta">{{ meta }}</div>
       </div>
-    </div>
-  </xrd-simple-dialog>
+    </template>
+  </XrdSimpleDialog>
 </template>
 
 <script lang="ts">
 // A dialog for backend warnings
-import Vue from 'vue';
-import { Prop } from 'vue/types/options';
+import { defineComponent, PropType } from 'vue';
+import { CodeWithDetails } from '@/openapi-types';
+import { XrdSimpleDialog } from '@niis/shared-ui';
 
-export default Vue.extend({
+export default defineComponent({
+  components: { XrdSimpleDialog },
   props: {
-    dialog: {
-      type: Boolean,
-      required: true,
-    },
     localizationParent: {
       type: String,
       required: true,
     },
     warnings: {
-      type: Array as Prop<string[]>,
+      type: Array as PropType<CodeWithDetails[]>,
       required: true,
     },
     cancelButtonText: {
@@ -82,7 +82,7 @@ export default Vue.extend({
       default: false,
     },
   },
-
+  emits: ['cancel', 'accept'],
   methods: {
     cancel(): void {
       this.$emit('cancel');
@@ -93,7 +93,3 @@ export default Vue.extend({
   },
 });
 </script>
-
-<style lang="scss" scoped>
-@import '../../assets/dialogs';
-</style>

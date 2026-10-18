@@ -24,24 +24,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import '@mdi/font/css/materialdesignicons.css';
-import Vue from 'vue';
-import Vuetify from 'vuetify/lib';
-import { Colors } from '@/global';
 
-Vue.use(Vuetify);
+import { Color, createXrdVuetify } from '@niis/shared-ui'; //Keep at the top
+import '@/assets/styles.css';
 
-export default new Vuetify({
-  icons: {
-    iconfont: 'mdi',
-  },
-  theme: {
-    themes: {
-      light: {
-        primary: Colors.Purple100,
-        accent: Colors.Purple70,
-        grey: Colors.Black50,
-      },
-    },
-  },
-});
+export default createXrdVuetify(Color.M_900, Color.D_100, Color.M_100, Color.D_800);

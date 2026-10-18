@@ -17,4 +17,11 @@ legacy/lib/
 .settings
 *.rpm
 .vagrant/
+gradle-cache
 **/.DS_Store
+mailpit*
+**/.settings/
+**/.factorypath
+**/.npmrc
+.claude
+.planning/

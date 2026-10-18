@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,81 +25,79 @@
    THE SOFTWARE.
  -->
 <template>
-  <div>
-    <div class="title-and-search">
-      <div class="xrd-view-title">{{ $t('tab.keys.signAndAuthKeys') }}</div>
-      <div>
-        <help-button
-          help-image="keys_and_certificates.png"
-          help-title="keys.helpTitleKeys"
-          help-text="keys.helpTextKeys"
-        ></help-button>
-      </div>
-      <div class="search-row">
-        <xrd-search v-model="search" />
-      </div>
-    </div>
-
-    <XrdEmptyPlaceholder
-      :data="filtered"
-      :loading="loading"
-      :filtered="search && search.length > 0"
-      :no-items-text="$t('noData.noTokens')"
-      skeleton-type="table-heading"
-    />
-
-    <template v-if="filtered && !loading">
-      <token-expandable
-        v-for="token in filtered"
-        :key="token.id"
-        :token="token"
-        @refresh-list="fetchData"
-        @token-logout="logoutDialog = true"
-        @token-login="loginDialog = true"
-        @add-key="addKey"
-      />
+  <XrdView title="tab.keys.signAndAuthKeys">
+    <template #append-header>
+      <HelpButton class="ml-2" :help-image="helpImage" help-title="keys.helpTitleKeys" help-text="keys.helpTextKeys" />
     </template>
+    <template #tabs>
+      <KeysAndCertificatesTabs />
+    </template>
+    <XrdSubView>
+      <XrdEmptyPlaceholder
+        :data="filtered"
+        :loading="loading"
+        :filtered="!!search && search.length > 0"
+        :no-items-text="$t('noData.noTokens')"
+        skeleton-type="table-heading"
+      />
 
-    <xrd-confirm-dialog
-      :dialog="logoutDialog"
+      <template v-if="filtered && !loading">
+        <TokenExpandable
+          v-for="(token, idx) in filtered"
+          :key="token.id"
+          data-test="tokens-table"
+          :class="{ 'mb-6': idx + 1 < filtered.length }"
+          :token="token"
+          @refresh-list="fetchData"
+          @token-logout="logoutDialog = true"
+          @token-login="loginDialog = true"
+          @add-key="addKey"
+        />
+      </template>
+    </XrdSubView>
+    <XrdConfirmDialog
+      v-if="logoutDialog"
       title="keys.logOutTitle"
       text="keys.logOutText"
       @cancel="logoutDialog = false"
       @accept="acceptTokenLogout()"
     />
 
-    <TokenLoginDialog
-      :dialog="loginDialog"
-      @cancel="loginDialog = false"
-      @save="tokenLogin"
-    />
-  </div>
+    <TokenLoginDialog :dialog="loginDialog" @cancel="loginDialog = false" @save="tokenLogin" />
+  </XrdView>
 </template>
 
 <script lang="ts">
 // View for keys tab
-import Vue from 'vue';
+import { defineComponent } from 'vue';
 import { RouteName } from '@/global';
 import TokenExpandable from './TokenExpandable.vue';
 import TokenLoginDialog from '@/components/token/TokenLoginDialog.vue';
-import HelpButton from '../HelpButton.vue';
+import HelpButton from '@/components/ui/HelpButton.vue';
 import { mapActions, mapState } from 'pinia';
-import { useNotifications } from '@/store/modules/notifications';
-import { useTokensStore } from '@/store/modules/tokens';
+import { useTokens } from '@/store/modules/tokens';
+import helpImage from '@/assets/keys_and_certificates.png';
 
-import {
-  Key,
-  Token,
-  TokenCertificate,
-  TokenCertificateSigningRequest,
-} from '@/openapi-types';
+import { Key, Token, TokenCertificate, TokenCertificateSigningRequest } from '@/openapi-types';
 import { deepClone } from '@/util/helpers';
+import { useCsr } from '@/store/modules/certificateSignRequest';
+import { XrdView, XrdSubView, useNotifications, XrdEmptyPlaceholder, XrdConfirmDialog } from '@niis/shared-ui';
+import KeysAndCertificatesTabs from '@/views/KeysAndCertificates/KeysAndCertificatesTabs.vue';
 
-export default Vue.extend({
+export default defineComponent({
   components: {
+    KeysAndCertificatesTabs,
     HelpButton,
     TokenExpandable,
     TokenLoginDialog,
+    XrdView,
+    XrdSubView,
+    XrdEmptyPlaceholder,
+    XrdConfirmDialog,
+  },
+  setup() {
+    const { addError, addSuccessMessage } = useNotifications();
+    return { addError, addSuccessMessage };
   },
   data() {
     return {
@@ -109,7 +108,10 @@ export default Vue.extend({
     };
   },
   computed: {
-    ...mapState(useTokensStore, ['tokens', 'selectedToken']),
+    ...mapState(useTokens, ['tokens', 'selectedToken']),
+    helpImage(): string {
+      return helpImage;
+    },
     filtered(): Token[] {
       if (!this.tokens || this.tokens.length === 0) {
         return [];
@@ -147,14 +149,12 @@ export default Vue.extend({
           key.certificates = certs;
 
           // Filter the CSR:s
-          const csrs = key.certificate_signing_requests.filter(
-            (csr: TokenCertificateSigningRequest) => {
-              if (csr.id) {
-                return csr.id.toLowerCase().includes(mysearch);
-              }
-              return false;
-            },
-          );
+          const csrs = key.certificate_signing_requests.filter((csr: TokenCertificateSigningRequest) => {
+            if (csr.id) {
+              return csr.id.toLowerCase().includes(mysearch);
+            }
+            return false;
+          });
           key.certificate_signing_requests = csrs;
         });
       });
@@ -165,10 +165,7 @@ export default Vue.extend({
             return true;
           }
 
-          if (
-            key.certificate_signing_requests &&
-            key.certificate_signing_requests.length > 0
-          ) {
+          if (key.certificate_signing_requests && key.certificate_signing_requests.length > 0) {
             return true;
           }
 
@@ -198,18 +195,21 @@ export default Vue.extend({
     this.fetchData();
   },
   methods: {
-    ...mapActions(useNotifications, ['showError', 'showSuccess']),
-    ...mapActions(useTokensStore, ['fetchTokens', 'tokenLogout']),
+    ...mapActions(useTokens, ['fetchTokens', 'tokenLogout']),
+    ...mapActions(useCsr, ['fetchCertificateAuthorities']),
     fetchData(): void {
       // Fetch tokens from backend
       this.loading = true;
       this.fetchTokens()
         .catch((error) => {
-          this.showError(error);
+          this.addError(error);
         })
         .finally(() => {
           this.loading = false;
         });
+      this.fetchCertificateAuthorities().catch((error) => {
+        this.addError(error);
+      });
     },
     acceptTokenLogout(): void {
       if (!this.selectedToken) {
@@ -220,10 +220,10 @@ export default Vue.extend({
 
       this.tokenLogout(this.selectedToken.id).then(
         () => {
-          this.showSuccess(this.$t('keys.loggedOut'));
+          this.addSuccessMessage('keys.loggedOut');
         },
         (error) => {
-          this.showError(error);
+          this.addError(error);
         },
       );
 
@@ -251,19 +251,4 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" scoped>
-.title-and-search {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  margin-bottom: 40px;
-}
-
-.search-row {
-  margin-left: 20px;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-</style>
+<style lang="scss" scoped></style>

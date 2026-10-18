@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,7 +25,9 @@
  */
 package org.niis.xroad.restapi.test;
 
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.niis.xroad.restapi.auth.AllowListConfig;
 import org.niis.xroad.restapi.auth.ApiKeyAuthenticationManager;
 import org.niis.xroad.restapi.config.ApiCachingConfiguration;
 import org.niis.xroad.restapi.config.LimitRequestSizesFilter;
@@ -34,21 +36,22 @@ import org.niis.xroad.restapi.config.audit.AuditEventHelper;
 import org.niis.xroad.restapi.config.audit.AuditEventLoggingFacade;
 import org.niis.xroad.restapi.controller.CommonModuleEndpointPaths;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.LazyInitializationExcludeFilter;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.util.unit.DataSize;
-
-import javax.transaction.Transactional;
 
 /**
  * Base class for {@link  MockMvc} based test cases.
@@ -57,19 +60,20 @@ import javax.transaction.Transactional;
 @AutoConfigureTestDatabase
 @WithMockUser
 @Transactional
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(print = MockMvcPrint.LOG_DEBUG)
 @EnableAutoConfiguration
+@EntityScan("org.niis.xroad.restapi.entity")
 @SpringBootTest(classes = AbstractSpringMvcTest.CommonRestApiTestConfiguration.class,
         webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 public abstract class AbstractSpringMvcTest {
 
-    @MockBean
+    @MockitoBean
     AuditEventLoggingFacade auditEventLoggingFacade;
-    @MockBean
+    @MockitoBean
     AuditDataHelper auditDataHelper;
-    @MockBean
+    @MockitoBean
     AuditEventHelper auditEventHelper;
-    @MockBean
+    @MockitoBean
     ApiKeyAuthenticationManager apiKeyAuthenticationManager;
     @Autowired
     protected CommonModuleEndpointPaths commonModuleEndpointPaths;
@@ -108,6 +112,27 @@ public abstract class AbstractSpringMvcTest {
                 @Override
                 public DataSize getRequestSizeLimitBinaryUpload() {
                     return DataSize.ofMegabytes(5);
+                }
+            };
+        }
+
+        @Bean
+        public LazyInitializationExcludeFilter dataSourceScriptInitFilter() {
+            return LazyInitializationExcludeFilter.forBeanTypes(
+                    org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializer.class);
+        }
+
+        @Bean
+        public AllowListConfig allowListConfig() {
+            return new AllowListConfig() {
+                @Override
+                public String getKeyManagementApiWhitelist() {
+                    return "127.0.0.0/8, ::1";
+                }
+
+                @Override
+                public String getRegularApiWhitelist() {
+                    return "0.0.0.0/0, ::/0";
                 }
             };
         }

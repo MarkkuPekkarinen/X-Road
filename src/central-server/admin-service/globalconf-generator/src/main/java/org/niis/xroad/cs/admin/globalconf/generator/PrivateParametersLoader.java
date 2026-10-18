@@ -27,24 +27,23 @@
 package org.niis.xroad.cs.admin.globalconf.generator;
 
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
 import org.niis.xroad.cs.admin.api.domain.AnchorUrl;
 import org.niis.xroad.cs.admin.api.domain.AnchorUrlCert;
 import org.niis.xroad.cs.admin.api.domain.TrustedAnchor;
-import org.niis.xroad.cs.admin.api.service.InternalTlsCertificateService;
+import org.niis.xroad.cs.admin.api.service.ManagementServiceTlsCertificateService;
 import org.niis.xroad.cs.admin.api.service.SystemParameterService;
 import org.niis.xroad.cs.admin.api.service.TrustedAnchorService;
+import org.niis.xroad.globalconf.model.PrivateParameters;
 import org.springframework.stereotype.Component;
-
-import static java.util.stream.Collectors.toList;
 
 @Component
 @RequiredArgsConstructor
 class PrivateParametersLoader {
     private final SystemParameterService systemParameterService;
     private final TrustedAnchorService trustedAnchorService;
-    private final InternalTlsCertificateService internalTlsCertificateService;
+    private final ManagementServiceTlsCertificateService managementServiceTlsCertificateService;
 
     PrivateParameters load() {
         var privateParameters = new PrivateParameters();
@@ -52,7 +51,7 @@ class PrivateParametersLoader {
 
         var configurationAnchors = trustedAnchorService.findAll().stream()
                 .map(this::toConfigurationAnchor)
-                .collect(toList());
+                .toList();
         privateParameters.setConfigurationAnchors(configurationAnchors);
         privateParameters.setManagementService(getManagementService());
         privateParameters.setTimeStampingIntervalSeconds(systemParameterService.getTimeStampingIntervalSeconds());
@@ -60,8 +59,8 @@ class PrivateParametersLoader {
         return privateParameters;
     }
 
-    @SneakyThrows
     private PrivateParameters.ManagementService getManagementService() {
+
         var managementService = new PrivateParameters.ManagementService();
 
         String authCertRegUrl = systemParameterService.getAuthCertRegUrl();
@@ -70,9 +69,13 @@ class PrivateParametersLoader {
         }
         managementService.setAuthCertRegServiceAddress(authCertRegUrl);
 
-        managementService.setAuthCertRegServiceCert(internalTlsCertificateService.getInternalTlsCertificate().getEncoded());
-        managementService.setManagementRequestServiceProviderId(systemParameterService.getManagementServiceProviderId());
-        return managementService;
+        try {
+            managementService.setAuthCertRegServiceCert(managementServiceTlsCertificateService.getTlsCertificate().getEncoded());
+            managementService.setManagementRequestServiceProviderId(systemParameterService.getManagementServiceProviderId());
+            return managementService;
+        } catch (Exception e) {
+            throw XrdRuntimeException.systemException(e);
+        }
     }
 
     private PrivateParameters.ConfigurationAnchor toConfigurationAnchor(TrustedAnchor trustedAnchor) {
@@ -81,17 +84,17 @@ class PrivateParametersLoader {
         configurationAnchor.setGeneratedAt(trustedAnchor.getGeneratedAt());
         configurationAnchor.setSources(trustedAnchor.getAnchorUrls().stream()
                 .map(this::toConfigurationSource)
-                .collect(toList()));
+                .toList());
         return configurationAnchor;
     }
 
-    private PrivateParameters.ConfigurationSource toConfigurationSource(AnchorUrl anchorUrl) {
-        var configurationSource = new PrivateParameters.ConfigurationSource();
+    private PrivateParameters.Source toConfigurationSource(AnchorUrl anchorUrl) {
+        var configurationSource = new PrivateParameters.Source();
         configurationSource.setDownloadURL(anchorUrl.getUrl());
         configurationSource.setVerificationCerts(
                 anchorUrl.getAnchorUrlCerts().stream()
                         .map(AnchorUrlCert::getCert)
-                        .collect(toList()));
+                        .toList());
         return configurationSource;
     }
 }

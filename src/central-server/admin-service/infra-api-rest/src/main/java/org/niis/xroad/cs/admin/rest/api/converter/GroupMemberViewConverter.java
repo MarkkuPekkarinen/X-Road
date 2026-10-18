@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -43,6 +43,7 @@ import static java.util.stream.Collectors.toList;
 @RequiredArgsConstructor
 public class GroupMemberViewConverter {
     private final ClientIdDtoConverter clientIdDtoConverter;
+
     public GroupMemberListViewDto convert(GlobalGroupMemberView entity) {
         return new GroupMemberListViewDto()
                 .id(entity.getId())

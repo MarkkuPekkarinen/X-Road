@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -28,7 +28,7 @@ package org.niis.xroad.securityserver.restapi.service;
 import ee.ria.xroad.common.Version;
 
 import lombok.extern.slf4j.Slf4j;
-import org.niis.xroad.securityserver.restapi.dto.VersionInfoDto;
+import org.niis.xroad.securityserver.restapi.dto.VersionInfo;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -48,8 +48,8 @@ public class VersionService {
      * Returns X-Road software version number and java version information
      * @return
      */
-    public VersionInfoDto getVersionInfo() {
-        VersionInfoDto result = new VersionInfoDto();
+    public VersionInfo getVersionInfo() {
+        VersionInfo result = new VersionInfo();
         result.setInfo(Version.XROAD_VERSION);
         int javaVersion = Version.readJavaVersion();
         result.setJavaVersion(javaVersion);

@@ -18,6 +18,10 @@ tags:
     description: resources related to Backups and Backup Restoration
   - name: certification-services
     description: resources related to Certification Services
+  - name: ds-tls-certification-authorities
+    description: resources related to approved DataSpace TLS certification authorities
+  - name: ds-tls-intermediate-cas
+    description: resources related to Intermediate Certificate Authorities of approved DataSpace TLS certification authorities
   - name: members
     description: resources related to Members
   - name: subsystems
@@ -85,8 +89,8 @@ paths:
       description:
         <h3>Generates a new central server backup.</h3>
         <p>
-          This endpoint can also return metadata in the error response.
-          The metadata array contains the output of a failed backup generation script.
+        This endpoint can also return metadata in the error response.
+        The metadata array contains the output of a failed backup generation script.
         </p>
       operationId: addBackup
       responses:
@@ -125,19 +129,19 @@ paths:
       description:
         <h3>Uploads new central server backup to the system.</h3>
         <p>
-          Note that it is possible to overwrite an existing backup file with the same name.
-          <ul>
-            <li>Attempt to upload a new backup file having the same name with an existing backup and with query
-                parameter <code>ignore_warnings</code> = false causes the operation to fail with a warning in
-                response's ErrorInfo object.
-            </li>
-            <li>Attempt to upload a new backup file having the same name with an existing backup and with query
-                parameter <code>ignore_warnings</code> = true will overwrite the existing backup.
-            </li>
-          </ul>
+        Note that it is possible to overwrite an existing backup file with the same name.
+        <ul>
+        <li>Attempt to upload a new backup file having the same name with an existing backup and with query
+        parameter <code>ignore_warnings</code> = false causes the operation to fail with a warning in
+        response's ErrorInfo object.
+        </li>
+        <li>Attempt to upload a new backup file having the same name with an existing backup and with query
+        parameter <code>ignore_warnings</code> = true will overwrite the existing backup.
+        </li>
+        </ul>
         </p>
         <p>The warning response has a warning code <code>warning_file_already_exists</code> and the metadata field
-          contains the name of the existing backup
+        contains the name of the existing backup
         </p>
       operationId: uploadBackup
       parameters:
@@ -529,10 +533,11 @@ paths:
             schema:
               allOf:
                 - $ref: '#/components/schemas/OcspResponderUrl'
+                - $ref: '#/components/schemas/CostTypeProperty'
                 - $ref: '#/components/schemas/CertificateFile'
               required:
                 - url
-                - certificate
+                - cost_type
         description: ocsp responder to add
       responses:
         '201':
@@ -554,6 +559,215 @@ paths:
       summary: add an ocsp responder to a certification service
       tags:
         - certification-services
+  /ds-tls-certification-authorities:
+    get:
+      description: <h3>CS administrator views the list of approved DataSpace TLS certification authorities.</h3>
+      operationId: getDsTlsCertificationAuthorities
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: array of DS TLS certification authority objects
+                items:
+                  $ref: '#/components/schemas/ApprovedDsTlsCertificationAuthorityListItem'
+                type: array
+                uniqueItems: false
+          description: list of DS TLS certification authorities
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: get all DS TLS certification authorities
+      tags:
+        - ds-tls-certification-authorities
+    post:
+      description: <h3>CS administrator adds an approved DataSpace TLS certification authority.</h3>
+      operationId: addDsTlsCertificationAuthority
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DsTlsCertificationAuthorityFileAndSettings'
+        description: the new DS TLS certification authority with settings
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovedDsTlsCertificationAuthority'
+          description: created item
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: add a new DS TLS certification authority
+      tags:
+        - ds-tls-certification-authorities
+  /ds-tls-certification-authorities/{ds_tls_certification_authority_id}:
+    parameters:
+      - $ref: '#/components/parameters/DsTlsCertificationAuthorityIdParam'
+    delete:
+      description: <h3>CS administrator deletes a DS TLS certification authority.</h3>
+      operationId: deleteDsTlsCertificationAuthority
+      responses:
+        '204':
+          description: DS TLS certification authority deletion was successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: delete DS TLS certification authority
+      tags:
+        - ds-tls-certification-authorities
+    get:
+      description: <h3>CS administrator views the details of an approved DS TLS certification authority.</h3>
+      operationId: getDsTlsCertificationAuthority
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovedDsTlsCertificationAuthority'
+          description: a DS TLS certification authority
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: get a DS TLS certification authority
+      tags:
+        - ds-tls-certification-authorities
+    patch:
+      description: <h3>CS administrator edits the settings of a DS TLS certification authority.</h3>
+      operationId: updateDsTlsCertificationAuthority
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DsTlsCertificationAuthoritySettings'
+        description: the updated settings of the DS TLS certification authority
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovedDsTlsCertificationAuthority'
+          description: the new state of the DS TLS certification authority
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: update the DS TLS certification authority
+      tags:
+        - ds-tls-certification-authorities
+  /ds-tls-certification-authorities/{ds_tls_certification_authority_id}/certificate:
+    get:
+      description: <h3>CS administrator views the details of an approved DS TLS certification authority certificate.</h3>
+      operationId: getDsTlsCertificationAuthorityCertificate
+      parameters:
+        - $ref: '#/components/parameters/DsTlsCertificationAuthorityIdParam'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateDetails'
+          description: a DS TLS certification authority certificate
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: get a DS TLS certification authority certificate
+      tags:
+        - ds-tls-certification-authorities
+  /ds-tls-certification-authorities/{ds_tls_certification_authority_id}/intermediate-cas:
+    parameters:
+      - $ref: '#/components/parameters/DsTlsCertificationAuthorityIdParam'
+    get:
+      description: <h3>CS administrator views the intermediate CAs configured for a DS TLS certification authority.</h3>
+      operationId: getDsTlsCertificationAuthorityIntermediateCas
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: array of DS TLS intermediate certificate authorities
+                items:
+                  $ref: '#/components/schemas/DsTlsIntermediateCertificateAuthority'
+                type: array
+                uniqueItems: false
+          description: list of intermediate certificate authorities belonging to the DS TLS certification authority
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: get the intermediate certificate authorities of a DS TLS certification authority
+      tags:
+        - ds-tls-certification-authorities
+    post:
+      description: <h3>CS administrator configures an intermediate CA for a DS TLS certification authority.</h3>
+      operationId: addDsTlsCertificationAuthorityIntermediateCa
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CertificateFile'
+        description: the new intermediate certificate authority certificate file
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsTlsIntermediateCertificateAuthority'
+          description: created item
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: add a new intermediate certificate authority to a DS TLS certification authority
+      tags:
+        - ds-tls-certification-authorities
   /global-groups:
     get:
       description: <h3>CS administrator searches for global groups.</h3>
@@ -624,7 +838,7 @@ paths:
       description:
         <h3>CS administrator deletes a global group.</h3>
         <p>The access rights that were granted for the group will not be available for the X-Road members and
-          subsystems that were the members of this group.
+        subsystems that were the members of this group.
         </p>
       operationId: deleteGlobalGroup
       responses:
@@ -1309,29 +1523,29 @@ paths:
       description:
         <h3>Administrator initializes a new Central Server with the provided initial configuration.</h3>
         <p> This endpoint can also return metadata in the error response. The metadata array can contain error
-          messages about why the init did not succeed. If the pin code is too weak, the error code <code>weak_pin</code>
-          is used and the entries in the metadata array are always ordered in following way
-          <ul>
-            <li>metadata has a list of strings ["pin_min_length", x, "pin_min_char_classes_count", y] where</li>
-            <li>x = the minimum length of the pin code</li>
-            <li>y = the minimum amount of character classes (e.g. uppercase, number, special characters) to be used in the pin code</li>
-          </ul>
-          Other possible error code are
-          <ul>
-            <li><code>invalid_init_params</code> for "business" logic problems which can have any one or more of the
-              following strings in the metadata field. There "_exists" -entries are returned if parameter has been
-              given already in partially succeeded initialization. The "_not_provided"-entries are returned if these
-              parameters is needed still for the initialization,  but it is not given in the request.
-            </li>
-            <li>pin_code_exists</li>
-            <li>pin_code_not_provided</li>
-            <li>server_address_exists</li>
-            <li>server_address_not_provided</li>
-            <li>instance_identifier_exists</li>
-            <li>instance_identifier_not_provided</li>
-            <li><code>validation_failure</code> for parameter format errors
-          </ul>
-          <strong>See the '400' response examples</strong>
+        messages about why the init did not succeed. If the pin code is too weak, the error code <code>weak_pin</code>
+        is used and the entries in the metadata array are always ordered in following way
+        <ul>
+        <li>metadata has a list of strings ["pin_min_length", x, "pin_min_char_classes_count", y] where</li>
+        <li>x = the minimum length of the pin code</li>
+        <li>y = the minimum amount of character classes (e.g. uppercase, number, special characters) to be used in the pin code</li>
+        </ul>
+        Other possible error code are
+        <ul>
+        <li><code>invalid_init_params</code> for "business" logic problems which can have any one or more of the
+        following strings in the metadata field. There "_exists" -entries are returned if parameter has been
+        given already in partially succeeded initialization. The "_not_provided"-entries are returned if these
+        parameters is needed still for the initialization,  but it is not given in the request.
+        </li>
+        <li>pin_code_exists</li>
+        <li>pin_code_not_provided</li>
+        <li>server_address_exists</li>
+        <li>server_address_not_provided</li>
+        <li>instance_identifier_exists</li>
+        <li>instance_identifier_not_provided</li>
+        <li><code>validation_failure</code> for parameter format errors
+        </ul>
+        <strong>See the '400' response examples</strong>
         </p>
       operationId: initCentralServer
       requestBody:
@@ -1488,10 +1702,11 @@ paths:
             schema:
               allOf:
                 - $ref: '#/components/schemas/OcspResponderUrl'
+                - $ref: '#/components/schemas/CostTypeProperty'
                 - $ref: '#/components/schemas/CertificateFile'
               required:
                 - url
-                - certificate
+                - cost_type
         description: ocsp responder to add
       responses:
         '201':
@@ -1545,6 +1760,51 @@ paths:
       summary: delete an intermediate certificate authority ocsp responder
       tags:
         - intermediate-cas
+  /ds-tls-intermediate-cas/{ds_tls_intermediate_ca_id}:
+    parameters:
+      - $ref: '#/components/parameters/DsTlsIntermediateCaIdParam'
+    delete:
+      description: <h3>CS administrator deletes a DS TLS intermediate CA.</h3>
+      operationId: deleteDsTlsIntermediateCa
+      responses:
+        '204':
+          description: DS TLS intermediate CA deletion was successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: delete a DS TLS intermediate certificate authority
+      tags:
+        - ds-tls-intermediate-cas
+    get:
+      description: <h3>CS administrator views the details of a DS TLS intermediate CA.</h3>
+      operationId: getDsTlsIntermediateCa
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsTlsIntermediateCertificateAuthority'
+          description: DS TLS intermediate certificate authority
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: get a DS TLS intermediate certificate authority
+      tags:
+        - ds-tls-intermediate-cas
   /member-classes:
     get:
       description: <h3>CS Administrator lists member classes.</h3>
@@ -1880,6 +2140,58 @@ paths:
       tags:
         - members
         - security-servers
+  /members/{member_id}/used-servers:
+    get:
+      description: <h3>CS administrator views a servers, where member is registered as a client.</h3>
+      operationId: getUsedServers
+      parameters:
+        - $ref: '#/components/parameters/MemberIdParam'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: array of member security servers
+                items:
+                  $ref: '#/components/schemas/SecurityServer'
+                type: array
+                uniqueItems: false
+          description: List of member's global groups
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - members
+        - security-servers
+  /members/{member_id}/servers/{server_id}:
+    delete:
+      description: <h3>CS administrator unregisters a member from a Security Server</h3>
+      operationId: unregisterMember
+      parameters:
+        - $ref: '#/components/parameters/MemberIdParam'
+        - $ref: '#/components/parameters/ServerIdParam'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: delete a member
+      tags:
+        - members
+        - security-servers
   /subsystems:
     post:
       description:
@@ -1924,11 +2236,11 @@ paths:
       tags:
         - subsystems
   /subsystems/{subsystem_id}:
+    parameters:
+      - $ref: '#/components/parameters/SubsystemIdParam'
     delete:
       description: <h3>CS administrator deletes a subsystem</h3>
       operationId: deleteSubsystem
-      parameters:
-        - $ref: '#/components/parameters/SubsystemIdParam'
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
@@ -1943,6 +2255,36 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
       summary: delete a subsystem
+      tags:
+        - subsystems
+    patch:
+      description: <h3>CS administrator edits the name of a subsystem.</h3>
+      operationId: updateSubsystemName
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubsystemName'
+        description: subsystem name
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: the updated member
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      summary: update the name of a subsystem
       tags:
         - subsystems
   /subsystems/{subsystem_id}/servers/{server_id}:
@@ -1983,7 +2325,7 @@ paths:
           schema:
             example: foobar
             format: text
-            maxLength: 25
+            maxLength: 255
             type: string
         - description: >
             optional paging and sorting parameters. Sorting possible according to one of the following values:
@@ -2149,6 +2491,7 @@ paths:
             schema:
               anyOf:
                 - $ref: '#/components/schemas/OcspResponderUrl'
+                - $ref: '#/components/schemas/CostTypeProperty'
                 - $ref: '#/components/schemas/CertificateFile'
         description: update ocsp responder url, upload a new certificate file, or do both
       responses:
@@ -2182,7 +2525,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CertificateDetails'
+                $ref: '#/components/schemas/OcspResponderCertificateDetails'
           description: a certification service
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -2212,7 +2555,7 @@ paths:
           schema:
             example: foobar
             format: text
-            maxLength: 25
+            maxLength: 255
             type: string
         - description: >
             optional paging and sorting parameters. Sorting possible according to one of the following values:
@@ -2251,7 +2594,7 @@ paths:
     delete:
       description:
         <h3>CS administrator deletes a security server. System generates deletion requests for the clients
-          and authentication certificates registered for the deleted server.
+        and authentication certificates registered for the deleted server.
         </h3>
       operationId: deleteSecurityServer
       responses:
@@ -2496,6 +2839,138 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       tags:
         - management-services
+  /management-services-configuration/download-certificate:
+    get:
+      tags:
+        - management-services
+      summary: download the management service certificate as gzip compressed tar archive
+      operationId: downloadCertificate
+      description: <h3>Administrator downloads the management service TLS certificate.</h3>
+      responses:
+        '200':
+          description: information fetched successfully
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+                description: certificate file
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /management-services-configuration/certificate:
+    get:
+      tags:
+        - management-services
+      summary: view the management service certificate information
+      operationId: getCertificate
+      description: <h3>Administrator views the management service TLS certificate information.</h3>
+      responses:
+        '200':
+          description: certificate information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - management-services
+      summary: generate a new management service TLS key and self-sign cert
+      operationId: generateKeyAndCertificate
+      description:
+        <h3>Administrator generates new management service TLS key and certificate.</h3>
+      responses:
+        '201':
+          description: tls key generated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /management-services-configuration/generate-csr:
+    post:
+      tags:
+        - management-services
+      summary: generate new certificate request
+      operationId: generateCertificateRequest
+      description: <h3>Administrator generates a new certificate request.</h3>
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DistinguishedName'
+        required: true
+      responses:
+        '201':
+          description: created CSR
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+                description: csr file
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /management-services-configuration/upload-certificate:
+    post:
+      tags:
+        - management-services
+      summary: upload new management service TLS certificate.
+      operationId: uploadCertificate
+      description: <h3>Administrator uploads a new management service TLS certificate</h3>
+      requestBody:
+        description: certificate file
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CertificateFile'
+      responses:
+        '200':
+          description: tls certificate imported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /system/server-address:
     put:
       operationId: updateCentralServerAddress
@@ -2622,10 +3097,12 @@ paths:
             schema:
               allOf:
                 - $ref: '#/components/schemas/TimestampingServiceUrl'
+                - $ref: '#/components/schemas/CostTypeProperty'
                 - $ref: '#/components/schemas/CertificateFile'
               required:
                 - url
                 - certificate
+                - cost_type
         description: timestamping service to add
         required: true
       responses:
@@ -2700,9 +3177,11 @@ paths:
             schema:
               allOf:
                 - $ref: '#/components/schemas/TimestampingServiceUrl'
+                - $ref: '#/components/schemas/CostTypeProperty'
                 - $ref: '#/components/schemas/CertificateFile'
               required:
                 - url
+                - cost_type
         description: updated URL or certificate of the timestamping service
         required: true
       responses:
@@ -3081,10 +3560,125 @@ components:
         tls_auth:
           description: can the CA be used for TLS authentication
           type: boolean
+        default_csr_format:
+          $ref: '#/components/schemas/CsrFormat'
+        acme_server_directory_url:
+          type: string
+          format: url
+          minLength: 1
+        acme_server_ip_address:
+          type: string
+          format: text
+          minLength: 1
+        authentication_certificate_profile_id:
+          format: text
+          type: string
+          minLength: 1
+        signing_certificate_profile_id:
+          format: text
+          type: string
+          minLength: 1
       required:
         - id
         - tls_auth
         - certificate_profile_info
+      type: object
+    ApprovedDsTlsCertificationAuthorityListItem:
+      description: DS TLS certification authority list item
+      properties:
+        id:
+          description: unique identifier
+          example: 123
+          format: int32
+          readOnly: true
+          type: integer
+        name:
+          description: DS TLS certification authority name
+          example: Let's Encrypt
+          format: text
+          maxLength: 255
+          minLength: 1
+          type: string
+        not_after:
+          description: certificate validity not after
+          example: '2022-01-17T00:00:00.001Z'
+          format: date-time
+          maxLength: 24
+          minLength: 24
+          type: string
+        not_before:
+          description: certificate validity not before
+          example: '2022-01-17T00:00:00.001Z'
+          format: date-time
+          maxLength: 24
+          minLength: 24
+          type: string
+      required:
+        - id
+        - name
+        - not_before
+        - not_after
+      type: object
+    ApprovedDsTlsCertificationAuthority:
+      description: >-
+        approved DS TLS certification authority (globalconf approvedConnectorTlsCA entry). Only the ACME directory URL and
+        the DS TLS certificate profile id are exposed for the ACME server - the shared ACME type's auth/sign
+        profile ids are meaningless for these entries and are never surfaced here.
+      properties:
+        id:
+          description: unique identifier
+          example: 123
+          format: int32
+          readOnly: true
+          type: integer
+        name:
+          description: DS TLS certification authority name
+          example: Let's Encrypt
+          format: text
+          maxLength: 255
+          minLength: 1
+          type: string
+        issuer_distinguished_name:
+          description: certificate issuer distinguished name
+          example: issuer123
+          format: text
+          maxLength: 255
+          minLength: 1
+          type: string
+        subject_distinguished_name:
+          description: certificate subject distinguished name
+          example: subject123
+          format: text
+          maxLength: 255
+          minLength: 1
+          type: string
+        not_after:
+          description: certificate validity not after
+          example: '2022-01-17T00:00:00.001Z'
+          format: date-time
+          maxLength: 24
+          minLength: 24
+          type: string
+        not_before:
+          description: certificate validity not before
+          example: '2022-01-17T00:00:00.001Z'
+          format: date-time
+          maxLength: 24
+          minLength: 24
+          type: string
+        acme_server_directory_url:
+          description: enables auto-enrollment from this CA's ACME server when set
+          type: string
+          format: url
+          minLength: 1
+        ds_tls_certificate_profile_id:
+          description: certificate profile id some ACME servers need to know the DS TLS certificate usage type
+          format: text
+          type: string
+          minLength: 1
+      required:
+        - id
+        - name
       type: object
     Backup:
       description: central server backup # potential-common-api
@@ -3096,13 +3690,17 @@ components:
           maxLength: 255
           minLength: 1
           type: string
+        compatible:
+          type: boolean
+          description: whether this backup is compatible with this server's backup format
       required:
         - filename
+        - compatible
       type: object
     BackupArchive:
       description: central server backup archive file # potential-common-api
       properties:
-        file:
+        backup:
           format: binary
           type: string
       type: object
@@ -3134,6 +3732,12 @@ components:
           format: int32
           readOnly: true
           type: integer
+        certification_service_id:
+          description: unique identifier
+          example: 123
+          format: int32
+          readOnly: true
+          type: integer
         ca_certificate:
           $ref: '#/components/schemas/CertificateDetails'
       required:
@@ -3143,10 +3747,10 @@ components:
       description: certificate details for any kind of certificate (TLS, auth, sign) # potential-common-api
       properties:
         hash:
-          description: certificate SHA-1 hash
+          description: certificate SHA-256 hash
           example: 1234567890ABCDEF
           format: text
-          maxLength: 40
+          maxLength: 64
           minLength: 1
           type: string
         issuer_common_name:
@@ -3197,6 +3801,20 @@ components:
           type: integer
         rsa_public_key_modulus:
           description: hex encoded RSA public key modulus (if RSA key)
+          example: c44421d601...
+          format: hex
+          maxLength: 1000
+          minLength: 1
+          type: string
+        ec_public_parameters:
+          description: EC public key named curve (if EC key)
+          example: 'secp256r1(1.2.840.10045.3.1.7)'
+          format: text
+          maxLength: 255
+          minLength: 1
+          type: string
+        ec_public_key_point:
+          description: hex encoded EC public key point (if EC key)
           example: c44421d601...
           format: hex
           maxLength: 1000
@@ -3278,6 +3896,23 @@ components:
           format: int32
           readOnly: true
           type: integer
+    OcspResponderCertificateDetails:
+      allOf:
+        - $ref: '#/components/schemas/CertificateDetails'
+      description: Security server's authentication certificate
+      properties:
+        intermediate_ca_id:
+          description: unique identifier
+          example: 123
+          format: int32
+          readOnly: true
+          type: integer
+        certification_service_id:
+          description: unique identifier
+          example: 123
+          format: int32
+          readOnly: true
+          type: integer
     CertificateFile:
       description: certificate file
       properties:
@@ -3294,6 +3929,9 @@ components:
         - $ref: '#/components/schemas/CertificationServiceSettings'
       description: certification service file and settings
       type: object
+      required:
+        - certificate
+        - default_csr_format
     CertificationServiceSettings:
       description: certification service settings
       properties:
@@ -3305,7 +3943,81 @@ components:
         tls_auth:
           description: can the CA be used for TLS authentication
           type: string
+        default_csr_format:
+          $ref: '#/components/schemas/CsrFormat'
+        acme_server_directory_url:
+          format: url
+          type: string
+        acme_server_ip_address:
+          format: text
+          type: string
+        authentication_certificate_profile_id:
+          format: text
+          type: string
+        signing_certificate_profile_id:
+          format: text
+          type: string
       type: object
+    DsTlsCertificationAuthoritySettings:
+      description: >-
+        DS TLS certification authority settings. Only the ACME directory URL and the DS TLS certificate profile id
+        are settable for the ACME server - the shared ACME type's auth/sign profile ids do not apply here.
+      properties:
+        name:
+          description: DS TLS certification authority name
+          example: Let's Encrypt
+          format: text
+          maxLength: 255
+          minLength: 1
+          type: string
+        acme_server_directory_url:
+          description: enables auto-enrollment from this CA's ACME server when set
+          format: url
+          type: string
+        ds_tls_certificate_profile_id:
+          description: certificate profile id some ACME servers need to know the DS TLS certificate usage type
+          format: text
+          type: string
+      type: object
+    DsTlsCertificationAuthorityFileAndSettings:
+      allOf:
+        - $ref: '#/components/schemas/CertificateFile'
+        - $ref: '#/components/schemas/DsTlsCertificationAuthoritySettings'
+      description: DS TLS certification authority file and settings
+      type: object
+      required:
+        - certificate
+        - name
+    DsTlsIntermediateCertificateAuthority:
+      description: DS TLS intermediate certificate authority information
+      properties:
+        id:
+          description: unique identifier
+          example: 123
+          format: int32
+          readOnly: true
+          type: integer
+        ds_tls_certification_authority_id:
+          description: unique identifier of the owning DS TLS certification authority
+          example: 123
+          format: int32
+          readOnly: true
+          type: integer
+        ca_certificate:
+          $ref: '#/components/schemas/CertificateDetails'
+      required:
+        - ca_certificate
+      type: object
+    DistinguishedName:
+      type: object
+      properties:
+        name:
+          type: string
+          format: text
+          description: distinguished name
+          example: C=FI, O=X-Road Test, OU=X-Road Test CA OU, CN=X-Road Test CA CN
+          minLength: 1
+          maxLength: 255
     CodeWithDetails:
       $ref: '../../../../../common/common-admin-api/src/main/resources/common-openapi-definition.yaml#/components/schemas/CodeWithDetails'
     ConfigurationAnchorContainer:
@@ -3360,7 +4072,7 @@ components:
           type: integer
       required:
         - content_identifier
-        - filename
+        - file_name
         - file_updated_at
         - version
         - optional
@@ -3391,6 +4103,14 @@ components:
       example: INTERNAL
       format: enum
       type: string
+    KeyAlgorithm:
+      description: Key type
+      enum:
+        - RSA
+        - EC
+      example: RSA
+      format: enum
+      type: string
     ErrorInfo:
       $ref: '../../../../../common/common-admin-api/src/main/resources/common-openapi-definition.yaml#/components/schemas/ErrorInfo'
     GlobalConfDownloadUrl:
@@ -3408,6 +4128,7 @@ components:
     GlobalGroupResource:
       allOf:
         - $ref: '#/components/schemas/GlobalGroupCodeAndDescription'
+        - $ref: '#/components/schemas/ModificationTimestamps'
       description: group
       properties:
         member_count:
@@ -3434,6 +4155,7 @@ components:
           format: text
           maxLength: 255
           minLength: 1
+          pattern: '^[a-zA-Z0-9-_,.;:!? ]*$'
           type: string
       required:
         - code
@@ -3448,6 +4170,7 @@ components:
           format: text
           maxLength: 255
           minLength: 1
+          pattern: '^[a-zA-Z0-9-_,.;:!? ]*$'
           type: string
       required:
         - description
@@ -3631,7 +4354,9 @@ components:
             $ref: '#/components/schemas/PossibleKeyAction'
           type: array
         source_type:
-            $ref: '#/components/schemas/ConfigurationType'
+          $ref: '#/components/schemas/ConfigurationType'
+        key_algorithm:
+          $ref: '#/components/schemas/KeyAlgorithm'
       required:
         - id
         - label
@@ -3712,7 +4437,6 @@ components:
         - service_provider_name
         - services_address
         - wsdl_address
-        - service_provider_id
       type: object
     Client:
       allOf:
@@ -3737,6 +4461,8 @@ components:
     SubsystemAdd:
       description: x-road subsystem to add
       type: object
+      allOf:
+        - $ref: '#/components/schemas/SubsystemName'
       required:
         - subsystem_id
       properties:
@@ -3755,6 +4481,7 @@ components:
           example: ABC
           minLength: 1
           maxLength: 255
+
       required:
         - subsystem_code
     NewMemberId:
@@ -3778,14 +4505,22 @@ components:
         - code
       type: object
     Subsystem:
+      allOf:
+        - $ref: '#/components/schemas/SubsystemName'
       properties:
         subsystem_id:
           $ref: '#/components/schemas/ClientId'
         used_security_servers:
           items:
             $ref: '#/components/schemas/UsedSecurityServers'
+          type: array
       type: object
+      required:
+        - subsystem_id
+        - used_security_servers
     UsedSecurityServers:
+      allOf:
+        - $ref: '#/components/schemas/EncodedId'
       properties:
         server_code:
           description: security server code
@@ -3806,6 +4541,7 @@ components:
           format: text
           maxLength: 255
           minLength: 1
+          pattern: '^[a-zA-Z0-9-_,.;:!? ]*$'
           type: string
       required:
         - description
@@ -3819,6 +4555,17 @@ components:
           format: text
           maxLength: 255
           minLength: 1
+          type: string
+      type: object
+    SubsystemName:
+      description: x-road subsystem name
+      properties:
+        subsystem_name:
+          description: Subsystem name.
+          example: Subsystem123
+          format: text
+          maxLength: 255
+          minLength: 0
           type: string
       type: object
     MemberCode:
@@ -3896,6 +4643,7 @@ components:
     OcspResponder:
       allOf:
         - $ref: '#/components/schemas/OcspResponderUrl'
+        - $ref: '#/components/schemas/CostTypeProperty'
       description: OCSP responder
       properties:
         id:
@@ -3931,6 +4679,31 @@ components:
       required:
         - url
       type: object
+    CostTypeProperty:
+      type: object
+      description: Object containing cost_type field of CostType enum
+      properties:
+        cost_type:
+          $ref: '#/components/schemas/CostType'
+      required:
+        - cost_type
+    CostType:
+      description: cost type for services like TSP-s and OCSP responders
+      enum:
+        - FREE
+        - PAID
+        - UNDEFINED
+      example: FREE
+      format: enum
+      type: string
+    CsrFormat:
+      description: CSR format
+      enum:
+        - PEM
+        - DER
+      example: PEM
+      format: enum
+      type: string
     PossibleTokenAction:
       description: an action to change state or edit tokens # set of values not final or complete
       enum:
@@ -3967,8 +4740,17 @@ components:
         owner_name:
           type: string
           readOnly: true
+        in_maintenance_mode:
+          description: true if the security server is in maintenance mode, false otherwise
+          type: boolean
+          readOnly: true
+        maintenance_mode_message:
+          description: optional message of maintenance mode
+          type: string
+          readOnly: true
       required:
         - server_id
+        - in_maintenance_mode
       type: object
     PagedClients:
       description: array of Clients with paging metadata
@@ -4039,14 +4821,14 @@ components:
           format: int32
         limit:
           description: >
-              Indicates the maximum number of items for the returned page.
+            Indicates the maximum number of items for the returned page.
           default: 25
           type: integer
           format: int32
         offset:
           description: >
-              Offset in pages from the beginning of the query result after filtering and sorting
-              parameters are taken into account.
+            Offset in pages from the beginning of the query result after filtering and sorting
+            parameters are taken into account.
           default: 0
           type: integer
           format: int32
@@ -4070,22 +4852,22 @@ components:
         # https://stackoverflow.com/questions/35628974/when-post-spring-is-ignoring-jsonproperty#comment58939524_35628974
         desc:
           description: >
-              Used sorting direction. Value 'true'  indicates descending and 'false' or omitted
-              parameter indicates ascending direction.
+            Used sorting direction. Value 'true'  indicates descending and 'false' or omitted
+            parameter indicates ascending direction.
           default: false
           type: boolean
         limit:
           description: >
-              Indicates the maximum number of items for the returned page.   If parameter is
-              omitted, then the default amount of 25   is returned.
+            Indicates the maximum number of items for the returned page.   If parameter is
+            omitted, then the default amount of 25   is returned.
           default: 25
           type: integer
           format: int32
         offset:
           description: >
-              Offset in pages from the beginning of the query result after filtering and sorting
-              parameters are taken into account.  If the parameter omitted or the value 0 (zero)
-              is given, the first page is returned.
+            Offset in pages from the beginning of the query result after filtering and sorting
+            parameters are taken into account.  If the parameter omitted or the value 0 (zero)
+            is given, the first page is returned.
           default: 0
           type: integer
           format: int32
@@ -4136,6 +4918,7 @@ components:
     TimestampingService:
       allOf:
         - $ref: '#/components/schemas/TimestampingServiceUrl'
+        - $ref: '#/components/schemas/CostTypeProperty'
         - $ref: '#/components/schemas/TimestampingServiceCertificate'
       description: timestamping service
       properties:
@@ -4150,21 +4933,10 @@ components:
           example: 60
           format: int32
           type: integer
-        cost:
-          $ref: '#/components/schemas/TimestampingServiceCost'
       required:
         - id
         - timestamping_interval
-        - cost
       type: object
-    TimestampingServiceCost:
-      description: timestamping service cost (free, paid, undefined)
-      enum:
-        - FREE
-        - PAID
-        - UNDEFINED
-      example: FREE
-      format: enum
     TimestampingServiceCertificate:
       description: timestamping service certificate
       properties:
@@ -4345,9 +5117,9 @@ components:
       discriminator:
         propertyName: type
         mapping:
-          MEMBER: "ClientId"
-          SERVER: "SecurityServerId"
-          SUBSYSTEM: "ClientId"
+          MEMBER: "#/components/schemas/ClientId"
+          SERVER: "#/components/schemas/SecurityServerId"
+          SUBSYSTEM: "#/components/schemas/ClientId"
       properties:
         instance_id:
           description: Xroad instance id. Cannot contain colons, semicolons, slashes, backslashes, percent signs or control characters
@@ -4377,7 +5149,7 @@ components:
         encoded_id:
           readOnly: true
           type: string
-          description: Encoded ID of Security Serve, Member or Subsystem Id
+          description: Encoded ID of Security Server, Member or Subsystem Id
     ClientId:
       type: object
       description: Client identifier
@@ -4400,7 +5172,7 @@ components:
         member_class:
           description: Member class. Cannot contain colons, semicolons, slashes, backslashes, percent signs or control characters
           example: GOV
-          format: text§
+          format: text
           maxLength: 255
           minLength: 1
           type: string
@@ -4436,9 +5208,6 @@ components:
       allOf:
         - $ref: '#/components/schemas/ManagementRequestListView'
       properties:
-        client_owner_name:
-          type: string
-          readOnly: true
         comments:
           type: string
           format: text
@@ -4452,11 +5221,17 @@ components:
       discriminator:
         propertyName: type
         mapping:
-          AUTH_CERT_REGISTRATION_REQUEST: "AuthenticationCertificateRegistrationRequest"
-          AUTH_CERT_DELETION_REQUEST: "AuthenticationCertificateDeletionRequest"
-          CLIENT_REGISTRATION_REQUEST: "ClientRegistrationRequest"
-          CLIENT_DELETION_REQUEST: "ClientDeletionRequest"
-          OWNER_CHANGE_REQUEST: "OwnerChangeRequest"
+          AUTH_CERT_REGISTRATION_REQUEST: "#/components/schemas/AuthenticationCertificateRegistrationRequest"
+          AUTH_CERT_DELETION_REQUEST: "#/components/schemas/AuthenticationCertificateDeletionRequest"
+          CLIENT_REGISTRATION_REQUEST: "#/components/schemas/ClientRegistrationRequest"
+          CLIENT_DELETION_REQUEST: "#/components/schemas/ClientDeletionRequest"
+          CLIENT_DISABLE_REQUEST: "#/components/schemas/ClientDisableRequest"
+          CLIENT_ENABLE_REQUEST: "#/components/schemas/ClientEnableRequest"
+          CLIENT_RENAME_REQUEST: "#/components/schemas/ClientRenameRequest"
+          OWNER_CHANGE_REQUEST: "#/components/schemas/OwnerChangeRequest"
+          ADDRESS_CHANGE_REQUEST: "#/components/schemas/AddressChangeRequest"
+          MAINTENANCE_MODE_ENABLE_REQUEST: "#/components/schemas/MaintenanceModeEnableRequest"
+          MAINTENANCE_MODE_DISABLE_REQUEST: "#/components/schemas/MaintenanceModeDisableRequest"
       properties:
         id:
           type: integer
@@ -4480,8 +5255,8 @@ components:
           readOnly: true
       required:
         - type
-        - source
-        - securityserverId
+        - origin
+        - security_server_id
     ManagementRequestListView:
       type: object
       description: Management Request view
@@ -4505,13 +5280,19 @@ components:
           $ref: '#/components/schemas/ManagementRequestStatus'
         client_id:
           $ref: '#/components/schemas/ClientId'
+        client_owner_name:
+          type: string
+          readOnly: true
+        client_subsystem_name:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
           readOnly: true
       required:
         - type
-        - source
+        - origin
         - security_server_id
     ManagementRequestType:
       type: string
@@ -4520,7 +5301,13 @@ components:
         - CLIENT_REGISTRATION_REQUEST
         - OWNER_CHANGE_REQUEST
         - CLIENT_DELETION_REQUEST
+        - CLIENT_DISABLE_REQUEST
+        - CLIENT_ENABLE_REQUEST
+        - CLIENT_RENAME_REQUEST
         - AUTH_CERT_DELETION_REQUEST
+        - ADDRESS_CHANGE_REQUEST
+        - MAINTENANCE_MODE_ENABLE_REQUEST
+        - MAINTENANCE_MODE_DISABLE_REQUEST
     ManagementRequestStatus:
       type: string
       readOnly: true
@@ -4553,7 +5340,7 @@ components:
           description: management request type
           nullable: true
           items:
-           $ref: '#/components/schemas/ManagementRequestType'
+            $ref: '#/components/schemas/ManagementRequestType'
         status:
           description: request status
           nullable: true
@@ -4656,8 +5443,8 @@ components:
           type: string
           format: byte
       required:
-        - serverAddress
-        - authenticationCertificate
+        - server_address
+        - authentication_certificate
     AuthenticationCertificateDeletionRequest:
       allOf:
         - $ref: '#/components/schemas/ManagementRequest'
@@ -4667,7 +5454,7 @@ components:
           type: string
           format: byte
       required:
-        - authenticationCertificate
+        - authentication_certificate
     ClientRegistrationRequest:
       allOf:
         - $ref: '#/components/schemas/ManagementRequest'
@@ -4676,8 +5463,10 @@ components:
         client_id:
           type: string
           description: Encoded Client ID
+        subsystem_name:
+          type: string
       required:
-        - clientId
+        - client_id
     ClientDeletionRequest:
       allOf:
         - $ref: '#/components/schemas/ManagementRequest'
@@ -4688,7 +5477,7 @@ components:
           description: Encoded Client ID
       required:
         - clientId
-    OwnerChangeRequest:
+    ClientDisableRequest:
       allOf:
         - $ref: '#/components/schemas/ManagementRequest'
       type: object
@@ -4698,6 +5487,63 @@ components:
           description: Encoded Client ID
       required:
         - clientId
+    ClientEnableRequest:
+      allOf:
+        - $ref: '#/components/schemas/ManagementRequest'
+      type: object
+      properties:
+        client_id:
+          type: string
+          description: Encoded Client ID
+      required:
+        - client_id
+    ClientRenameRequest:
+      allOf:
+        - $ref: '#/components/schemas/ManagementRequest'
+      type: object
+      properties:
+        client_id:
+          type: string
+          description: Encoded Client ID
+        subsystem_name:
+          type: string
+      required:
+        - client_id
+        - client_name
+    OwnerChangeRequest:
+      allOf:
+        - $ref: '#/components/schemas/ManagementRequest'
+      type: object
+      properties:
+        client_id:
+          type: string
+          description: Encoded Client ID
+      required:
+        - client_id
+    AddressChangeRequest:
+      allOf:
+        - $ref: '#/components/schemas/ManagementRequest'
+      type: object
+      properties:
+        server_address:
+          type: string
+      required:
+        - server_address
+    MaintenanceModeEnableRequest:
+      allOf:
+        - $ref: '#/components/schemas/ManagementRequest'
+      type: object
+      properties:
+        message:
+          description: Optional short message about maintenance mode
+          example: Short maintenance procedure
+          format: text
+          maxLength: 255
+          type: string
+    MaintenanceModeDisableRequest:
+      allOf:
+        - $ref: '#/components/schemas/ManagementRequest'
+      type: object
   securitySchemes:
     ApiKeyAuth:
       description: X-Road-ApiKey token=<api key>
@@ -4710,6 +5556,15 @@ components:
       in: path
       name: certification_service_id
       description: unique identifier of the certification service
+      required: true
+      schema:
+        format: int32
+        minimum: 1
+        type: integer
+    DsTlsCertificationAuthorityIdParam:
+      in: path
+      name: ds_tls_certification_authority_id
+      description: unique identifier of the DS TLS certification authority
       required: true
       schema:
         format: int32
@@ -4773,6 +5628,15 @@ components:
       in: path
       name: intermediate_ca_id
       description: unique identifier of the intermediate certificate authority
+      required: true
+      schema:
+        format: int32
+        minimum: 1
+        type: integer
+    DsTlsIntermediateCaIdParam:
+      in: path
+      name: ds_tls_intermediate_ca_id
+      description: unique identifier of the DS TLS intermediate certificate authority
       required: true
       schema:
         format: int32

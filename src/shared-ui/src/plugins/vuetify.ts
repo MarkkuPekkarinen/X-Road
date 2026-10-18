@@ -24,21 +24,100 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import Vue from 'vue';
-import Vuetify from 'vuetify';
-Vue.use(Vuetify);
 
-export default new Vuetify({
-  theme: {
-    options: {
-      customProperties: true,
+import 'vuetify/styles';
+import '@fontsource-variable/material-symbols-rounded/fill.css';
+import '@fontsource-variable/open-sans';
+import '../assets/global-style.scss';
+
+import { createVuetify } from 'vuetify/framework';
+import { msrAliases, msr, createLightTheme, createDarkTheme, Color, getNonce } from '../utils';
+import { createVueI18nAdapter } from 'vuetify/locale/adapters/vue-i18n';
+import { i18n } from './i18n';
+import { useI18n } from 'vue-i18n';
+import { VTextField } from 'vuetify/components';
+import { XRD_THEME } from '../composables';
+
+export function createXrdVuetify(appSpecificLight: Color, onAppSpecificLight: Color, appSpecificDark: Color, onAppSpecificDark: Color) {
+  return createVuetify({
+    aliases: {
+      XrdSearchField: VTextField,
+      XrdRoundedSearchField: VTextField,
     },
-    themes: {
-      light: {
-        primary: '#663cdc',
-        secondary: '#00C9E7',
-        accent: '#8c9eff',
+    defaults: {
+      global: {},
+      VDataTable: {
+        loaderHeight: 2,
+      },
+      VCheckboxBtn: {
+        class: 'xrd',
+      },
+      VTextField: {
+        variant: 'underlined',
+      },
+      VTooltip: {
+        maxWidth: '280',
+        contentClass: 'bg-inverse-surface',
+      },
+      VSelect: {
+        variant: 'underlined',
+        listProps: {
+          class: 'xrd-select-list',
+        },
+      },
+      VCombobox: {
+        variant: 'underlined',
+        listProps: {
+          class: 'xrd-select-list',
+        },
+      },
+      VAutocomplete: {
+        variant: 'underlined',
+        listProps: {
+          class: 'xrd-select-list',
+        },
+      },
+      VDateInput: {
+        variant: 'underlined',
+      },
+      VTimeInput: {
+        variant: 'underlined',
+      },
+      XrdSearchField: {
+        class: 'xrd xrd-search-field',
+        prependInnerIcon: 'search',
+        variant: 'underlined',
+        density: 'compact',
+        singleLine: true,
+        hideDetails: true,
+      },
+      XrdRoundedSearchField: {
+        class: 'xrd xrd-search-field',
+        prependInnerIcon: 'search',
+        variant: 'outlined',
+        rounded: 'pill',
+        density: 'compact',
+        singleLine: true,
+        hideDetails: true,
       },
     },
-  },
-});
+    icons: {
+      defaultSet: 'msr',
+      aliases: msrAliases,
+      sets: {
+        msr,
+      },
+    },
+    locale: {
+      adapter: createVueI18nAdapter({ i18n, useI18n }),
+    },
+    theme: {
+      cspNonce: getNonce(),
+      defaultTheme: localStorage.getItem(XRD_THEME) ?? 'system',
+      themes: {
+        light: createLightTheme(appSpecificLight, onAppSpecificLight),
+        dark: createDarkTheme(appSpecificDark, onAppSpecificDark),
+      },
+    },
+  });
+}

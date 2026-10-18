@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -27,7 +27,6 @@
 package org.niis.xroad.cs.admin.api.service;
 
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.common.identifier.SecurityServerId;
 
 import org.niis.xroad.cs.admin.api.domain.Subsystem;
 import org.niis.xroad.cs.admin.api.dto.SubsystemCreationRequest;
@@ -43,9 +42,8 @@ public interface SubsystemService {
 
     Optional<Subsystem> findByIdentifier(ClientId id);
 
-    void unregisterSubsystem(ClientId subsystemId, SecurityServerId securityServerId);
-
     void deleteSubsystem(ClientId subsystemClientId);
 
 
+    Optional<Subsystem> updateSubsystemName(ClientId clientId, String newName);
 }

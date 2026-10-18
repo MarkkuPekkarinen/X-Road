@@ -33,8 +33,6 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
-
 import static ee.ria.xroad.common.util.HttpHeaders.X_FORWARDED_FOR;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -43,8 +41,8 @@ public class XForwardedForHeaderFeignInterceptor implements RequestInterceptor {
     @Override
     public void apply(RequestTemplate template) {
         final RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes instanceof ServletRequestAttributes) {
-            HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
+        if (requestAttributes instanceof ServletRequestAttributes sra) {
+            var request = sra.getRequest();
 
             String clientIp = request.getHeader(X_FORWARDED_FOR);
             if (isBlank(clientIp)) {

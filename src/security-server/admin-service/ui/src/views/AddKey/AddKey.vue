@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,77 +25,59 @@
    THE SOFTWARE.
  -->
 <template>
-  <div class="view-wrap">
-    <xrd-sub-view-title
-      class="wizard-view-title"
-      :title="$t('csr.addKey')"
-      :show-close="false"
-    />
-    <v-stepper
-      v-model="currentStep"
-      :alt-labels="true"
-      class="wizard-stepper wizard-noshadow"
-    >
-      <v-stepper-header class="wizard-noshadow">
-        <v-stepper-step :complete="currentStep > 1" step="1">{{
-          $t('keys.detailsTitle')
-        }}</v-stepper-step>
-        <v-divider></v-divider>
-        <v-stepper-step :complete="currentStep > 2" step="2">{{
-          $t('csr.csrDetails')
-        }}</v-stepper-step>
-        <v-divider></v-divider>
-        <v-stepper-step :complete="currentStep > 3" step="3">{{
-          $t('csr.generateCsr')
-        }}</v-stepper-step>
-      </v-stepper-header>
+  <XrdElevatedViewSimple title="csr.addKey">
+    <XrdWizard v-model="currentStep">
+      <template #header-items>
+        <v-stepper-item :complete="currentStep > 1" :value="1">
+          {{ $t('keys.detailsTitle') }}
+        </v-stepper-item>
+        <v-divider />
 
-      <v-stepper-items class="wizard-stepper-content">
-        <!-- Step 1 -->
-        <v-stepper-content step="1">
-          <WizardPageKeyLabel
-            :token-type="tokenType"
-            @cancel="cancel"
-            @done="currentStep = 2"
-          />
-        </v-stepper-content>
-        <!-- Step 2 -->
-        <v-stepper-content step="2">
-          <WizardPageCsrDetails
-            @cancel="cancel"
-            @previous="currentStep = 1"
-            @done="save"
-          />
-        </v-stepper-content>
-        <!-- Step 3 -->
-        <v-stepper-content step="3">
-          <WizardPageGenerateCsr
-            key-and-csr
-            @cancel="cancel"
-            @previous="currentStep = 2"
-            @done="done"
-          />
-        </v-stepper-content>
-      </v-stepper-items>
-    </v-stepper>
-  </div>
+        <v-stepper-item :complete="currentStep > 2" :value="2">
+          {{ $t('csr.csrDetails') }}
+        </v-stepper-item>
+        <v-divider />
+
+        <v-stepper-item :value="3">
+          {{ $t('csr.generateCsr') }}
+        </v-stepper-item>
+      </template>
+
+      <!-- Step 1 -->
+      <v-stepper-window-item :value="1">
+        <WizardPageKeyLabel :token-type="tokenType" @cancel="cancel" @done="currentStep++" />
+      </v-stepper-window-item>
+
+      <!-- Step 2 -->
+      <v-stepper-window-item :value="2">
+        <WizardPageCsrDetails save-button-text="action.next" @cancel="cancel" @previous="currentStep--" @done="save" />
+      </v-stepper-window-item>
+
+      <!-- Step 3 -->
+      <v-stepper-window-item :value="3">
+        <WizardPageGenerateCsr :key="csrGenPageKey" key-and-csr @cancel="cancel" @previous="currentStep--" @done="done" />
+      </v-stepper-window-item>
+    </XrdWizard>
+  </XrdElevatedViewSimple>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
+import { defineComponent } from 'vue';
 import WizardPageKeyLabel from '@/components/wizard/WizardPageKeyLabel.vue';
 import WizardPageCsrDetails from '@/components/wizard/WizardPageCsrDetails.vue';
 import WizardPageGenerateCsr from '@/components/wizard/WizardPageGenerateCsr.vue';
 import { RouteName } from '@/global';
 import { mapActions } from 'pinia';
-import { useCsrStore } from '@/store/modules/certificateSignRequest';
-import { useNotifications } from '@/store/modules/notifications';
+import { useCsr } from '@/store/modules/certificateSignRequest';
+import { XrdElevatedViewSimple, XrdWizard, useNotifications } from '@niis/shared-ui';
 
-export default Vue.extend({
+export default defineComponent({
   components: {
     WizardPageKeyLabel,
     WizardPageCsrDetails,
     WizardPageGenerateCsr,
+    XrdElevatedViewSimple,
+    XrdWizard,
   },
   props: {
     tokenId: {
@@ -106,37 +89,39 @@ export default Vue.extend({
       required: true,
     },
   },
+  setup() {
+    const { addError } = useNotifications();
+    return { addError };
+  },
   data() {
     return {
       currentStep: 1,
+      csrGenPageKey: 0,
     };
   },
   created() {
     this.setCsrTokenId(this.tokenId);
     this.setCsrTokenType(this.tokenType);
     this.fetchCertificateAuthorities().catch((error) => {
-      this.showError(error);
+      this.addError(error);
     });
   },
   methods: {
-    ...mapActions(useNotifications, ['showError']),
-    ...mapActions(useCsrStore, [
-      'setCsrTokenId',
-      'setCsrTokenType',
-      'fetchCsrForm',
-      'resetCsrState',
-      'fetchCertificateAuthorities',
-    ]),
+    ...mapActions(useCsr, ['setCsrTokenId', 'setCsrTokenType', 'fetchCsrForm', 'resetCsrState', 'fetchCertificateAuthorities']),
 
     save(): void {
       this.fetchCsrForm().then(
         () => {
           this.currentStep = 3;
+          this.rerenderCsrGenPage();
         },
         (error) => {
-          this.showError(error);
+          this.addError(error);
         },
       );
+    },
+    rerenderCsrGenPage(): void {
+      this.csrGenPageKey += 1;
     },
     cancel(): void {
       this.resetCsrState();
@@ -150,6 +135,4 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/wizards';
-</style>
+<style lang="scss" scoped></style>

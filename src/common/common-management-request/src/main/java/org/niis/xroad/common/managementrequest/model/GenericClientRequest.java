@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,20 +25,18 @@
  */
 package org.niis.xroad.common.managementrequest.model;
 
-import ee.ria.xroad.common.SystemProperties;
+import ee.ria.xroad.common.crypto.Signatures;
+import ee.ria.xroad.common.crypto.identifier.DigestAlgorithm;
+import ee.ria.xroad.common.crypto.identifier.SignAlgorithm;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.message.SoapMessageImpl;
-import ee.ria.xroad.common.util.CryptoUtils;
 import ee.ria.xroad.common.util.MimeTypes;
-import ee.ria.xroad.signer.protocol.SignerClient;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
-import ee.ria.xroad.signer.protocol.dto.MemberSigningInfo;
-import ee.ria.xroad.signer.protocol.message.GetMemberSigningInfo;
-import ee.ria.xroad.signer.protocol.message.Sign;
-import ee.ria.xroad.signer.protocol.message.SignResponse;
 
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.jetty.util.MultiPartOutputStream;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.client.SignerRpcClient.MemberSigningInfoDto;
+import org.niis.xroad.signer.client.SignerSignClient;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -48,27 +46,32 @@ import java.io.InputStream;
 import static ee.ria.xroad.common.ErrorCodes.X_CANNOT_CREATE_SIGNATURE;
 import static ee.ria.xroad.common.ErrorCodes.translateException;
 import static ee.ria.xroad.common.ErrorCodes.translateWithPrefix;
-import static ee.ria.xroad.common.util.CryptoUtils.calculateDigest;
+import static ee.ria.xroad.common.crypto.Digests.calculateDigest;
 import static ee.ria.xroad.common.util.MimeUtils.HEADER_SIG_ALGO_ID;
 import static ee.ria.xroad.common.util.MimeUtils.mpRelatedContentType;
 
 @Slf4j
 abstract class GenericClientRequest implements ManagementRequest {
-    private static final String SIGNATURE_DIGEST_ALGORITHM_ID =
-            SystemProperties.getAuthCertRegSignatureDigestAlgorithmId();
 
+    private final SignerRpcClient signerRpcClient;
+    private final SignerSignClient signerSignClient;
     private final ClientId client;
     private final SoapMessageImpl requestMessage;
+    private final DigestAlgorithm signatureDigestAlgorithm;
 
     private CertificateInfo clientCert;
 
-    private byte[] dataToSign;
+    private final byte[] dataToSign;
 
     private MultiPartOutputStream multipart;
 
-    GenericClientRequest(ClientId client, SoapMessageImpl request) throws Exception {
+    GenericClientRequest(SignerRpcClient signerRpcClient, SignerSignClient signerSignClient, ClientId client, SoapMessageImpl request,
+                         DigestAlgorithm signatureDigestAlgorithm) {
+        this.signerRpcClient = signerRpcClient;
+        this.signerSignClient = signerSignClient;
         this.client = client;
         this.requestMessage = request;
+        this.signatureDigestAlgorithm = signatureDigestAlgorithm;
 
         this.dataToSign = request.getBytes();
     }
@@ -89,7 +92,7 @@ abstract class GenericClientRequest implements ManagementRequest {
     }
 
     @Override
-    public InputStream getRequestContent() throws Exception {
+    public InputStream getRequestContent() throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         multipart = new MultiPartOutputStream(out);
 
@@ -101,7 +104,7 @@ abstract class GenericClientRequest implements ManagementRequest {
         return new ByteArrayInputStream(out.toByteArray());
     }
 
-    private void writeCert() throws Exception {
+    private void writeCert() throws IOException {
         // Write client certificate and corresponding OCSP response
         multipart.startPart(MimeTypes.BINARY);
         multipart.write(clientCert.getCertificateBytes());
@@ -109,18 +112,18 @@ abstract class GenericClientRequest implements ManagementRequest {
         multipart.write(clientCert.getOcspBytes());
     }
 
-    private void writeSignature() throws Exception {
-        MemberSigningInfo memberSigningInfo = getMemberSigningInfo();
+    private void writeSignature() throws IOException {
+        MemberSigningInfoDto memberSigningInfo = getMemberSigningInfo();
 
-        String clientSignAlgoId = CryptoUtils.getSignatureAlgorithmId(SIGNATURE_DIGEST_ALGORITHM_ID,
-                memberSigningInfo.getSignMechanismName());
+        var clientSignAlgoId = SignAlgorithm.ofDigestAndMechanism(signatureDigestAlgorithm,
+                memberSigningInfo.signMechanismName());
 
-        String[] clientSignaturePartHeaders = {HEADER_SIG_ALGO_ID + ": " + clientSignAlgoId};
+        String[] clientSignaturePartHeaders = {HEADER_SIG_ALGO_ID + ": " + clientSignAlgoId.name()};
 
-        byte[] digest = calculateDigest(SIGNATURE_DIGEST_ALGORITHM_ID, dataToSign);
+        byte[] digest = calculateDigest(signatureDigestAlgorithm, dataToSign);
 
         multipart.startPart(MimeTypes.BINARY, clientSignaturePartHeaders);
-        multipart.write(createSignature(memberSigningInfo.getKeyId(), clientSignAlgoId, digest));
+        multipart.write(createSignature(memberSigningInfo.keyId(), clientSignAlgoId, digest));
     }
 
     private void writeSoap() throws IOException {
@@ -128,11 +131,11 @@ abstract class GenericClientRequest implements ManagementRequest {
         multipart.write(dataToSign);
     }
 
-    private MemberSigningInfo getMemberSigningInfo() throws Exception {
+    private MemberSigningInfoDto getMemberSigningInfo() {
         try {
-            MemberSigningInfo signingInfo = SignerClient.execute(new GetMemberSigningInfo(client));
+            MemberSigningInfoDto signingInfo = signerRpcClient.getMemberSigningInfo(client);
 
-            clientCert = signingInfo.getCert();
+            clientCert = signingInfo.cert();
 
             return signingInfo;
         } catch (Exception e) {
@@ -140,11 +143,9 @@ abstract class GenericClientRequest implements ManagementRequest {
         }
     }
 
-    private static byte[] createSignature(String keyId, String signAlgoId, byte[] digest) throws Exception {
+    private byte[] createSignature(String keyId, SignAlgorithm signAlgoId, byte[] digest) {
         try {
-            SignResponse response = SignerClient.execute(new Sign(keyId, signAlgoId, digest));
-
-            return response.getSignature();
+            return Signatures.useAsn1DerFormat(signAlgoId, signerSignClient.sign(keyId, signAlgoId, digest));
         } catch (Exception e) {
             throw translateWithPrefix(X_CANNOT_CREATE_SIGNATURE, e);
         }

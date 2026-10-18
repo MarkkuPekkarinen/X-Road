@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,16 +25,15 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.NotFoundException;
+import org.niis.xroad.common.exception.BadRequestException;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_TIMESTAMPING_SERVICE_NOT_FOUND;
+import static org.niis.xroad.common.core.exception.ErrorCode.TIMESTAMPING_SERVICE_NOT_FOUND;
 
 /**
  * If timestamping service was not found
  */
-public class TimestampingServiceNotFoundException extends NotFoundException {
-    public TimestampingServiceNotFoundException(String s)  {
-        super(s, new ErrorDeviation(ERROR_TIMESTAMPING_SERVICE_NOT_FOUND));
+public class TimestampingServiceNotFoundException extends BadRequestException {
+    public TimestampingServiceNotFoundException(String s) {
+        super(s, TIMESTAMPING_SERVICE_NOT_FOUND.build());
     }
 }

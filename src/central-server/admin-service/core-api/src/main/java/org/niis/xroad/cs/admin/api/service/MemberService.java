@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -27,14 +27,15 @@
 package org.niis.xroad.cs.admin.api.service;
 
 import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.SecurityServerId;
 
-import io.vavr.control.Option;
 import org.niis.xroad.cs.admin.api.domain.GlobalGroupMember;
 import org.niis.xroad.cs.admin.api.domain.SecurityServer;
 import org.niis.xroad.cs.admin.api.domain.XRoadMember;
 import org.niis.xroad.cs.admin.api.dto.MemberCreationRequest;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface MemberService {
 
@@ -42,11 +43,14 @@ public interface MemberService {
 
     void delete(ClientId clientId);
 
-    Option<XRoadMember> findMember(ClientId clientId);
+    Optional<XRoadMember> findMember(ClientId clientId);
 
     List<GlobalGroupMember> getMemberGlobalGroups(ClientId memberId);
 
     List<SecurityServer> getMemberOwnedServers(ClientId memberId);
+    List<SecurityServer> getMemberClientOfServers(ClientId memberId);
 
-    Option<XRoadMember> updateMemberName(ClientId clientId, String newName);
+    void unregisterMember(ClientId memberId, SecurityServerId securityServerId);
+
+    Optional<XRoadMember> updateMemberName(ClientId clientId, String newName);
 }

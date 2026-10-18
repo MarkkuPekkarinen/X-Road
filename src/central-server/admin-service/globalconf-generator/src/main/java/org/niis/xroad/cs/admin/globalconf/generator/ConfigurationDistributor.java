@@ -26,9 +26,11 @@
  */
 package org.niis.xroad.cs.admin.globalconf.generator;
 
+import lombok.Getter;
 import lombok.NonNull;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.globalconf.util.FileUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,6 +48,7 @@ public class ConfigurationDistributor {
             .withZone(ZoneOffset.UTC);
 
     private final Path generatedConfDir;
+    @Getter
     private final int version;
     private final Instant timestamp;
 
@@ -77,11 +80,23 @@ public class ConfigurationDistributor {
         writeFile(getVersionSubPath().resolve(fileName), data);
     }
 
-    @SneakyThrows
+
     public void moveDirectoryContentFile(String source, String target) {
-        var versionPath = generatedConfDir.resolve(getVersionSubPath());
-        var sourcePath = versionPath.resolve(source);
-        Files.move(sourcePath, versionPath.resolve(target), StandardCopyOption.ATOMIC_MOVE);
+        try {
+            var sourcePath = getVersionLocationPath().resolve(source);
+            Files.move(sourcePath, getVersionLocationPath().resolve(target), StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            throw XrdRuntimeException.systemException(e);
+        }
+    }
+
+
+    public void deleteDirectoryContentFile(String target) {
+        try {
+            FileUtils.delete(getVersionLocationPath().resolve(target));
+        } catch (IOException e) {
+            throw XrdRuntimeException.systemException(e);
+        }
     }
 
     private void writeConfigurationFile(ConfigurationPart configurationPart) {
@@ -111,8 +126,12 @@ public class ConfigurationDistributor {
         return getVersionSubPath().resolve(DIRECTORY_TIMESTAMP_FORMATTER.format(timestamp));
     }
 
-    private Path getConfigLocationPath() {
+    public Path getConfigLocationPath() {
         return generatedConfDir.resolve(getSubPath());
+    }
+
+    public Path getVersionLocationPath() {
+        return generatedConfDir.resolve(getVersionSubPath());
     }
 
     private void checkInitialized() {

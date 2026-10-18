@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,12 +25,12 @@
  */
 package org.niis.xroad.securityserver.restapi.openapi;
 
-import ee.ria.xroad.common.conf.serverconf.model.TspType;
-
 import org.junit.Before;
 import org.junit.Test;
-import org.niis.xroad.securityserver.restapi.openapi.model.TimestampingService;
+import org.niis.xroad.common.CostType;
+import org.niis.xroad.securityserver.restapi.openapi.model.TimestampingServiceDto;
 import org.niis.xroad.securityserver.restapi.util.TestUtils;
+import org.niis.xroad.serverconf.model.TimestampingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,7 +54,7 @@ public class TimestampingServiceApiControllerTest extends AbstractApiControllerT
     @Autowired
     TimestampingServicesApiController timestampingServicesApiController;
 
-    private static final Map<String, TspType> APPROVED_TIMESTAMPING_SERVICES = new HashMap<>();
+    private static final Map<String, TimestampingService> APPROVED_TIMESTAMPING_SERVICES = new HashMap<>();
 
     private static final String TSA_1_URL = "https://tsa.com";
 
@@ -66,38 +66,38 @@ public class TimestampingServiceApiControllerTest extends AbstractApiControllerT
 
     @Before
     public void setup() {
-        TspType tsa1 = TestUtils.createTspType(TSA_1_URL, TSA_1_NAME);
-        TspType tsa2 = TestUtils.createTspType(TSA_2_URL, TSA_2_NAME);
+        TimestampingService tsa1 = TestUtils.createTspType(TSA_1_URL, TSA_1_NAME, CostType.FREE);
+        TimestampingService tsa2 = TestUtils.createTspType(TSA_2_URL, TSA_2_NAME, CostType.PAID);
         APPROVED_TIMESTAMPING_SERVICES.put(tsa1.getName(), tsa1);
         APPROVED_TIMESTAMPING_SERVICES.put(tsa2.getName(), tsa2);
 
-        when(globalConfFacade.getInstanceIdentifier()).thenReturn("TEST");
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn("TEST");
 
         doReturn(Arrays.asList(tsa1, tsa2)).when(globalConfService).getApprovedTspsForThisInstance();
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_TSPS" })
+    @WithMockUser(authorities = {"VIEW_TSPS"})
     public void getApprovedTimestampingServices() {
-        ResponseEntity<Set<TimestampingService>> response =
+        ResponseEntity<Set<TimestampingServiceDto>> response =
                 timestampingServicesApiController.getApprovedTimestampingServices();
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Set<TimestampingService> timestampingServices = response.getBody();
+        Set<TimestampingServiceDto> timestampingServices = response.getBody();
 
         assertEquals(APPROVED_TIMESTAMPING_SERVICES.keySet().size(), timestampingServices.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_TSPS" })
+    @WithMockUser(authorities = {"VIEW_TSPS"})
     public void getApprovedTimestampingServicesEmptyList() {
-        when(globalConfService.getApprovedTspsForThisInstance()).thenReturn(new ArrayList<TspType>());
+        when(globalConfService.getApprovedTspsForThisInstance()).thenReturn(new ArrayList<TimestampingService>());
 
-        ResponseEntity<Set<TimestampingService>> response =
+        ResponseEntity<Set<TimestampingServiceDto>> response =
                 timestampingServicesApiController.getApprovedTimestampingServices();
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Set<TimestampingService> timestampingServices = response.getBody();
+        Set<TimestampingServiceDto> timestampingServices = response.getBody();
 
         assertEquals(0, timestampingServices.size());
     }

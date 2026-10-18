@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
@@ -29,20 +30,17 @@ import ee.ria.xroad.common.identifier.ClientId;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
-import org.niis.xroad.securityserver.restapi.openapi.model.Client;
-import org.niis.xroad.securityserver.restapi.openapi.model.ClientAdd;
-import org.niis.xroad.securityserver.restapi.openapi.model.ClientStatus;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroup;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupAdd;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientStatusDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupDto;
 import org.niis.xroad.securityserver.restapi.util.TestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
@@ -58,13 +56,15 @@ import static org.mockito.Mockito.when;
 /**
  * Test that user inputted strings are being trimmed correctly.
  *
- * TestRestTemplate requests will not be rolled back so the context will need to be reloaded after this test class
+ * WebTestClient requests will not be rolled back so the context will need to be reloaded after this test class
  */
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class StringTrimmerRestTemplateTest extends AbstractApiControllerTestContext {
 
     @Autowired
-    TestRestTemplate restTemplate;
+    WebTestClient webTestClient;
+
+    private WebTestClient client;
 
     public static final String MEMBER_CODE_WITH_SPACES = "  1234  ";
     public static final String MEMBER_CODE_WITHOUT_SPACES = "1234";
@@ -80,9 +80,9 @@ public class StringTrimmerRestTemplateTest extends AbstractApiControllerTestCont
 
     @Before
     public void setup() {
-        TestUtils.addApiKeyAuthorizationHeader(restTemplate);
-        when(globalConfFacade.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
-        when(globalConfFacade.getMemberName(any())).thenAnswer((Answer<String>) invocation -> {
+        client = TestUtils.addApiKeyAuthorizationHeader(webTestClient);
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
+        when(globalConfProvider.getMemberName(any())).thenAnswer((Answer<String>) invocation -> {
             Object[] args = invocation.getArguments();
             ClientId identifier = (ClientId) args[0];
             return identifier.getSubsystemCode() != null ? TestUtils.NAME_FOR + identifier.getSubsystemCode()
@@ -98,10 +98,14 @@ public class StringTrimmerRestTemplateTest extends AbstractApiControllerTestCont
     @Test
     @WithMockUser(authorities = "ADD_CLIENT")
     public void testAddClientWithSpaces() {
-        ClientAdd clientAdd = createClientAdd(MEMBER_CODE_WITH_SPACES, SUBSYSTEM_CODE_WITH_SPACES);
-        ResponseEntity<Client> response = restTemplate.postForEntity("/api/v1/clients", clientAdd, Client.class);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        Client addedClient = response.getBody();
+        ClientAddDto clientAdd = createClientAdd(MEMBER_CODE_WITH_SPACES, SUBSYSTEM_CODE_WITH_SPACES);
+        ClientDto addedClient = client.post().uri("/api/v1/clients")
+                .bodyValue(clientAdd)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ClientDto.class)
+                .returnResult()
+                .getResponseBody();
         assertNotNull(addedClient);
         assertEquals(MEMBER_CODE_WITHOUT_SPACES, addedClient.getMemberCode());
         assertEquals(SUBSYSTEM_CODE_WITHOUT_SPACES, addedClient.getSubsystemCode());
@@ -110,11 +114,15 @@ public class StringTrimmerRestTemplateTest extends AbstractApiControllerTestCont
     @Test
     @WithMockUser(authorities = "ADD_LOCAL_GROUP")
     public void testAddLocalGroupWithSpaces() {
-        LocalGroupAdd localGroupAdd = createLocalGroupAdd(GROUP_CODE_WITH_SPACES, GROUP_DESC_WITH_SPACES);
-        ResponseEntity<LocalGroup> response = restTemplate.postForEntity("/api/v1/clients/" + TestUtils.CLIENT_ID_SS1
-                + "/local-groups", localGroupAdd, LocalGroup.class);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        LocalGroup addedGroup = response.getBody();
+        LocalGroupAddDto localGroupAdd = createLocalGroupAdd(GROUP_CODE_WITH_SPACES, GROUP_DESC_WITH_SPACES);
+        LocalGroupDto addedGroup = client.post().uri("/api/v1/clients/" + TestUtils.CLIENT_ID_SS1
+                        + "/local-groups")
+                .bodyValue(localGroupAdd)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(LocalGroupDto.class)
+                .returnResult()
+                .getResponseBody();
         assertNotNull(addedGroup);
         assertEquals(GROUP_CODE_WITHOUT_SPACES, addedGroup.getCode());
         assertEquals(GROUP_DESC_WITHOUT_SPACES, addedGroup.getDescription());
@@ -127,25 +135,27 @@ public class StringTrimmerRestTemplateTest extends AbstractApiControllerTestCont
                 .queryParam("subsystem_code", SUBSYSTEM_CODE_WITH_SPACES)
                 .build(false)
                 .toString();
-        ParameterizedTypeReference<List<Client>> typeRef = new ParameterizedTypeReference<List<Client>>() {
-        };
-        ResponseEntity<List<Client>> response = restTemplate.exchange(findClientsApiPath, HttpMethod.GET, null,
-                typeRef);
-        List<Client> foundClients = response.getBody();
+        List<ClientDto> foundClients = client.get().uri(findClientsApiPath)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<ClientDto>>() {
+                })
+                .returnResult()
+                .getResponseBody();
         assertNotNull(foundClients);
-        foundClients.forEach(client -> assertEquals(SUBSYSTEM_CODE_WITHOUT_SPACES, client.getSubsystemCode()));
+        foundClients.forEach(c -> assertEquals(SUBSYSTEM_CODE_WITHOUT_SPACES, c.getSubsystemCode()));
     }
 
-    private ClientAdd createClientAdd(String memberCode, String subsystemCode) {
-        Client client = new Client()
+    private ClientAddDto createClientAdd(String memberCode, String subsystemCode) {
+        ClientDto clientDto = new ClientDto()
                 .memberClass("GOV")
                 .memberCode(memberCode)
                 .subsystemCode(subsystemCode)
-                .status(ClientStatus.SAVED);
-        return new ClientAdd().client(client);
+                .status(ClientStatusDto.SAVED);
+        return new ClientAddDto().client(clientDto);
     }
 
-    private LocalGroupAdd createLocalGroupAdd(String code, String description) {
-        return new LocalGroupAdd().code(code).description(description);
+    private LocalGroupAddDto createLocalGroupAdd(String code, String description) {
+        return new LocalGroupAddDto().code(code).description(description);
     }
 }

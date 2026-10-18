@@ -25,58 +25,58 @@
    THE SOFTWARE.
  -->
 <template>
-  <div>
-    <!-- Toolbar buttons -->
-    <div class="table-toolbar align-fix mt-0 pl-0">
-      <div class="xrd-title-search align-fix mt-0 pt-0">
-        <div class="xrd-view-title align-fix">
-          {{ $t('tab.main.managementRequests') }}
-        </div>
-        <xrd-search
-          v-model="filterQuery"
-          class="margin-fix"
-          data-test="management-requests-search"
-        />
-        <!-- Not yet implemented -->
-        <!--<xrd-filter class="ml-4 margin-fix" />-->
+  <XrdView data-test="security-servers-view" title="tab.main.managementRequests">
+    <template #append-header>
+      <div class="ml-6">
+        <XrdSearchField v-model="filterQuery" data-test="search-query-field" width="320" :label="$t('action.search')" />
       </div>
+      <v-spacer />
       <div class="only-pending">
-        <v-checkbox
+        <v-switch
           v-model="showOnlyPending"
-          :label="$t('managementRequests.showOnlyPending')"
-          class="custom-checkbox"
           data-test="show-only-pending-requests"
-          @change="changeOptions"
-        ></v-checkbox>
+          class="xrd ml-3"
+          false-icon="close"
+          true-icon="check"
+          hide-details
+          inset
+          :label="$t('managementRequests.showOnlyPending')"
+          @update:model-value="fetchItems"
+        />
       </div>
-    </div>
-
-    <v-data-table
+    </template>
+    <v-data-table-server
+      data-test="management-requests-table"
+      class="xrd bg-surface-container xrd-rounded-16 border"
+      item-key="id"
+      :sort-by="sortBy"
       :loading="loading"
       :headers="headers"
-      :items="managementRequestsStore.items"
-      :search="managementRequestsStore.currentFilter.query"
       :must-sort="true"
+      :items="managementRequests.items"
+      :items-length="managementRequests.pagingOptions.total_items"
       :items-per-page="10"
-      :options.sync="managementRequestsStore.pagingSortingOptions"
-      :server-items-length="managementRequestsStore.pagingOptions.total_items"
-      class="elevation-0 data-table"
-      item-key="id"
       :loader-height="2"
-      :footer-props="{ itemsPerPageOptions: [10, 25, 50] }"
-      data-test="management-requests-table"
       @update:options="changeOptions"
     >
       <template #[`item.id`]="{ item }">
-        <management-request-id-cell :management-request="item" />
+        <XrdLabelWithIcon
+          icon="rule_settings"
+          semi-bold
+          :clickable="canSeeDetails"
+          :label="item.id"
+          @navigate="item.id && navigateToDetails(item.id)"
+        />
       </template>
 
       <template #[`item.created_at`]="{ item }">
-        <div>{{ item.created_at | formatDateTime }}</div>
+        <div>
+          <XrdDateTime :value="item.created_at" />
+        </div>
       </template>
 
       <template #[`item.type`]="{ item }">
-        <mr-type-cell :type="item.type" />
+        <MrTypeCell :type="item.type" />
       </template>
 
       <template #[`item.security_server_owner`]="{ item }">
@@ -88,186 +88,192 @@
       </template>
 
       <template #[`item.status`]="{ item }">
-        <mr-status-cell :status="item.status" />
+        <MrStatusCell :status="item.status" />
       </template>
 
       <template #[`item.button`]="{ item }">
-        <mr-actions-cell
-          :management-request="item"
-          @approve="changeOptions"
-          @decline="changeOptions"
+        <XrdBtn
+          v-if="item.status === 'WAITING' && canApprove"
+          data-test="approve-button"
+          variant="text"
+          text="action.approve"
+          color="tertiary"
+          @click="toApprove = item"
+        />
+
+        <XrdBtn
+          v-if="item.status === 'WAITING' && canDecline"
+          data-test="decline-button"
+          variant="text"
+          text="action.decline"
+          color="tertiary"
+          @click="toDecline = item"
         />
       </template>
-    </v-data-table>
-  </div>
+      <template #bottom>
+        <XrdPagination />
+      </template>
+    </v-data-table-server>
+    <MrConfirmDialog
+      v-if="toApprove?.id && toApprove.security_server_id.encoded_id"
+      :request-id="toApprove.id"
+      :security-server-id="toApprove.security_server_id.encoded_id"
+      :new-member="newMember"
+      @approve="fetchItems"
+      @cancel="toApprove = undefined"
+    />
+    <MrDeclineDialog
+      v-if="toDecline?.id && toDecline.security_server_id.encoded_id"
+      :request-id="toDecline.id"
+      :security-server-id="toDecline.security_server_id.encoded_id"
+      @decline="fetchItems"
+      @cancel="toDecline = undefined"
+    />
+  </XrdView>
 </template>
 
-<script lang="ts">
-import Vue from 'vue';
-import { DataTableHeader } from 'vuetify';
-import { mapActions, mapStores } from 'pinia';
-import { notificationsStore } from '@/store/modules/notifications';
+<script lang="ts" setup>
+import { computed, reactive, ref, watch } from 'vue';
+
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+
+import { useNotifications, XrdBtn, XrdLabelWithIcon, XrdPagination, XrdView, XrdDateTime } from '@niis/shared-ui';
+
+import { Permissions, RouteName } from '@/global';
+import { ManagementRequestListView, ManagementRequestStatus, ManagementRequestType } from '@/openapi-types';
+import { useManagementRequests } from '@/store/modules/management-requests';
+import { useUser } from '@/store/modules/user';
+import { DataQuery, PagingOptions } from '@/ui-types';
 import { debounce } from '@/util/helpers';
-import { managementRequestsStore } from '@/store/modules/managementRequestStore';
-import { ManagementRequestStatus } from '@/openapi-types';
-import ManagementRequestIdCell from '@/components/managementRequests/MrIdCell.vue';
-import MrActionsCell from '@/components/managementRequests/MrActionsCell.vue';
-import MrStatusCell from '@/components/managementRequests/MrStatusCell.vue';
-import MrTypeCell from '@/components/managementRequests/MrTypeCell.vue';
 
-// To provide the Vue instance to debounce
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let that: any;
+import MrConfirmDialog from './dialogs/MrConfirmDialog.vue';
+import MrDeclineDialog from './dialogs/MrDeclineDialog.vue';
+import MrStatusCell from './MrStatusCell.vue';
+import MrTypeCell from './MrTypeCell.vue';
+import { DataTableHeader } from 'vuetify/lib/components/VDataTable/types';
+import { SortItem } from 'vuetify/lib/components/VDataTable/composables/sort';
 
-/**
- * General component for Management requests
- */
-export default Vue.extend({
-  name: 'ManagementRequestsList',
-  components: {
-    MrTypeCell,
-    MrStatusCell,
-    MrActionsCell,
-    ManagementRequestIdCell,
-  },
-  data() {
-    return {
-      loading: false, //is data being loaded
-    };
-  },
-  computed: {
-    ...mapStores(managementRequestsStore),
-    headers(): DataTableHeader[] {
-      return [
-        {
-          text: this.$t('global.id') as string,
-          align: 'start',
-          value: 'id',
-          class: 'xrd-table-header mr-table-header-id',
-        },
-        {
-          text: this.$t('global.created') as string,
-          align: 'start',
-          value: 'created_at',
-          class: 'xrd-table-header mr-table-header-created',
-        },
-        {
-          text: this.$t('global.type') as string,
-          align: 'start',
-          value: 'type',
-          class: 'xrd-table-header mr-table-header-type',
-        },
-        {
-          text: this.$t('managementRequests.securityServerOwnerName') as string,
-          align: 'start',
-          value: 'security_server_owner',
-          class: 'xrd-table-header mr-table-header-owner-name',
-        },
-        {
-          text: this.$t('managementRequests.securityServerId') as string,
-          align: 'start',
-          value: 'security_server_id',
-          class: 'xrd-table-header mr-table-header-owner-id',
-        },
-        {
-          text: this.$t('global.status') as string,
-          align: 'start',
-          value: 'status',
-          class: 'xrd-table-header mr-table-header-status',
-        },
-        {
-          text: '',
-          value: 'button',
-          sortable: false,
-          class: 'xrd-table-header mr-table-header-buttons',
-        },
-      ];
-    },
-    showOnlyPending: {
-      get(): boolean {
-        return (
-          this.managementRequestsStore.currentFilter.status ===
-          ManagementRequestStatus.WAITING
-        );
-      },
-      set(value: boolean) {
-        this.managementRequestsStore.pagingSortingOptions.page = 1;
-        this.managementRequestsStore.currentFilter.status = value
-          ? ManagementRequestStatus.WAITING
-          : undefined;
-      },
-    },
-    filterQuery: {
-      get(): string {
-        return this.managementRequestsStore.currentFilter.query || '';
-      },
-      set(value: string) {
-        this.managementRequestsStore.pagingSortingOptions.page = 1;
-        this.managementRequestsStore.currentFilter.query = value;
-      },
-    },
-  },
-  watch: {
-    filterQuery: {
-      handler(newValue, oldValue) {
-        this.debouncedFetchItems();
-      },
-    },
-  },
-  created() {
-    that = this;
-  },
-  methods: {
-    ...mapActions(notificationsStore, ['showError', 'showSuccess']),
-    debouncedFetchItems: debounce(() => {
-      // Debounce is used to reduce unnecessary api calls
-      that.fetchItems();
-    }, 600),
-    changeOptions: async function () {
-      await this.fetchItems();
-    },
-    fetchItems: async function () {
-      this.loading = true;
+const sortBy = [{ key: 'id', order: 'desc' }] as SortItem[];
+const loading = ref(false);
+const toApprove = ref<ManagementRequestListView | undefined>(undefined);
+const toDecline = ref<ManagementRequestListView | undefined>(undefined);
+const dataQuery = reactive({} as DataQuery);
 
-      try {
-        await this.managementRequestsStore.find(
-          this.managementRequestsStore.pagingSortingOptions,
-          this.managementRequestsStore.currentFilter,
-        );
-      } catch (error: unknown) {
-        this.showError(error);
-      } finally {
-        this.loading = false;
-      }
-    },
+const managementRequests = useManagementRequests();
+const { addError } = useNotifications();
+const { t } = useI18n();
+const router = useRouter();
+const { hasPermission } = useUser();
+
+const showOnlyPending = computed({
+  get(): boolean {
+    return managementRequests.currentFilter.status === ManagementRequestStatus.WAITING;
+  },
+  set(value: boolean) {
+    managementRequests.currentFilter.status = value ? ManagementRequestStatus.WAITING : undefined;
   },
 });
-</script>
 
-<style lang="scss" scoped>
-@import '~@/assets/tables';
+const filterQuery = computed({
+  get(): string {
+    return managementRequests.currentFilter.query || '';
+  },
+  set(value: string) {
+    managementRequests.currentFilter.query = value;
+  },
+});
 
-#management-request-filters {
-  display: flex;
-  justify-content: space-between;
+const newClientOwner = computed(
+  () => toApprove.value?.type === ManagementRequestType.CLIENT_REGISTRATION_REQUEST && !toApprove.value?.client_owner_name,
+);
+const newServerOwner = computed(
+  () => toApprove.value?.type === ManagementRequestType.AUTH_CERT_REGISTRATION_REQUEST && !toApprove.value?.security_server_owner,
+);
+const newMember = computed(() => newClientOwner.value || newServerOwner.value);
+
+const headers = computed(
+  () =>
+    [
+      {
+        title: t('global.id') as string,
+        align: 'start',
+        key: 'id',
+      },
+      {
+        title: t('global.created') as string,
+        align: 'start',
+        key: 'created_at',
+      },
+      {
+        title: t('global.type') as string,
+        align: 'start',
+        key: 'type',
+      },
+      {
+        title: t('managementRequests.securityServerOwnerName') as string,
+        align: 'start',
+        key: 'security_server_owner',
+      },
+      {
+        title: t('managementRequests.securityServerId') as string,
+        align: 'start',
+        key: 'security_server_id',
+      },
+      {
+        title: t('global.status') as string,
+        align: 'start',
+        key: 'status',
+      },
+      {
+        title: '',
+        sortable: false,
+        key: 'button',
+      },
+    ] as DataTableHeader[],
+);
+
+const canSeeDetails = computed(() => hasPermission(Permissions.VIEW_MANAGEMENT_REQUEST_DETAILS));
+const canApprove = computed(() => hasPermission(Permissions.VIEW_MANAGEMENT_REQUEST_DETAILS));
+const canDecline = computed(() => hasPermission(Permissions.VIEW_MANAGEMENT_REQUEST_DETAILS));
+
+watch(
+  filterQuery,
+  debounce(() => {
+    // Debounce is used to reduce unnecessary api calls
+    fetchItems();
+  }, 600),
+);
+
+function navigateToDetails(reqId: number): void {
+  router.push({
+    name: RouteName.ManagementRequestDetails,
+    params: { requestId: String(reqId) },
+  });
 }
 
-.align-fix {
-  align-items: center;
+async function changeOptions({ itemsPerPage, page, sortBy }: PagingOptions) {
+  dataQuery.itemsPerPage = itemsPerPage;
+  dataQuery.page = page;
+  dataQuery.sortBy = sortBy[0]?.key;
+  const order = sortBy[0]?.order;
+  dataQuery.sortOrder = order === undefined ? undefined : order === true || order === 'asc' ? 'asc' : 'desc';
+  await fetchItems();
 }
 
-.margin-fix {
-  margin-top: -10px;
-}
+async function fetchItems() {
+  toApprove.value = undefined;
+  toDecline.value = undefined;
+  loading.value = true;
 
-.custom-checkbox {
-  .v-label {
-    font-size: 14px;
+  try {
+    await managementRequests.find(dataQuery, managementRequests.currentFilter);
+  } catch (error: unknown) {
+    addError(error);
+  } finally {
+    loading.value = false;
   }
 }
+</script>
 
-.only-pending {
-  display: flex;
-  justify-content: flex-end;
-}
-</style>
+<style lang="scss" scoped></style>

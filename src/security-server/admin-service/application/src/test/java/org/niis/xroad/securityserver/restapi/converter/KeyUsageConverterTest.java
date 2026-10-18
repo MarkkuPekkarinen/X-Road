@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -26,7 +27,7 @@
 package org.niis.xroad.securityserver.restapi.converter;
 
 import org.junit.Test;
-import org.niis.xroad.securityserver.restapi.openapi.model.KeyUsage;
+import org.niis.xroad.securityserver.restapi.openapi.model.KeyUsageDto;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -44,39 +45,39 @@ public class KeyUsageConverterTest {
     @Test
     public void convert() {
         boolean[] bits;
-        bits = new boolean[] {false, false, false, false, false, false, false, false, false };
-        Set<KeyUsage> usages = keyUsageConverter.convert(bits);
+        bits = new boolean[]{false, false, false, false, false, false, false, false, false};
+        Set<KeyUsageDto> usages = keyUsageConverter.convert(bits);
         assertEquals(new HashSet<>(usages), new HashSet<>());
 
-        bits = new boolean[] {true, false, false, false, false, false, false, false, true };
+        bits = new boolean[]{true, false, false, false, false, false, false, false, true};
         usages = keyUsageConverter.convert(bits);
         assertEquals(new HashSet<>(usages), new HashSet<>(Arrays.asList(
-                KeyUsage.DIGITAL_SIGNATURE,
-                KeyUsage.DECIPHER_ONLY)));
+                KeyUsageDto.DIGITAL_SIGNATURE,
+                KeyUsageDto.DECIPHER_ONLY)));
 
-        bits = new boolean[] {false, true, false, false, false, false, false, true, false };
+        bits = new boolean[]{false, true, false, false, false, false, false, true, false};
         usages = keyUsageConverter.convert(bits);
         assertEquals(new HashSet<>(usages), new HashSet<>(Arrays.asList(
-                KeyUsage.NON_REPUDIATION,
-                KeyUsage.ENCIPHER_ONLY)));
+                KeyUsageDto.NON_REPUDIATION,
+                KeyUsageDto.ENCIPHER_ONLY)));
 
-        bits = new boolean[] {false, false, false, false, true, false, false, false, false };
+        bits = new boolean[]{false, false, false, false, true, false, false, false, false};
         usages = keyUsageConverter.convert(bits);
         assertEquals(new HashSet<>(usages), new HashSet<>(Arrays.asList(
-                KeyUsage.KEY_AGREEMENT)));
+                KeyUsageDto.KEY_AGREEMENT)));
 
-        bits = new boolean[] {false, false, false, false, true };
+        bits = new boolean[]{false, false, false, false, true};
         usages = keyUsageConverter.convert(bits);
         assertEquals(new HashSet<>(usages), new HashSet<>(Arrays.asList(
-                KeyUsage.KEY_AGREEMENT)));
+                KeyUsageDto.KEY_AGREEMENT)));
 
-        bits = new boolean[] {};
+        bits = new boolean[]{};
         usages = keyUsageConverter.convert(bits);
         assertEquals(new HashSet<>(usages), new HashSet<>());
 
-        bits = new boolean[] {false, false, false, false, false, false, false, false, true, true, true, true };
+        bits = new boolean[]{false, false, false, false, false, false, false, false, true, true, true, true};
         usages = keyUsageConverter.convert(bits);
         assertEquals(new HashSet<>(usages), new HashSet<>(Arrays.asList(
-                KeyUsage.DECIPHER_ONLY)));
+                KeyUsageDto.DECIPHER_ONLY)));
     }
 }

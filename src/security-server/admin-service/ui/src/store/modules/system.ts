@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,21 +25,52 @@
  * THE SOFTWARE.
  */
 
-import { NodeType, NodeTypeResponse, VersionInfo } from '@/openapi-types';
-import * as api from '@/util/api';
 import { defineStore } from 'pinia';
 
-export const useSystemStore = defineStore('systemStore', {
-  state: () => {
+import {
+  AddressChangeData,
+  Anchor,
+  AuthProviderType,
+  AuthProviderTypeResponse,
+  EnableMaintenanceModeData,
+  MaintenanceMode,
+  NodeType,
+  NodeTypeResponse,
+  SecurityServerAddressStatus,
+  VersionInfo,
+} from '@/openapi-types';
+import * as api from '@/util/api';
+import { buildFileFormData, ConfigurablePropertyDto, ConfigurablePropertyUpdateDto, multipartFormDataConfig } from '@niis/shared-ui';
+
+export interface SystemState {
+  securityServerVersion: VersionInfo;
+  securityServerNodeType?: NodeType;
+  securityServerAuthProviderType?: AuthProviderType;
+}
+
+export const useSystem = defineStore('system', {
+  state: (): SystemState => {
     return {
       securityServerVersion: {} as VersionInfo,
-      securityServerNodeType: undefined as undefined | NodeType,
+      securityServerNodeType: undefined,
+      securityServerAuthProviderType: undefined,
     };
   },
-  persist: true, // This store is saved into browser local storage (pinia-plugin-persistedstate)
+  persist: {
+    storage: localStorage,
+  },
   getters: {
     isSecondaryNode(state) {
       return state.securityServerNodeType === NodeType.SECONDARY;
+    },
+    globalConfigurationVersion(state): number | undefined {
+      return state.securityServerVersion.global_configuration_version;
+    },
+    doesSupportSubsystemNames(): boolean {
+      return !!this.globalConfigurationVersion && this.globalConfigurationVersion >= 5;
+    },
+    isDatabaseBasedAuthentication(): boolean {
+      return this.securityServerAuthProviderType === AuthProviderType.DATABASE;
     },
   },
 
@@ -48,15 +80,57 @@ export const useSystemStore = defineStore('systemStore', {
       this.$reset();
     },
     async fetchSecurityServerNodeType() {
+      return api.get<NodeTypeResponse>('/system/node-type').then((res) => {
+        this.securityServerNodeType = res.data.node_type;
+      });
+    },
+    async fetchSecurityServerVersion() {
       return api.get<VersionInfo>('/system/version').then((res) => {
         this.securityServerVersion = res.data;
       });
     },
-    async fetchSecurityServerVersion() {
-      // Fetch tokens from backend
-      return api.get<NodeTypeResponse>('/system/node-type').then((res) => {
-        this.securityServerNodeType = res.data.node_type;
+    async fetchAuthenticationProviderType() {
+      return api.get<AuthProviderTypeResponse>('/system/auth-provider-type').then((res) => {
+        this.securityServerAuthProviderType = res.data.auth_provider_type;
       });
+    },
+    async enableMaintenanceMode(message?: string) {
+      const body: EnableMaintenanceModeData['body'] = { message };
+      return api.put('/system/maintenance-mode/enable', body);
+    },
+    async disableMaintenanceMode() {
+      return api.put('/system/maintenance-mode/disable', undefined);
+    },
+    async fetchMaintenanceModeState() {
+      return api.get<MaintenanceMode>('/system/maintenance-mode').then((resp) => resp.data);
+    },
+    async fetchSecurityServerAddress() {
+      return api.get<SecurityServerAddressStatus>('/system/server-address').then((resp) => resp.data);
+    },
+    async changeSecurityServerAddress(address: string) {
+      const body: AddressChangeData['body'] = { address };
+      return api.put('/system/server-address', body);
+    },
+    async fetchConfigurableProperties() {
+      return api.get<ConfigurablePropertyDto[]>('/system/property').then((resp) => resp.data);
+    },
+    async updateConfigurableProperty(update: ConfigurablePropertyUpdateDto) {
+      return api.patch('/system/property', update);
+    },
+    async uploadAnchor(initMode: boolean, anchorFile: File) {
+      const apiCall = initMode ? api.post : api.put;
+      return apiCall('/system/anchor', buildFileFormData('anchor', anchorFile), multipartFormDataConfig());
+    },
+    async fetchConfigurationAnchor() {
+      return api.get<Anchor>('/system/anchor').then((resp) => resp.data);
+    },
+    async downloadAnchor() {
+      return api.get('/system/anchor/download', { responseType: 'blob' });
+    },
+    async previewAnchor(initMode: boolean, anchorFile: File) {
+      const path = initMode ? '/system/anchor/previews?validate_instance=false' : '/system/anchor/previews';
+
+      return api.post<Anchor>(path, buildFileFormData('anchor', anchorFile), multipartFormDataConfig()).then((resp) => resp.data);
     },
   },
 });

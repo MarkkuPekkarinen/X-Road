@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,19 +25,21 @@
    THE SOFTWARE.
  -->
 <template>
-  <xrd-simple-dialog
-    :dialog="dialog"
+  <XrdSimpleDialog
+    v-if="dialog"
     title="warning"
     cancel-button-text="action.cancel"
     save-button-text="action.yes"
-    :show-close="false"
+    hide-close
     @save="accept"
     @cancel="cancel"
   >
-    <div slot="content" data-test="dialog-content-text">
-      <template v-if="errorResponse">{{ $t('keys.unregisterError') }}</template>
-    </div>
-  </xrd-simple-dialog>
+    <template #content>
+      <div data-test="dialog-content-text">
+        <template v-if="errorResponse">{{ $t('keys.unregisterError') }} </template>
+      </div>
+    </template>
+  </XrdSimpleDialog>
 </template>
 
 <script lang="ts">
@@ -44,9 +47,11 @@
  * A dialog for handling error in unregister auth certificate
  */
 
-import Vue from 'vue';
+import { defineComponent } from 'vue';
+import { XrdSimpleDialog } from '@niis/shared-ui';
 
-export default Vue.extend({
+export default defineComponent({
+  components: { XrdSimpleDialog },
   props: {
     dialog: {
       type: Boolean,
@@ -62,7 +67,7 @@ export default Vue.extend({
       default: false,
     },
   },
-
+  emits: ['cancel', 'accept'],
   methods: {
     cancel(): void {
       this.$emit('cancel');

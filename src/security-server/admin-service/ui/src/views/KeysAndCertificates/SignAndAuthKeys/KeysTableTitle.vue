@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,38 +25,45 @@
    THE SOFTWARE.
  -->
 <template>
-  <div class="table-title" :class="{ 'table-closed': !arrowState }">
-    <div class="title-text" data-test="key-title-sort" @click="arrowClick">
-      <v-btn icon :color="colors.WarmGrey100">
-        <v-icon v-if="arrowState">icon-Sorting-arrow</v-icon>
-        <v-icon v-else class="arrow-degree">icon-Sorting-arrow</v-icon>
-      </v-btn>
+  <div class="table-title cursor-pointer d-flex flex-row align-center pt-2 pb-2 pl-4 pr-4" :class="{ 'table-closed': !arrowState }">
+    <div class="title-text font-weight-medium" data-test="key-title-sort" @click="arrowClick">
+      <v-btn class="xrd opacity-100" variant="plain" color="primary" :icon="icon" :ripple="false" />
 
       {{ title }}
     </div>
-    <div class="status-wrap">
-      <div v-if="errors > 0" class="errors">
-        <v-icon color="red">icon-Error</v-icon> {{ errors }}
-        {{ $t('keys.globalErrors') }}
-      </div>
-      <div v-else-if="registered === certificateCount" class="registered">
-        <v-icon color="green">icon-Checked</v-icon> {{ $t('keys.noIssues') }}
-      </div>
+    <v-spacer />
+    <div v-if="errors > 0" class="errors">
+      <v-chip class="xrd" density="compact" color="error-container" variant="flat">
+        <template #prepend>
+          <v-icon class="mr-1 ml-n1" icon="error" color="error" />
+        </template>
+        <span class="font-weight-medium body-small">
+          {{ $t('keys.globalErrors') }}
+        </span>
+      </v-chip>
+    </div>
+    <div v-else-if="registered === certificateCount" class="registered">
+      <v-chip class="xrd" density="compact" color="success-container" variant="flat">
+        <template #prepend>
+          <v-icon class="mr-1 ml-n1" icon="check_circle" color="success" filled />
+        </template>
+        <span class="font-weight-medium body-small">
+          {{ $t('keys.noIssues') }}
+        </span>
+      </v-chip>
     </div>
   </div>
 </template>
 
 <script lang="ts">
 // View for a token
-import Vue from 'vue';
-import { Colors } from '@/global';
+import { defineComponent, PropType } from 'vue';
 import { CertificateStatus, Key, TokenCertificate } from '@/openapi-types';
-import { Prop } from 'vue/types/options';
 
-export default Vue.extend({
+export default defineComponent({
   props: {
     keys: {
-      type: Array as Prop<Key[]>,
+      type: Array as PropType<Key[]>,
       required: true,
     },
     title: {
@@ -67,15 +75,19 @@ export default Vue.extend({
       required: true,
     },
   },
+  emits: ['click'],
   data() {
     return {
       errors: 0,
       registered: 0,
       certificateCount: 0,
-      colors: Colors,
     };
   },
-  computed: {},
+  computed: {
+    icon() {
+      return this.arrowState ? 'keyboard_arrow_down' : 'chevron_right';
+    },
+  },
   created() {
     this.countStates();
   },
@@ -100,44 +112,4 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" scoped>
-@import '~styles/tables';
-@import '~styles/colors';
-
-.status-wrap {
-  text-transform: uppercase;
-  font-size: 12px;
-  font-weight: 700;
-  color: $XRoad-WarmGrey100;
-}
-
-.errors {
-  color: $XRoad-Error;
-}
-
-.table-title {
-  margin-top: -1px; // avoid double 2px border with multiple components
-  width: 100%;
-  border-top: 1px solid $XRoad-WarmGrey30;
-  padding: 10px;
-  padding-right: 20px;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  height: 100%;
-  align-items: center;
-
-  .title-text {
-    cursor: pointer;
-  }
-}
-
-.table-closed {
-  // Show bottom border only when table is closed
-  border-bottom: 1px solid $XRoad-WarmGrey30;
-}
-
-.arrow-degree {
-  transform: translate(-4px) rotate(-90deg);
-}
-</style>
+<style lang="scss" scoped></style>

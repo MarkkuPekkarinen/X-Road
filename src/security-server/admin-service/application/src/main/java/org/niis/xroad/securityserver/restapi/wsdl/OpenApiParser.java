@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -26,19 +26,17 @@
 
 package org.niis.xroad.securityserver.restapi.wsdl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.parser.OpenAPIV3Parser;
-import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import lombok.Value;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.niis.xroad.restapi.exceptions.ErrorDeviation;
-import org.niis.xroad.restapi.service.ServiceException;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -53,38 +51,38 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_OPENAPI_PARSING;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_UNSUPPORTED_OPENAPI_VERSION;
+import static org.niis.xroad.securityserver.restapi.exceptions.ErrorMessage.OPENAPI_PARSING;
 
 /**
  * Parser for OpenAPI descriptions
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class OpenApiParser {
 
-    private static final String SUPPORTED_OPENAPI_MINOR_VERSION = "3.0";
+    private static final String SUPPORTED_OPENAPI_MINOR_VERSION_3_0 = "3.0";
+    private static final String SUPPORTED_OPENAPI_VERSION_3_1_0 = "3.1.0";
     private static final int BUF_SIZE = 8192;
     private static final long MAX_DESCRIPTION_SIZE = 10 * 1024 * 1024;
-    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper YAML_MAPPER = YAMLMapper.builder().build();
+    private static final ObjectMapper JSON_MAPPER = JsonMapper.builder().build();
+
+    private final HttpUrlConnectionConfig httpUrlConnectionConfig;
 
     /**
      * Parse openapi3 description
-     *
      * @return OpenApiParser.Result
-     * @throws ParsingException if parsing cannot be done
+     * @throws ParsingException                   if parsing cannot be done
      * @throws UnsupportedOpenApiVersionException if the openapi version is not supported
      */
     public Result parse(String urlString) throws ParsingException, UnsupportedOpenApiVersionException {
-        URI openApiUrl = null;
+        URI openApiUrl;
         try {
             openApiUrl = new URI(urlString);
         } catch (URISyntaxException e) {
             throw new ParsingException("Invalid URL", e);
         }
-
-        final ParseOptions options = new ParseOptions();
-        options.setResolve(false);
 
         final SwaggerParseResult result;
 
@@ -92,12 +90,13 @@ public class OpenApiParser {
             String openApiDescription = readOpenAPIDescription(openApiUrl);
             JsonNode jsonNode = YAML_MAPPER.readTree(openApiDescription);
             verifyOpenApiVersion(jsonNode);
-            result = new OpenAPIV3Parser().parseJsonNode(null, jsonNode);
-        } catch (JsonProcessingException e) {
-            throw new ParsingException("Unable to parse OpenAPI description from " + openApiUrl, e);
+            String jsonContent = JSON_MAPPER.writeValueAsString(jsonNode);
+            result = new OpenAPIV3Parser().readContents(jsonContent, null, null);
+        } catch (ParsingException | UnsupportedOpenApiVersionException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Reading OpenAPI description from {} failed", openApiUrl, e);
-            throw e;
+            throw new ParsingException("Unable to parse OpenAPI description from " + openApiUrl, e);
         }
 
         validate(result, openApiUrl);
@@ -126,12 +125,16 @@ public class OpenApiParser {
     }
 
     private void verifyOpenApiVersion(JsonNode node) throws UnsupportedOpenApiVersionException {
-        final String openapiVersion = node.get("openapi").asText();
-        if (openapiVersion != null && !openapiVersion.startsWith(SUPPORTED_OPENAPI_MINOR_VERSION)) {
+        final String openapiVersion = node.get("openapi").asString();
+        if (openapiVersion != null && !versionSupported(openapiVersion)) {
             String errorMsg = String.format("OpenAPI version %s not supported", openapiVersion);
-            throw new UnsupportedOpenApiVersionException(errorMsg,
-                    new ErrorDeviation(ERROR_UNSUPPORTED_OPENAPI_VERSION));
+            throw new UnsupportedOpenApiVersionException(errorMsg);
         }
+    }
+
+    private boolean versionSupported(String version) {
+        return version.startsWith(SUPPORTED_OPENAPI_MINOR_VERSION_3_0)
+                || version.equals(SUPPORTED_OPENAPI_VERSION_3_1_0);
     }
 
     private void validate(SwaggerParseResult result, URI openApiUrl) throws ParsingException {
@@ -147,8 +150,8 @@ public class OpenApiParser {
                 throw new ParsingException("Invalid protocol: " + openApiUrl.getScheme());
             }
             conn = openApiUrl.toURL().openConnection();
-            if (conn instanceof HttpURLConnection) {
-                HttpUrlConnectionConfig.apply((HttpURLConnection) conn);
+            if (conn instanceof HttpURLConnection httpURLConnection) {
+                httpUrlConnectionConfig.apply(httpURLConnection);
             }
             conn.connect();
             try (InputStreamReader in = new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)) {
@@ -183,13 +186,11 @@ public class OpenApiParser {
 
     /**
      * OpenAPI parsing result
+     * @param baseUrl
+     * @param operations
+     * @param warnings
      */
-    @Value
-    public static class Result {
-
-        private final String baseUrl;
-        private final List<Operation> operations;
-        private final List<String> warnings;
+    public record Result(String baseUrl, List<Operation> operations, List<String> warnings) {
 
         /**
          * @return true if the result has non-fatal errors
@@ -202,23 +203,22 @@ public class OpenApiParser {
 
     /**
      * Operation (method + path) in the API
+     * @param method
+     * @param path
      */
-    @Value
-    public static class Operation {
-        private final String method;
-        private final String path;
+    public record Operation(String method, String path) {
     }
 
     /**
      * OpenAPI Parsing Exception
      */
-    public static class ParsingException extends ServiceException {
+    public static class ParsingException extends BadRequestException {
         public ParsingException(String message) {
-            super(new ErrorDeviation(ERROR_OPENAPI_PARSING, message));
+            super(OPENAPI_PARSING.build(message));
         }
 
         public ParsingException(String message, Throwable cause) {
-            super(cause, new ErrorDeviation(ERROR_OPENAPI_PARSING, message));
+            super(cause, OPENAPI_PARSING.build(message));
         }
 
     }

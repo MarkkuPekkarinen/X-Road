@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -26,7 +27,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: process.env.VUE_APP_AUTH_URL,
+  baseURL: import.meta.env.VITE_VUE_APP_AUTH_URL,
 });
 
 export default instance;

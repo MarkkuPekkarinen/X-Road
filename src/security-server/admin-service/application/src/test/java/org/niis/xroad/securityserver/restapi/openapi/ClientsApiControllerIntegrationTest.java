@@ -1,5 +1,6 @@
-/**
+/*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,54 +26,55 @@
  */
 package org.niis.xroad.securityserver.restapi.openapi;
 
-import ee.ria.xroad.common.conf.globalconf.GlobalGroupInfo;
 import ee.ria.xroad.common.identifier.ClientId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
-import ee.ria.xroad.signer.protocol.dto.CertRequestInfo;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyInfo;
-import ee.ria.xroad.signer.protocol.dto.KeyUsageInfo;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.stubbing.Answer;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
+import org.niis.xroad.common.exception.NotFoundException;
+import org.niis.xroad.globalconf.model.GlobalGroupInfo;
+import org.niis.xroad.globalconf.model.MemberInfo;
 import org.niis.xroad.restapi.exceptions.DeviationCodes;
-import org.niis.xroad.restapi.openapi.BadRequestException;
-import org.niis.xroad.restapi.openapi.ConflictException;
-import org.niis.xroad.restapi.openapi.ResourceNotFoundException;
 import org.niis.xroad.securityserver.restapi.converter.comparator.ClientSortingComparator;
 import org.niis.xroad.securityserver.restapi.converter.comparator.ServiceClientSortingComparator;
-import org.niis.xroad.securityserver.restapi.openapi.model.AccessRight;
-import org.niis.xroad.securityserver.restapi.openapi.model.AccessRights;
-import org.niis.xroad.securityserver.restapi.openapi.model.CertificateDetails;
-import org.niis.xroad.securityserver.restapi.openapi.model.Client;
-import org.niis.xroad.securityserver.restapi.openapi.model.ClientAdd;
-import org.niis.xroad.securityserver.restapi.openapi.model.ClientStatus;
-import org.niis.xroad.securityserver.restapi.openapi.model.ConnectionType;
-import org.niis.xroad.securityserver.restapi.openapi.model.ConnectionTypeWrapper;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroup;
-import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupAdd;
-import org.niis.xroad.securityserver.restapi.openapi.model.OrphanInformation;
-import org.niis.xroad.securityserver.restapi.openapi.model.Service;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceClient;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceClientType;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescription;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescriptionAdd;
-import org.niis.xroad.securityserver.restapi.openapi.model.ServiceType;
-import org.niis.xroad.securityserver.restapi.openapi.model.TokenCertificate;
+import org.niis.xroad.securityserver.restapi.openapi.model.AccessRightDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.AccessRightsDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.CertificateDetailsDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ClientStatusDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ConnectionTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ConnectionTypeWrapperDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.LocalGroupDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.OrphanInformationDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceClientDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceClientTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescriptionAddDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDescriptionDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.ServiceTypeDto;
+import org.niis.xroad.securityserver.restapi.openapi.model.TokenCertificateDto;
 import org.niis.xroad.securityserver.restapi.util.CertificateTestUtils;
 import org.niis.xroad.securityserver.restapi.util.CertificateTestUtils.CertRequestInfoBuilder;
 import org.niis.xroad.securityserver.restapi.util.TestUtils;
 import org.niis.xroad.securityserver.restapi.util.TokenTestUtils;
-import org.niis.xroad.securityserver.restapi.wsdl.WsdlValidatorTest;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.KeyInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -84,19 +86,20 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static junit.framework.TestCase.fail;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.niis.xroad.securityserver.restapi.util.CertificateTestUtils.getResource;
+import static org.niis.xroad.securityserver.restapi.util.CertificateTestUtils.MOCK_CERTIFICATE_HASH;
+import static org.niis.xroad.securityserver.restapi.util.CertificateTestUtils.WIDGITS_CERTIFICATE_HASH;
+import static org.niis.xroad.securityserver.restapi.util.CertificateTestUtils.getMultipartFile;
 import static org.niis.xroad.securityserver.restapi.util.DeviationTestUtils.assertErrorWithMetadata;
 import static org.niis.xroad.securityserver.restapi.util.DeviationTestUtils.assertErrorWithoutMetadata;
 import static org.niis.xroad.securityserver.restapi.util.DeviationTestUtils.assertWarning;
@@ -106,11 +109,15 @@ import static org.niis.xroad.securityserver.restapi.util.TestUtils.assertLocatio
 /**
  * Test ClientsApiController
  */
-public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTestContext {
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
+@ExtendWith(SpringExtension.class)
+class ClientsApiControllerIntegrationTest extends AbstractApiControllerTestContext {
     @Autowired
     ClientSortingComparator clientSortingComparator;
     @Autowired
     ServiceClientSortingComparator serviceClientSortingComparator;
+    @Autowired
+    SignerRpcClient signerRpcClient;
 
     private static final SecurityServerId.Conf OWNER_SERVER_ID = SecurityServerId.Conf.create(TestUtils.getM1Ss1ClientId(),
             "owner");
@@ -124,44 +131,38 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
     private static final List<String> MEMBER_CLASSES = Arrays.asList(TestUtils.MEMBER_CLASS_GOV,
             TestUtils.MEMBER_CLASS_PRO);
 
-    @Before
-    public void setup() throws Exception {
-        when(globalConfFacade.getMemberName(any())).thenAnswer((Answer<String>) invocation -> {
+    @BeforeEach
+    void setup() throws Exception {
+
+        when(globalConfProvider.getMemberName(any())).thenAnswer((Answer<String>) invocation -> {
             Object[] args = invocation.getArguments();
             ClientId identifier = (ClientId) args[0];
             return identifier.getSubsystemCode() != null ? TestUtils.NAME_FOR + identifier.getSubsystemCode()
                     : TestUtils.NAME_FOR + "test-member";
         });
-        when(globalConfFacade.getMembers(any())).thenReturn(new ArrayList<>(Arrays.asList(
-                TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                        null),
-                TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                        TestUtils.SUBSYSTEM1),
-                TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                        TestUtils.SUBSYSTEM2),
-                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M2,
-                        TestUtils.SUBSYSTEM3),
-                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1,
-                        null),
-                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_PRO, TestUtils.MEMBER_CODE_M1,
-                        TestUtils.SUBSYSTEM1),
-                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_PRO, TestUtils.MEMBER_CODE_M2,
-                        null)
-        )
-        ));
-        List<TokenInfo> mockTokens = createMockTokenInfos(null);
-        when(tokenService.getAllTokens()).thenReturn(mockTokens);
-        when(wsdlValidator.getWsdlValidatorCommand()).thenReturn("src/test/resources/validator/mock-wsdlvalidator.sh");
-        when(globalConfFacade.getGlobalGroups(any())).thenReturn(globalGroupInfos);
-        when(globalConfFacade.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
-        when(globalConfFacade.getInstanceIdentifiers()).thenReturn(instanceIdentifiers);
+        List<MemberInfo> members = List.of(
+                TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, null),
+                TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM1),
+                TestUtils.getMemberInfo(TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM2),
+                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M2, TestUtils.SUBSYSTEM3),
+                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, null),
+                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_PRO, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM1),
+                TestUtils.getMemberInfo(TestUtils.INSTANCE_EE, TestUtils.MEMBER_CLASS_PRO, TestUtils.MEMBER_CODE_M2, null)
+        );
+        when(globalConfProvider.getMembers()).thenReturn(new ArrayList<>(members));
+        List<TokenInfo> mockTokens = createMockTokenInfos();
+        doReturn(mockTokens).when(tokenService).getAllTokens();
+        when(globalConfProvider.getGlobalGroups()).thenReturn(globalGroupInfos);
+        when(globalConfProvider.getGlobalGroups(any(String[].class))).thenReturn(globalGroupInfos);
+        when(globalConfProvider.getInstanceIdentifier()).thenReturn(TestUtils.INSTANCE_FI);
+        when(globalConfProvider.getInstanceIdentifiers()).thenReturn(instanceIdentifiers);
         // mock for URL validator - FormatUtils is tested independently
         when(urlValidator.isValidUrl(any())).thenReturn(true);
-        when(managementRequestSenderService.sendClientRegisterRequest(any())).thenReturn(0);
+        when(managementRequestSenderService.sendClientRegisterRequest(any(), anyString())).thenReturn(0);
         when(managementRequestSenderService.sendOwnerChangeRequest(any())).thenReturn(0);
-        when(serverConfService.getSecurityServerId()).thenReturn(OWNER_SERVER_ID);
+        doReturn(OWNER_SERVER_ID).when(serverConfService).getSecurityServerId();
         when(currentSecurityServerId.getServerId()).thenReturn(OWNER_SERVER_ID);
-        when(globalConfService.getMemberClassesForThisInstance()).thenReturn(new HashSet<>(MEMBER_CLASSES));
+        doReturn(new HashSet<>(MEMBER_CLASSES)).when(globalConfService).getMemberClassesForThisInstance();
     }
 
     @Autowired
@@ -169,23 +170,26 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void getAllClients() {
-        ResponseEntity<Set<Client>> response =
-                clientsApiController.findClients(null, null, null, null, null, true, false, null, false);
+    void getAllClients() {
+        ResponseEntity<Set<ClientDto>> response = clientsApiController.findClients(null, null, null, null, null, true,
+                false, null, false, false);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(11, response.getBody().size());
+        assertNotNull(response.getBody());
+        assertEquals(12, response.getBody().size());
         // Test sorting order
-        assertEquals(true, TestUtils.isSortOrderCorrect(response.getBody(), clientSortingComparator));
+        assertTrue(TestUtils.isSortOrderCorrect(response.getBody(), clientSortingComparator));
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void ownerMemberFlag() {
-        ResponseEntity<Set<Client>> response =
-                clientsApiController.findClients(null, null, null, null, null, true, false, null, false);
-        assertEquals(11, response.getBody().size());
-        List<Client> owners = response.getBody().stream()
-                .filter(Client::getOwner)
+    void ownerMemberFlag() {
+        ResponseEntity<Set<ClientDto>> response =
+                clientsApiController.findClients(null, null, null, null, null, true,
+                        false, null, false, false);
+        assertNotNull(response.getBody());
+        assertEquals(12, response.getBody().size());
+        List<ClientDto> owners = response.getBody().stream()
+                .filter(ClientDto::getOwner)
                 .collect(Collectors.toList());
         assertEquals(1, owners.size());
         assertEquals("FI:GOV:M1", owners.iterator().next().getId());
@@ -193,30 +197,36 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void getAllLocalClients() {
-        ResponseEntity<Set<Client>> response = clientsApiController.findClients(null, null, null, null, null, true,
-                true, null, false);
+    void getAllLocalClients() {
+        ResponseEntity<Set<ClientDto>> response = clientsApiController.findClients(null, null, null, null, null, true,
+                true, null, false, false);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(7, response.getBody().size());
-        Client client = response
+        assertNotNull(response.getBody());
+        assertEquals(8, response.getBody().size());
+        ClientDto client = response
                 .getBody()
                 .stream()
-                .filter(item -> item.getMemberName().equals(TestUtils.NAME_FOR + "SS1"))
+                .filter(item -> {
+                    assertNotNull(item.getMemberName());
+                    return item.getMemberName().equals(TestUtils.NAME_FOR + "SS1");
+                })
                 .findFirst()
                 .orElse(null);
+        assertNotNull(client);
         assertEquals(TestUtils.NAME_FOR + "SS1", client.getMemberName());
         assertEquals("M1", client.getMemberCode());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENT_DETAILS")
-    public void getClient() {
-        ResponseEntity<Client> response =
+    void getClient() {
+        ResponseEntity<ClientDto> response =
                 clientsApiController.getClient("FI:GOV:M1");
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        Client client = response.getBody();
-        assertEquals(ConnectionType.HTTP, client.getConnectionType());
-        assertEquals(ClientStatus.REGISTERED, client.getStatus());
+        ClientDto client = response.getBody();
+        assertNotNull(client);
+        assertEquals(ConnectionTypeDto.HTTP, client.getConnectionType());
+        assertEquals(ClientStatusDto.REGISTERED, client.getStatus());
         assertEquals(TestUtils.NAME_FOR + "test-member", client.getMemberName());
         assertEquals("GOV", client.getMemberClass());
         assertEquals("M1", client.getMemberCode());
@@ -225,56 +235,64 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
         response = clientsApiController.getClient("FI:GOV:M1:SS1");
         assertEquals(HttpStatus.OK, response.getStatusCode());
         client = response.getBody();
-        assertEquals(ConnectionType.HTTPS_NO_AUTH, client.getConnectionType());
-        assertEquals(ClientStatus.REGISTERED, client.getStatus());
+        assertNotNull(client);
+        assertEquals(ConnectionTypeDto.HTTPS_NO_AUTH, client.getConnectionType());
+        assertEquals(ClientStatusDto.REGISTERED, client.getStatus());
         assertEquals(TestUtils.NAME_FOR + "SS1", client.getMemberName());
         assertEquals("GOV", client.getMemberClass());
         assertEquals("M1", client.getMemberCode());
         assertEquals("FI:GOV:M1:SS1", client.getId());
         assertEquals("SS1", client.getSubsystemCode());
-        try {
-            clientsApiController.getClient("FI:GOV:M1:SS3");
-            fail("should throw ResourceNotFoundException to 404");
-        } catch (ResourceNotFoundException expected) {
-        }
+
+        assertThrows(NotFoundException.class, () -> clientsApiController.getClient("FI:GOV:M1:SS3"));
     }
 
     @Test
-    @WithMockUser(authorities = { "EDIT_CLIENT_INTERNAL_CONNECTION_TYPE", "VIEW_CLIENT_DETAILS" })
-    public void updateClient() throws Exception {
-        ResponseEntity<Client> response =
+    @WithMockUser(authorities = {"EDIT_CLIENT_INTERNAL_CONNECTION_TYPE", "VIEW_CLIENT_DETAILS"})
+    void updateClient() {
+        ResponseEntity<ClientDto> response =
                 clientsApiController.getClient("FI:GOV:M1:SS1");
-        assertEquals(ConnectionType.HTTPS_NO_AUTH, response.getBody().getConnectionType());
-        ConnectionTypeWrapper http = new ConnectionTypeWrapper();
-        http.setConnectionType(ConnectionType.HTTP);
+        assertNotNull(response.getBody());
+        assertEquals(ConnectionTypeDto.HTTPS_NO_AUTH, response.getBody().getConnectionType());
+        ConnectionTypeWrapperDto http = new ConnectionTypeWrapperDto();
+        http.setConnectionType(ConnectionTypeDto.HTTP);
         response = clientsApiController.updateClient("FI:GOV:M1:SS1", http);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(ConnectionType.HTTP, response.getBody().getConnectionType());
+        assertNotNull(response.getBody());
+        assertEquals(ConnectionTypeDto.HTTP, response.getBody().getConnectionType());
         response = clientsApiController.getClient("FI:GOV:M1:SS1");
-        assertEquals(ConnectionType.HTTP, response.getBody().getConnectionType());
+        assertNotNull(response.getBody());
+        assertEquals(ConnectionTypeDto.HTTP, response.getBody().getConnectionType());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENT_DETAILS")
-    public void getClientSignCertificates() throws Exception {
-        ResponseEntity<Set<TokenCertificate>> certificates =
+    void getClientSignCertificates() {
+        ResponseEntity<Set<TokenCertificateDto>> certificates =
                 clientsApiController.getClientSignCertificates("FI:GOV:M1");
         assertEquals(HttpStatus.OK, certificates.getStatusCode());
+        assertNotNull(certificates.getBody());
         assertEquals(0, certificates.getBody().size());
-        CertificateInfo mockCertificate = new CertificateInfo(
-                ClientId.Conf.create("FI", "GOV", "M1"),
-                true, true, CertificateInfo.STATUS_REGISTERED,
-                "id", CertificateTestUtils.getMockCertificateBytes(), null);
+        CertificateInfo mockCertificate = new CertificateTestUtils.CertificateInfoBuilder()
+                .clientId(ClientId.Conf.create("FI", "GOV", "M1"))
+                .active(true)
+                .savedToConfiguration(true)
+                .certificateStatus(CertificateInfo.STATUS_REGISTERED)
+                .id("id")
+                .certificate(CertificateTestUtils.getMockCertificate())
+                .build();
         doReturn(Collections.singletonList(mockCertificate)).when(tokenService).getSignCertificates(any());
 
         certificates = clientsApiController.getClientSignCertificates("FI:GOV:M1");
         assertEquals(HttpStatus.OK, certificates.getStatusCode());
+        assertNotNull(certificates.getBody());
         assertEquals(1, certificates.getBody().size());
-        Set<TokenCertificate> onlyCertificateSet = certificates.getBody();
-        TokenCertificate onlyCertificate = onlyCertificateSet
+        Set<TokenCertificateDto> onlyCertificateSet = certificates.getBody();
+        TokenCertificateDto onlyCertificate = onlyCertificateSet
                 .stream()
                 .findFirst()
                 .orElse(null);
+        assertNotNull(onlyCertificate);
         assertEquals("N/A", onlyCertificate.getCertificateDetails().getIssuerCommonName());
         assertEquals(OffsetDateTime.parse("1970-01-01T00:00:00Z"),
                 onlyCertificate.getCertificateDetails().getNotBefore());
@@ -284,65 +302,57 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
         assertEquals(Integer.valueOf(3), onlyCertificate.getCertificateDetails().getVersion());
         assertEquals("SHA512withRSA", onlyCertificate.getCertificateDetails().getSignatureAlgorithm());
         assertEquals("RSA", onlyCertificate.getCertificateDetails().getPublicKeyAlgorithm());
-        assertEquals("A2293825AA82A5429EC32803847E2152A303969C", onlyCertificate.getCertificateDetails().getHash());
+        assertEquals(MOCK_CERTIFICATE_HASH, onlyCertificate.getCertificateDetails().getHash());
         assertTrue(onlyCertificate.getCertificateDetails().getSignature().startsWith("314b7a50a09a9b74322671"));
         assertTrue(onlyCertificate.getCertificateDetails().getRsaPublicKeyModulus().startsWith("9d888fbe089b32a35f58"));
         assertEquals(Integer.valueOf(65537), onlyCertificate.getCertificateDetails().getRsaPublicKeyExponent());
-        assertEquals(new ArrayList<>(
-                Arrays.asList(org.niis.xroad.securityserver.restapi.openapi.model.KeyUsage.NON_REPUDIATION)),
+        assertEquals(List.of(org.niis.xroad.securityserver.restapi.openapi.model.KeyUsageDto.NON_REPUDIATION),
                 new ArrayList<>(onlyCertificate.getCertificateDetails().getKeyUsages()));
-        try {
-            certificates = clientsApiController.getClientSignCertificates("FI:GOV:M2");
-            fail("should throw ResourceNotFoundException for 404");
-        } catch (ResourceNotFoundException expected) {
-        }
+
+        assertThrows(NotFoundException.class, () -> clientsApiController.getClientSignCertificates("FI:GOV:M2"));
     }
 
     @Test
     @WithMockUser(roles = "WRONG_ROLE")
-    public void forbidden() {
-        try {
-            ResponseEntity<Set<Client>> response = clientsApiController.findClients(null, null, null, null, null, null,
-                    null, null, false);
-            fail("should throw AccessDeniedException");
-        } catch (AccessDeniedException expected) {
-        }
+    void forbidden() {
+        assertThrows(AccessDeniedException.class, () -> clientsApiController.findClients(null, null, null, null, null, null,
+                null, null, false, false));
     }
 
-    /**
-     * @param certificateInfo one certificate to put inside this tokenInfo
-     * structure
-     * @return
-     */
-    private List<TokenInfo> createMockTokenInfos(CertificateInfo certificateInfo) {
+    private List<TokenInfo> createMockTokenInfos() {
         List<TokenInfo> mockTokens = new ArrayList<>();
-        List<CertificateInfo> certificates = new ArrayList<>();
-        if (certificateInfo != null) {
-            certificates.add(certificateInfo);
-        }
-        KeyInfo keyInfo = new KeyInfo(false, null,
-                "friendlyName", "id", "label", "publicKey",
-                certificates, new ArrayList<CertRequestInfo>(),
-                "signMecchanismName");
-        TokenInfo tokenInfo = new TokenInfo("type",
-                "friendlyName", "id",
-                false, false, false,
-                "serialNumber", "label", -1,
-                null, Arrays.asList(keyInfo), null);
+
+        KeyInfo keyInfo = new TokenTestUtils.KeyInfoBuilder()
+                .available(false)
+                .keyUsageInfo(null)
+                .build();
+
+        TokenInfo tokenInfo = new TokenTestUtils.TokenInfoBuilder()
+                .type("type")
+                .friendlyName("friendlyName")
+                .readOnly(false)
+                .available(false)
+                .active(false)
+                .status(null)
+                .key(keyInfo)
+                .build();
+
         mockTokens.add(tokenInfo);
         return mockTokens;
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_INTERNAL_CERTS", "ADD_CLIENT_INTERNAL_CERT" })
-    public void addTlsCert() throws Exception {
-        ResponseEntity<Set<CertificateDetails>> certs = clientsApiController.getClientTlsCertificates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_INTERNAL_CERTS", "ADD_CLIENT_INTERNAL_CERT"})
+    void addTlsCert() {
+        ResponseEntity<Set<CertificateDetailsDto>> certs = clientsApiController.getClientTlsCertificates(
                 TestUtils.CLIENT_ID_SS1);
+        assertNotNull(certs.getBody());
         assertEquals(0, certs.getBody().size());
-        ResponseEntity<CertificateDetails> response =
+        ResponseEntity<CertificateDetailsDto> response =
                 clientsApiController.addClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                        getResource(CertificateTestUtils.getWidgitsCertificateBytes()));
-        CertificateDetails certificateDetails = response.getBody();
+                        getMultipartFile("certificate", CertificateTestUtils.getWidgitsCertificateBytes(), "cert.pem"));
+        CertificateDetailsDto certificateDetails = response.getBody();
+        assertNotNull(certificateDetails);
         assertEquals(CertificateTestUtils.getWidgitsCertificateHash(), certificateDetails.getHash());
         assertEquals("O=Internet Widgits Pty Ltd, ST=Some-State, C=AU",
                 certificateDetails.getSubjectDistinguishedName());
@@ -352,30 +362,22 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
 
         assertEquals(1, clientsApiController.getClientTlsCertificates(TestUtils.CLIENT_ID_SS1).getBody().size());
         // cert already exists
-        try {
-            response = clientsApiController.addClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                    getResource(CertificateTestUtils.getWidgitsCertificateBytes()));
-            fail("should have thrown ConflictException");
-        } catch (ConflictException expected) {
-        }
+        assertThrows(ConflictException.class, () -> clientsApiController.addClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
+                getMultipartFile("certificate", CertificateTestUtils.getWidgitsCertificateBytes(), "cert.pem")));
         assertEquals(1, clientsApiController.getClientTlsCertificates(TestUtils.CLIENT_ID_SS1).getBody().size());
         // cert is invalid
-        try {
-            response = clientsApiController.addClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                    getResource(CertificateTestUtils.getInvalidCertBytes()));
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-        }
+        assertThrows(BadRequestException.class, () -> clientsApiController.addClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
+                getMultipartFile("certificate", CertificateTestUtils.getInvalidCertBytes(), "cert.pem")));
         assertEquals(1, clientsApiController.getClientTlsCertificates(TestUtils.CLIENT_ID_SS1).getBody().size());
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_CLIENT_INTERNAL_CERT", "DELETE_CLIENT_INTERNAL_CERT",
-            "VIEW_CLIENT_INTERNAL_CERTS" })
-    public void deleteTlsCert() throws Exception {
-        ResponseEntity<CertificateDetails> response =
+    @WithMockUser(authorities = {"ADD_CLIENT_INTERNAL_CERT", "DELETE_CLIENT_INTERNAL_CERT",
+            "VIEW_CLIENT_INTERNAL_CERTS"})
+    void deleteTlsCert() {
+        ResponseEntity<CertificateDetailsDto> response =
                 clientsApiController.addClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                        getResource(CertificateTestUtils.getWidgitsCertificateBytes()));
+                        getMultipartFile("certificate", CertificateTestUtils.getWidgitsCertificateBytes(), "cert.pem"));
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertEquals(1, clientsApiController.getClientTlsCertificates(TestUtils.CLIENT_ID_SS1).getBody().size());
         ResponseEntity<Void> deleteResponse =
@@ -384,66 +386,60 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
         assertEquals(HttpStatus.NO_CONTENT, deleteResponse.getStatusCode());
         assertEquals(0, clientsApiController.getClientTlsCertificates(TestUtils.CLIENT_ID_SS1).getBody().size());
         // cert does not exist
-        try {
-            clientsApiController.deleteClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                    CertificateTestUtils.getWidgitsCertificateHash());
-            fail("should have thrown ResourceNotFoundException");
-        } catch (ResourceNotFoundException expected) {
-        }
+        assertThrows(NotFoundException.class, () -> clientsApiController.deleteClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
+                CertificateTestUtils.getWidgitsCertificateHash()));
         assertEquals(0, clientsApiController.getClientTlsCertificates(TestUtils.CLIENT_ID_SS1).getBody().size());
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_CLIENT_INTERNAL_CERT", "VIEW_CLIENT_INTERNAL_CERTS",
-            "VIEW_CLIENT_INTERNAL_CERT_DETAILS" })
-    public void findTlsCert() throws Exception {
-        ResponseEntity<CertificateDetails> response =
+    @WithMockUser(authorities = {"ADD_CLIENT_INTERNAL_CERT", "VIEW_CLIENT_INTERNAL_CERTS",
+            "VIEW_CLIENT_INTERNAL_CERT_DETAILS"})
+    void findTlsCert() {
+        ResponseEntity<CertificateDetailsDto> response =
                 clientsApiController.addClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                        getResource(CertificateTestUtils.getWidgitsCertificateBytes()));
+                        getMultipartFile("certificate", CertificateTestUtils.getWidgitsCertificateBytes(), "cert.pem"));
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertEquals(1, clientsApiController.getClientTlsCertificates(TestUtils.CLIENT_ID_SS1).getBody().size());
-        ResponseEntity<CertificateDetails> findResponse =
+        ResponseEntity<CertificateDetailsDto> findResponse =
                 clientsApiController.getClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
                         CertificateTestUtils.getWidgitsCertificateHash());
         assertEquals(HttpStatus.OK, findResponse.getStatusCode());
+        assertNotNull(findResponse.getBody());
         assertEquals(CertificateTestUtils.getWidgitsCertificateHash(), findResponse.getBody().getHash());
         // case insensitive
-        findResponse =
-                clientsApiController.getClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                        "63a104b2bac14667873c5dbd54be25bc687b3702");
+        findResponse = clientsApiController.getClientTlsCertificate(TestUtils.CLIENT_ID_SS1, WIDGITS_CERTIFICATE_HASH);
         assertEquals(HttpStatus.OK, findResponse.getStatusCode());
+        assertNotNull(findResponse.getBody());
         assertEquals(CertificateTestUtils.getWidgitsCertificateHash(), findResponse.getBody().getHash());
         // not found
-        try {
-            clientsApiController.getClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
-                    "63a104b2bac1466");
-            fail("should have thrown ResourceNotFoundException");
-        } catch (ResourceNotFoundException expected) {
-        }
+        assertThrows(NotFoundException.class, () -> clientsApiController.getClientTlsCertificate(TestUtils.CLIENT_ID_SS1,
+                "63a104b2bac1466"));
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_LOCAL_GROUP" })
-    public void addLocalGroup() throws Exception {
-        ResponseEntity<LocalGroup> response = clientsApiController.addClientLocalGroup(TestUtils.CLIENT_ID_SS1,
+    @WithMockUser(authorities = {"ADD_LOCAL_GROUP"})
+    void addLocalGroup() {
+        ResponseEntity<LocalGroupDto> response = clientsApiController.addClientLocalGroup(TestUtils.CLIENT_ID_SS1,
                 createLocalGroupAdd(TestUtils.NEW_GROUPCODE));
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        LocalGroup localGroup = response.getBody();
+        LocalGroupDto localGroup = response.getBody();
+        assertNotNull(localGroup);
         assertEquals(TestUtils.NEW_GROUPCODE, localGroup.getCode());
         assertLocationHeader("/api/local-groups/" + localGroup.getId(), response);
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_LOCAL_GROUPS" })
-    public void getClientGroups() throws Exception {
-        ResponseEntity<Set<LocalGroup>> response =
+    @WithMockUser(authorities = {"VIEW_CLIENT_LOCAL_GROUPS"})
+    void getClientGroups() {
+        ResponseEntity<Set<LocalGroupDto>> response =
                 clientsApiController.getClientLocalGroups(TestUtils.CLIENT_ID_SS1);
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals(3, response.getBody().size());
     }
 
-    private static LocalGroupAdd createLocalGroupAdd(String groupCode) {
-        LocalGroupAdd localGroupAdd = new LocalGroupAdd();
+    private static LocalGroupAddDto createLocalGroupAdd(String groupCode) {
+        LocalGroupAddDto localGroupAdd = new LocalGroupAddDto();
         localGroupAdd.setDescription(TestUtils.GROUP_DESC);
         localGroupAdd.setCode(groupCode);
         return localGroupAdd;
@@ -451,59 +447,65 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findAllClientsByAllSearchTermsExcludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(
+    void findAllClientsByAllSearchTermsExcludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(
                 TestUtils.NAME_FOR + TestUtils.SUBSYSTEM1,
                 TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM1,
-                false, false, null, false);
+                false, false, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(1, clientsResponse.getBody().size());
-        Set<Client> clients = clientsResponse.getBody();
-        Client client = clients
+        Set<ClientDto> clients = clientsResponse.getBody();
+        ClientDto client = clients
                 .stream()
                 .findFirst()
                 .orElse(null);
+        assertNotNull(client);
         assertEquals(TestUtils.NAME_FOR + TestUtils.SUBSYSTEM1, client.getMemberName());
         assertEquals(TestUtils.MEMBER_CLASS_GOV, client.getMemberClass());
         assertEquals(TestUtils.MEMBER_CODE_M1, client.getMemberCode());
         assertEquals(TestUtils.SUBSYSTEM1, client.getSubsystemCode());
-        assertEquals(ConnectionType.HTTPS_NO_AUTH, client.getConnectionType());
-        assertEquals(ClientStatus.REGISTERED, client.getStatus());
+        assertEquals(ConnectionTypeDto.HTTPS_NO_AUTH, client.getConnectionType());
+        assertEquals(ClientStatusDto.REGISTERED, client.getStatus());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findAllClients() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(null, null, null, null, null,
-                true, false, null, false);
+    void findAllClients() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(null, null, null, null, null,
+                true, false, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
-        assertEquals(11, clientsResponse.getBody().size());
+        assertNotNull(clientsResponse.getBody());
+        assertEquals(12, clientsResponse.getBody().size());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findAllClientsByLocalValidSignCert() {
+    void findAllClientsByLocalValidSignCert() {
         when(currentSecurityServerSignCertificates.getSignCertificateInfos())
                 .thenReturn(createSimpleSignCertList());
-        int clientsTotal = 11;
+        int clientsTotal = 12;
         // FI:GOV:M1, FI:GOV:M1:SS1, FI:GOV:M1:SS3
         int clientsWithValidSignCert = 3;
         // search all
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(null, null, null, null, null,
-                true, false, null, false);
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(null, null, null, null, null,
+                true, false, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(clientsTotal, clientsResponse.getBody().size());
 
         // search ones with valid sign cert
         clientsResponse = clientsApiController.findClients(null, null, null, null, null,
-                true, false, true, false);
+                true, false, true, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(clientsWithValidSignCert, clientsResponse.getBody().size());
 
         // search ones without valid sign cert
         clientsResponse = clientsApiController.findClients(null, null, null, null, null,
-                true, false, false, false);
+                true, false, false, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals((clientsTotal - clientsWithValidSignCert), clientsResponse.getBody().size());
     }
 
@@ -522,98 +524,99 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findAllClientsByMemberCodeIncludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(null, null, null,
-                TestUtils.MEMBER_CODE_M1, null, true, false, null, false);
+    void findAllClientsByMemberCodeIncludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(null, null, null,
+                TestUtils.MEMBER_CODE_M1, null, true, false, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(5, clientsResponse.getBody().size());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findAllClientsByMemberClassIncludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(null, null,
+    void findAllClientsByMemberClassIncludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(null, null,
                 TestUtils.MEMBER_CLASS_PRO,
-                null, null, true, false, null, false);
+                null, null, true, false, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(3, clientsResponse.getBody().size());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findAllClientsByNameIncludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(
+    void findAllClientsByNameIncludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(
                 TestUtils.NAME_FOR + TestUtils.SUBSYSTEM2,
-                null, null, null, null, false, true, null, false);
+                null, null, null, null, false, true, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(1, clientsResponse.getBody().size());
         // not found
         clientsResponse = clientsApiController.findClients("DOES_NOT_EXIST", null, null, null, null, true, false,
-                null, false);
+                null, false, false);
+        assertNotNull(clientsResponse.getBody());
         assertEquals(0, clientsResponse.getBody().size());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findInternalClientsByAllSearchTermsExcludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(
+    void findInternalClientsByAllSearchTermsExcludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(
                 TestUtils.NAME_FOR + TestUtils.SUBSYSTEM1,
                 TestUtils.INSTANCE_FI, TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M1, TestUtils.SUBSYSTEM1,
-                false, true, null, false);
+                false, true, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(1, clientsResponse.getBody().size());
     }
 
     @Test
     @WithMockUser(authorities = "VIEW_CLIENTS")
-    public void findInternalClientsBySubsystemExcludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(null, null, null, null,
-                TestUtils.SUBSYSTEM2, false, true, null, false);
+    void findInternalClientsBySubsystemExcludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(null, null, null, null,
+                TestUtils.SUBSYSTEM2, false, true, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(1, clientsResponse.getBody().size());
         // not found
         clientsResponse = clientsApiController.findClients(null, null, null, null, TestUtils.SUBSYSTEM3, false, true,
-                null, false);
+                null, false, false);
+        assertNotNull(clientsResponse.getBody());
         assertEquals(0, clientsResponse.getBody().size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_SERVICES" })
-    public void getServiceDescriptions() {
+    @WithMockUser(authorities = {"VIEW_CLIENT_SERVICES"})
+    void getServiceDescriptions() {
         // client with 0 services
-        ResponseEntity<Set<ServiceDescription>> descriptions =
+        ResponseEntity<Set<ServiceDescriptionDto>> descriptions =
                 clientsApiController.getClientServiceDescriptions(TestUtils.CLIENT_ID_SS2);
+        assertNotNull(descriptions.getBody());
         assertEquals(1, descriptions.getBody().size());
 
         // client not found
-        try {
-            descriptions = clientsApiController.getClientServiceDescriptions("FI:GOV:M1:NONEXISTENT");
-            fail("should throw ResourceNotFoundException to 404");
-        } catch (ResourceNotFoundException expected) {
-        }
+        assertThrows(NotFoundException.class, () -> clientsApiController.getClientServiceDescriptions("FI:GOV:M1:NONEXISTENT"));
 
         // bad client id
-        try {
-            descriptions = clientsApiController.getClientServiceDescriptions("foobar");
-            fail("should throw BadRequestException");
-        } catch (ValidationFailureException expected) {
-        }
+        assertThrows(BadRequestException.class, () -> clientsApiController.getClientServiceDescriptions("foobar"));
 
         // client with some services
         descriptions = clientsApiController.getClientServiceDescriptions(TestUtils.CLIENT_ID_SS1);
         assertEquals(HttpStatus.OK, descriptions.getStatusCode());
+        assertNotNull(descriptions.getBody());
         assertEquals(CLIENT_ID_SS1_INITIAL_SERVICEDESCRIPTION_COUNT, descriptions.getBody().size());
-        ServiceDescription serviceDescription = getDescription(descriptions.getBody(),
+        ServiceDescriptionDto serviceDescription = getDescription(descriptions.getBody(),
                 "https://restservice.com/api/v1")
                 .get();
         assertEquals(TestUtils.CLIENT_ID_SS1, serviceDescription.getClientId());
         assertEquals(true, serviceDescription.getDisabled());
         assertEquals("Kaputt", serviceDescription.getDisabledNotice());
         assertNotNull(serviceDescription.getRefreshedAt());
-        assertEquals(ServiceType.OPENAPI3, serviceDescription.getType());
+        assertEquals(ServiceTypeDto.OPENAPI3, serviceDescription.getType());
         assertEquals(1, serviceDescription.getServices().size());
 
-        Service service = serviceDescription.getServices().iterator().next();
+        ServiceDto service = serviceDescription.getServices().iterator().next();
         assertEquals(TestUtils.CLIENT_ID_SS1 + ":openapi-servicecode.v1", service.getId());
         assertEquals("openapi-servicecode.v1", service.getFullServiceCode());
         assertEquals("openapi-servicecode", service.getServiceCode());
@@ -621,51 +624,54 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
         assertEquals(true, service.getSslAuth());
         assertEquals("https://restservice.com/api/v1", service.getUrl());
 
-        ServiceDescription wsdlServiceDescription = getDescription(descriptions.getBody(),
+        ServiceDescriptionDto wsdlServiceDescription = getDescription(descriptions.getBody(),
                 "https://soapservice.com/v1/Endpoint?wsdl")
                 .get();
         assertEquals(4, wsdlServiceDescription.getServices().size());
 
-        ServiceDescription serviceDescriptionTypeRest = getDescription(descriptions.getBody(),
+        ServiceDescriptionDto serviceDescriptionDto = getDescription(descriptions.getBody(),
                 "https://restservice.com/api/v1/nosuchservice").get();
-        assertEquals(ServiceType.REST, serviceDescriptionTypeRest.getType());
+        assertEquals(ServiceTypeDto.REST, serviceDescriptionDto.getType());
     }
 
-    private Optional<ServiceDescription> getDescription(Set<ServiceDescription> descriptions, String url) {
+    private Optional<ServiceDescriptionDto> getDescription(Set<ServiceDescriptionDto> descriptions, String url) {
         return descriptions.stream()
                 .filter(serviceDescription -> serviceDescription.getUrl().equals(url))
                 .findFirst();
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENTS" })
-    public void findAllClientsByPartialNameIncludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(TestUtils.SUBSYSTEM3, null,
-                null, null, null, false, false, null, false);
+    @WithMockUser(authorities = {"VIEW_CLIENTS"})
+    void findAllClientsByPartialNameIncludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(TestUtils.SUBSYSTEM3, null,
+                null, null, null, false, false, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(1, clientsResponse.getBody().size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENTS" })
-    public void findAllClientsByPartialSearchTermsIncludeMembers() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(null, "FI",
-                "OV", "1", "1", false, true, null, false);
+    @WithMockUser(authorities = {"VIEW_CLIENTS"})
+    void findAllClientsByPartialSearchTermsIncludeMembers() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(null, "FI",
+                "OV", "1", "1", false, true, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(1, clientsResponse.getBody().size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENTS" })
-    public void findAllClientsShouldNotFindByPartialInstance() {
-        ResponseEntity<Set<Client>> clientsResponse = clientsApiController.findClients(null, "F",
-                 "OV", "1", "1", false, true, null, false);
+    @WithMockUser(authorities = {"VIEW_CLIENTS"})
+    void findAllClientsShouldNotFindByPartialInstance() {
+        ResponseEntity<Set<ClientDto>> clientsResponse = clientsApiController.findClients(null, "F",
+                "OV", "1", "1", false, true, null, false, false);
         assertEquals(HttpStatus.OK, clientsResponse.getStatusCode());
+        assertNotNull(clientsResponse.getBody());
         assertEquals(0, clientsResponse.getBody().size());
     }
 
-    private Client createTestClient(String memberClass, String memberCode, String subsystemCode) {
-        Client client = new Client();
+    private ClientDto createTestClient(String memberClass, String memberCode, String subsystemCode) {
+        ClientDto client = new ClientDto();
         client.setMemberClass(memberClass);
         client.setMemberCode(memberCode);
         client.setSubsystemCode(subsystemCode);
@@ -673,407 +679,389 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_CLIENT" })
-    public void addClient() {
-        Client clientToAdd = createTestClient("GOV", "M2", null);
-        ResponseEntity<Client> response = clientsApiController.addClient(
-                new ClientAdd().client(clientToAdd).ignoreWarnings(false));
+    @WithMockUser(authorities = {"ADD_CLIENT"})
+    void addClient() {
+        ClientDto clientToAdd = createTestClient("GOV", "M2", null);
+        ResponseEntity<ClientDto> response = clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd).ignoreWarnings(false));
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals("FI", response.getBody().getInstanceId());
         assertEquals("M2", response.getBody().getMemberCode());
-        assertEquals(ClientStatus.SAVED, response.getBody().getStatus());
-        assertEquals(ConnectionType.HTTPS, response.getBody().getConnectionType());
+        assertEquals(ClientStatusDto.SAVED, response.getBody().getStatus());
+        assertEquals(ConnectionTypeDto.HTTPS, response.getBody().getConnectionType());
         assertFalse(response.getBody().getOwner());
         assertLocationHeader("/api/clients/FI:GOV:M2", response);
 
         response = clientsApiController.addClient(
-                new ClientAdd().client(clientToAdd
-                        .connectionType(ConnectionType.HTTPS_NO_AUTH)
-                        .subsystemCode("SUBSYSTEM1"))
+                new ClientAddDto().client(clientToAdd
+                                .connectionType(ConnectionTypeDto.HTTPS_NO_AUTH)
+                                .subsystemCode("SUBSYSTEM1"))
                         .ignoreWarnings(false));
+        assertNotNull(response.getBody());
         assertEquals("SUBSYSTEM1", response.getBody().getSubsystemCode());
-        assertEquals(ClientStatus.SAVED, response.getBody().getStatus());
-        assertEquals(ConnectionType.HTTPS_NO_AUTH, response.getBody().getConnectionType());
+        assertEquals(ClientStatusDto.SAVED, response.getBody().getStatus());
+        assertEquals(ConnectionTypeDto.HTTPS_NO_AUTH, response.getBody().getConnectionType());
         assertLocationHeader("/api/clients/FI:GOV:M2:SUBSYSTEM1", response);
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_CLIENT" })
-    public void addClientConflicts() {
+    @WithMockUser(authorities = {"ADD_CLIENT"})
+    void addClientConflicts() {
         // conflict: client already exists
-        Client clientToAdd = createTestClient("GOV", "M1", null);
-        try {
-            clientsApiController.addClient(
-                    new ClientAdd().client(clientToAdd).ignoreWarnings(false));
-            fail("should have thrown ConflictException");
-        } catch (ConflictException expected) {
-        }
+        ClientDto clientToAdd = createTestClient("GOV", "M1", null);
+        assertThrows(ConflictException.class, () -> clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd).ignoreWarnings(false)));
 
         // conflict: two additional members
-        clientToAdd = createTestClient("GOV", "ADDITIONAL1", null);
-        ResponseEntity<Client> response = clientsApiController.addClient(
-                new ClientAdd().client(clientToAdd).ignoreWarnings(true));
+        var clientToAdd2 = createTestClient("GOV", "ADDITIONAL1", null);
+        ResponseEntity<ClientDto> response = clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd2).ignoreWarnings(true));
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
 
-        try {
-            clientsApiController.addClient(
-                    new ClientAdd().client(clientToAdd.memberCode("ADDITIONAL2")).ignoreWarnings(true));
-            fail("should have thrown ConflictException");
-        } catch (ConflictException expected) {
-        }
+        assertThrows(ConflictException.class, () -> clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd2.memberCode("ADDITIONAL2")).ignoreWarnings(true)));
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_CLIENT" })
-    public void addClientBadRequestFromWarnings() {
+    @WithMockUser(authorities = {"ADD_CLIENT"})
+    void addClientBadRequestFromWarnings() {
         // warning about unregistered client
-        doReturn(null).when(globalConfFacade).getMemberName(any());
-        Client clientToAdd = createTestClient(TestUtils.MEMBER_CLASS_GOV, "B", "C");
-        try {
-            clientsApiController.addClient(
-                    new ClientAdd().client(clientToAdd).ignoreWarnings(false));
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_WARNINGS_DETECTED, expected.getErrorDeviation().getCode());
-        }
+        doReturn(null).when(globalConfProvider).getMemberName(any());
+        ClientDto clientToAdd = createTestClient(TestUtils.MEMBER_CLASS_GOV, "B", "C");
 
-        ResponseEntity<Client> response = clientsApiController.addClient(
-                new ClientAdd().client(clientToAdd).ignoreWarnings(true));
+        var expected = assertThrows(BadRequestException.class, () -> clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd).ignoreWarnings(false)));
+        assertEquals(DeviationCodes.ERROR_WARNINGS_DETECTED, expected.getErrorDeviation().code());
+
+        ResponseEntity<ClientDto> response = clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd).ignoreWarnings(true));
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_CLIENT" })
-    public void addClientBadRequestFromInvalidMemberClass() {
+    @WithMockUser(authorities = {"ADD_CLIENT"})
+    void addClientBadRequestFromInvalidMemberClass() {
         // warning about unregistered client
-        doReturn(null).when(globalConfFacade).getMemberName(any());
-        Client clientToAdd = createTestClient("INVALID", "B", "C");
-        try {
-            clientsApiController.addClient(
-                    new ClientAdd().client(clientToAdd).ignoreWarnings(false));
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_MEMBER_CLASS, expected.getErrorDeviation().getCode());
-        }
+        doReturn(null).when(globalConfProvider).getMemberName(any());
+        ClientDto clientToAdd = createTestClient("INVALID", "B", "C");
+        var expected = assertThrows(BadRequestException.class, () -> clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd).ignoreWarnings(false)));
+        assertEquals(DeviationCodes.ERROR_INVALID_MEMBER_CLASS, expected.getErrorDeviation().code());
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_WSDL", "VIEW_CLIENT_SERVICES" })
-    public void addWsdlServiceDescription() {
-        ServiceDescriptionAdd serviceDescription = new ServiceDescriptionAdd()
+    @WithMockUser(authorities = {"ADD_WSDL", "VIEW_CLIENT_SERVICES"})
+    void addWsdlServiceDescription() {
+        ServiceDescriptionAddDto serviceDescription = new ServiceDescriptionAddDto()
                 .url("file:src/test/resources/wsdl/valid.wsdl");
-        serviceDescription.setType(ServiceType.WSDL);
+        serviceDescription.setType(ServiceTypeDto.WSDL);
         serviceDescription.setIgnoreWarnings(false);
 
-        ResponseEntity<ServiceDescription> response = clientsApiController.addClientServiceDescription(
+        ResponseEntity<ServiceDescriptionDto> response = clientsApiController.addClientServiceDescription(
                 TestUtils.CLIENT_ID_SS1, serviceDescription);
-        ServiceDescription addedServiceDescription = response.getBody();
+        ServiceDescriptionDto addedServiceDescription = response.getBody();
+        assertNotNull(addedServiceDescription);
         assertNotNull(addedServiceDescription.getId());
         assertEquals(serviceDescription.getUrl(), addedServiceDescription.getUrl());
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertLocationHeader("/api/service-descriptions/" + addedServiceDescription.getId(), response);
 
-        ResponseEntity<Set<ServiceDescription>> descriptions =
+        ResponseEntity<Set<ServiceDescriptionDto>> descriptions =
                 clientsApiController.getClientServiceDescriptions(TestUtils.CLIENT_ID_SS1);
+        assertNotNull(descriptions.getBody());
         assertEquals(CLIENT_ID_SS1_INITIAL_SERVICEDESCRIPTION_COUNT + 1, descriptions.getBody().size());
-        try {
-            serviceDescription.setIgnoreWarnings(true);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown ConflictException");
-        } catch (ConflictException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_WSDL_EXISTS, expected.getErrorDeviation().getCode());
-        }
-        serviceDescription = new ServiceDescriptionAdd().url("file:src/test/resources/wsdl/testservice.wsdl");
-        serviceDescription.setType(ServiceType.WSDL);
-        try {
-            serviceDescription.setIgnoreWarnings(false);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown ConflictException");
-        } catch (ConflictException expected) {
-            assertErrorWithMetadata(DeviationCodes.ERROR_SERVICE_EXISTS, expected,
-                    "xroadGetRandom.v1", "file:src/test/resources/wsdl/valid.wsdl");
-        }
+
+        serviceDescription.setIgnoreWarnings(true);
+        var expected = assertThrows(ConflictException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription));
+        assertEquals(DeviationCodes.ERROR_WSDL_EXISTS, expected.getErrorDeviation().code());
+
+        var serviceDescription2 = new ServiceDescriptionAddDto().url("file:src/test/resources/wsdl/testservice.wsdl");
+        serviceDescription2.setType(ServiceTypeDto.WSDL);
+
+        serviceDescription2.setIgnoreWarnings(false);
+        expected = assertThrows(ConflictException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription2));
+
+        assertErrorWithMetadata(DeviationCodes.ERROR_SERVICE_EXISTS, expected,
+                "xroadGetRandom.v1", "file:src/test/resources/wsdl/valid.wsdl");
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_WSDL" })
-    public void addWsdlServiceDescriptionParserFail() {
-        ServiceDescriptionAdd serviceDescription =
-                new ServiceDescriptionAdd().url("file:src/test/resources/wsdl/invalid.wsdl");
-        serviceDescription.setType(ServiceType.WSDL);
-        try {
-            serviceDescription.setIgnoreWarnings(true);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().getCode());
-        }
+    @WithMockUser(authorities = {"ADD_WSDL"})
+    void addWsdlServiceDescriptionParserFail() {
+        ServiceDescriptionAddDto serviceDescription =
+                new ServiceDescriptionAddDto().url("file:src/test/resources/wsdl/invalid.wsdl");
+        serviceDescription.setType(ServiceTypeDto.WSDL);
+
+        serviceDescription.setIgnoreWarnings(true);
+        var expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription));
+        assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().code());
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_WSDL" })
-    public void addWsdlServiceDescriptionBadServiceUrl() {
-        ServiceDescriptionAdd serviceDescription =
-                new ServiceDescriptionAdd().url("file:src/test/resources/wsdl/invalid-serviceurl.wsdl");
-        serviceDescription.setType(ServiceType.WSDL);
-        try {
-            serviceDescription.setIgnoreWarnings(true);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_SERVICE_URL, expected.getErrorDeviation().getCode());
-            assertFalse(expected.getErrorDeviation().getMetadata().isEmpty());
-        }
+    @WithMockUser(authorities = {"ADD_WSDL"})
+    void addWsdlServiceDescriptionBadServiceUrl() {
+        ServiceDescriptionAddDto serviceDescription =
+                new ServiceDescriptionAddDto().url("file:src/test/resources/wsdl/invalid-serviceurl.wsdl");
+        serviceDescription.setType(ServiceTypeDto.WSDL);
+
+        serviceDescription.setIgnoreWarnings(true);
+        var expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription));
+        assertEquals(DeviationCodes.ERROR_INVALID_SERVICE_URL, expected.getErrorDeviation().code());
+        assertFalse(expected.getErrorDeviation().metadata().isEmpty());
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_WSDL", "VIEW_CLIENT_SERVICES" })
-    public void addWsdlServiceDescriptionWithWarnings() {
-        ServiceDescriptionAdd serviceDescription =
-                new ServiceDescriptionAdd().url("file:src/test/resources/wsdl/warning.wsdl");
-        serviceDescription.setType(ServiceType.WSDL);
-        try {
-            serviceDescription.setIgnoreWarnings(false);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            assertErrorWithoutMetadata(DeviationCodes.ERROR_WARNINGS_DETECTED,
-                    expected);
-            assertWarning(DeviationCodes.WARNING_WSDL_VALIDATION_WARNINGS,
-                    WsdlValidatorTest.MOCK_VALIDATOR_WARNING,
-                    expected);
-        }
+    @WithMockUser(authorities = {"ADD_WSDL", "VIEW_CLIENT_SERVICES"})
+    void addWsdlServiceDescriptionWithWarnings() {
+        ServiceDescriptionAddDto serviceDescription =
+                new ServiceDescriptionAddDto().url("file:src/test/resources/wsdl/warning.wsdl");
+        serviceDescription.setType(ServiceTypeDto.WSDL);
+
+        serviceDescription.setIgnoreWarnings(false);
+        var expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription));
+        assertErrorWithoutMetadata(DeviationCodes.ERROR_WARNINGS_DETECTED,
+                expected);
+        assertWarning(DeviationCodes.WARNING_WSDL_VALIDATION_WARNINGS,
+                expected,
+                "", " Summary:  Failures: 0, Warnings: 1", " <<< WARNING! ",
+                "Operation xroadGetRandom in PortType: {http://producer.x-road.eu}testServicePort has no output message");
 
         // now lets ignore the warningDeviations
         serviceDescription.setIgnoreWarnings(true);
         clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-        ResponseEntity<Set<ServiceDescription>> descriptions =
+        ResponseEntity<Set<ServiceDescriptionDto>> descriptions =
                 clientsApiController.getClientServiceDescriptions(TestUtils.CLIENT_ID_SS1);
+        assertNotNull(descriptions.getBody());
         assertEquals(CLIENT_ID_SS1_INITIAL_SERVICEDESCRIPTION_COUNT + 1, descriptions.getBody().size());
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_WSDL" })
-    public void addWsdlServiceDescriptionValidationFail() {
-        ServiceDescriptionAdd serviceDescription =
-                new ServiceDescriptionAdd().url("file:src/test/resources/wsdl/error.wsdl");
-        serviceDescription.setType(ServiceType.WSDL);
-        try {
-            serviceDescription.setIgnoreWarnings(false);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().getCode());
-        }
+    @WithMockUser(authorities = {"ADD_WSDL"})
+    void addWsdlServiceDescriptionValidationFail() {
+        ServiceDescriptionAddDto serviceDescription =
+                new ServiceDescriptionAddDto().url("file:src/test/resources/wsdl/error.wsdl");
+        serviceDescription.setType(ServiceTypeDto.WSDL);
+
+        serviceDescription.setIgnoreWarnings(false);
+        var expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription));
+        assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().code());
 
         // cannot ignore these fatal errors
-        try {
-            serviceDescription.setIgnoreWarnings(true);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().getCode());
-        }
+        serviceDescription.setIgnoreWarnings(true);
+        expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription));
+        assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().code());
 
     }
 
     @Test
-    @WithMockUser(authorities = { "ADD_WSDL" })
-    public void addWsdlServiceDescriptionSkipValidation() {
-        ServiceDescriptionAdd serviceDescription =
-                new ServiceDescriptionAdd().url("file:src/test/resources/wsdl/error.wsdl");
-        serviceDescription.setType(ServiceType.WSDL);
-        try {
-            serviceDescription.setIgnoreWarnings(true);
-            clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().getCode());
-        }
+    @WithMockUser(authorities = {"ADD_WSDL"})
+    void addWsdlServiceDescriptionSkipValidation() {
+        ServiceDescriptionAddDto serviceDescription =
+                new ServiceDescriptionAddDto().url("file:src/test/resources/wsdl/error.wsdl");
+        serviceDescription.setType(ServiceTypeDto.WSDL);
+        serviceDescription.setIgnoreWarnings(true);
+        var expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.addClientServiceDescription(TestUtils.CLIENT_ID_SS1, serviceDescription));
+        assertEquals(DeviationCodes.ERROR_INVALID_WSDL, expected.getErrorDeviation().code());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findAllServiceClientCandidates() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findAllServiceClientCandidates() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
                 null,
                 null, null, null, null, null);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(10, serviceClients.size());
         // Test sorting order
-        assertEquals(true, TestUtils.isSortOrderCorrect(serviceClients, serviceClientSortingComparator));
+        assertTrue(TestUtils.isSortOrderCorrect(serviceClients, serviceClientSortingComparator));
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesByName() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesByName() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
                 TestUtils.NAME_FOR + TestUtils.SUBSYSTEM2, null, null, null, null, null);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(1, serviceClients.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesByGroupDescription() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesByGroupDescription() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
                 TestUtils.GLOBALGROUP, null, null, null, null, null);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(3, serviceClients.size());
 
         serviceClientResponse = clientsApiController.findServiceClientCandidates(TestUtils.CLIENT_ID_SS1,
                 "foo", null, null, null, null, null);
         serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(2, serviceClients.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesByType() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesByType() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
-                null, ServiceClientType.LOCALGROUP, null, null, null, null);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+                null, ServiceClientTypeDto.LOCALGROUP, null, null, null, null);
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(3, serviceClients.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesByInstance() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesByInstance() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
                 null, null, TestUtils.INSTANCE_EE, null, null, null);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(6, serviceClients.size()); // includes localgroups
 
-        ResponseEntity<Set<ServiceClient>> partialInstanceMatchResponse =
+        ResponseEntity<Set<ServiceClientDto>> partialInstanceMatchResponse =
                 clientsApiController.findServiceClientCandidates(
-                TestUtils.CLIENT_ID_SS1,
-                null, ServiceClientType.SUBSYSTEM, "E", null, null, null);
-        Set<ServiceClient> partialInstanceMatch = partialInstanceMatchResponse.getBody();
+                        TestUtils.CLIENT_ID_SS1,
+                        null, ServiceClientTypeDto.SUBSYSTEM, "E", null, null, null);
+        Set<ServiceClientDto> partialInstanceMatch = partialInstanceMatchResponse.getBody();
+        assertNotNull(partialInstanceMatch);
         assertEquals(0, partialInstanceMatch.size());
     }
 
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesByMemberClass() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesByMemberClass() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
                 null, null, null, TestUtils.MEMBER_CLASS_GOV, null, null);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(3, serviceClients.size());
 
-        ResponseEntity<Set<ServiceClient>> partialMemberClassMatchResponse =
+        ResponseEntity<Set<ServiceClientDto>> partialMemberClassMatchResponse =
                 clientsApiController.findServiceClientCandidates(
-                TestUtils.CLIENT_ID_SS1,
-                null, ServiceClientType.SUBSYSTEM, null, "GO", null, null);
-        Set<ServiceClient> partialMemberClassMatch = partialMemberClassMatchResponse.getBody();
+                        TestUtils.CLIENT_ID_SS1,
+                        null, ServiceClientTypeDto.SUBSYSTEM, null, "GO", null, null);
+        Set<ServiceClientDto> partialMemberClassMatch = partialMemberClassMatchResponse.getBody();
+        assertNotNull(partialMemberClassMatch);
         assertEquals(0, partialMemberClassMatch.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesByMemberOrGroupCode() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesByMemberOrGroupCode() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
                 null, null, null, null, TestUtils.MEMBER_CODE_M1, null);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(3, serviceClients.size());
 
         serviceClientResponse = clientsApiController.findServiceClientCandidates(TestUtils.CLIENT_ID_SS1,
                 null, null, null, null, "group1", null);
         serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(2, serviceClients.size());
 
         serviceClientResponse = clientsApiController.findServiceClientCandidates(TestUtils.CLIENT_ID_SS1,
                 null, null, null, null, "group2", null);
         serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(2, serviceClients.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesBySubsystemCode() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesBySubsystemCode() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
                 null, null, null, null, null, TestUtils.SUBSYSTEM2);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(1, serviceClients.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesByAllSearchTerms() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesByAllSearchTerms() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
-                TestUtils.NAME_FOR + TestUtils.SUBSYSTEM3, ServiceClientType.SUBSYSTEM,
+                TestUtils.NAME_FOR + TestUtils.SUBSYSTEM3, ServiceClientTypeDto.SUBSYSTEM,
                 TestUtils.INSTANCE_EE,
                 TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M2,
                 TestUtils.SUBSYSTEM3);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(1, serviceClients.size());
     }
 
-    @Test(expected = ResourceNotFoundException.class)
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesClientNotFound() {
-        clientsApiController.findServiceClientCandidates(TestUtils.CLIENT_ID_SS4, null, null, null, null, null, null);
+    @Test
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesClientNotFound() {
+        assertThrows(NotFoundException.class, () -> clientsApiController.findServiceClientCandidates(TestUtils.CLIENT_ID_SS4,
+                null, null, null, null, null, null));
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void findServiceClientCandidatesNoResults() {
-        ResponseEntity<Set<ServiceClient>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void findServiceClientCandidatesNoResults() {
+        ResponseEntity<Set<ServiceClientDto>> serviceClientResponse = clientsApiController.findServiceClientCandidates(
                 TestUtils.CLIENT_ID_SS1,
-                TestUtils.NAME_FOR + TestUtils.SUBSYSTEM3, ServiceClientType.LOCALGROUP,
+                TestUtils.NAME_FOR + TestUtils.SUBSYSTEM3, ServiceClientTypeDto.LOCALGROUP,
                 TestUtils.INSTANCE_EE,
                 TestUtils.MEMBER_CLASS_GOV, TestUtils.MEMBER_CODE_M2,
                 TestUtils.SUBSYSTEM3);
-        Set<ServiceClient> serviceClients = serviceClientResponse.getBody();
+        Set<ServiceClientDto> serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(0, serviceClients.size());
 
         serviceClientResponse = clientsApiController.findServiceClientCandidates(TestUtils.CLIENT_ID_SS1,
                 "nothing", null, null, null, "unknown-code", null);
         serviceClients = serviceClientResponse.getBody();
+        assertNotNull(serviceClients);
         assertEquals(0, serviceClients.size());
     }
 
     @Test
-    @WithMockUser(authorities = { "DELETE_CLIENT", "ADD_CLIENT", "VIEW_CLIENT_DETAILS" })
-    public void deleteClient() {
-        try {
-            clientsApiController.deleteClient("FI:GOV:M1");
-            fail("should have thrown exception (cant delete owner, or registered)");
-        } catch (ConflictException expected) {
-        }
-        try {
-            clientsApiController.deleteClient("FI:GOV:NOT-EXISTING");
-            fail("should have thrown exception");
-        } catch (ResourceNotFoundException expected) {
-        }
+    @WithMockUser(authorities = {"DELETE_CLIENT", "ADD_CLIENT", "VIEW_CLIENT_DETAILS"})
+    void deleteClient() {
+        assertThrows(ConflictException.class, () -> clientsApiController.deleteClient("FI:GOV:M1"));
+        assertThrows(NotFoundException.class, () -> clientsApiController.deleteClient("FI:GOV:NOT-EXISTING"));
         // create a new client, and then delete it
-        Client clientToAdd = createTestClient("GOV", "M3", null);
-        ResponseEntity<Client> addResponse = clientsApiController.addClient(
-                new ClientAdd().client(clientToAdd).ignoreWarnings(false));
+        ClientDto clientToAdd = createTestClient("GOV", "M3", null);
+        ResponseEntity<ClientDto> addResponse = clientsApiController.addClient(
+                new ClientAddDto().client(clientToAdd).ignoreWarnings(false));
         assertEquals(HttpStatus.CREATED, addResponse.getStatusCode());
 
         ResponseEntity<Void> deleteResponse =
                 clientsApiController.deleteClient("FI:GOV:M3");
         assertEquals(HttpStatus.NO_CONTENT, deleteResponse.getStatusCode());
-        try {
-            clientsApiController.getClient("FI:GOV:M3");
-            fail("should have thrown exception");
-        } catch (ResourceNotFoundException expected) {
-        }
+
+        assertThrows(NotFoundException.class, () -> clientsApiController.getClient("FI:GOV:M3"));
+
     }
 
     @Test
-    @WithMockUser(authorities = { "DELETE_CLIENT" })
-    public void getOrphans() {
+    @WithMockUser(authorities = {"DELETE_CLIENT"})
+    void getOrphans() {
         ClientId.Conf orphanClient = TestUtils.getClientId("FI:GOV:ORPHAN:SS1");
         KeyInfo keyInfo = new TokenTestUtils.KeyInfoBuilder()
                 .keyUsageInfo(KeyUsageInfo.SIGNING)
@@ -1085,21 +1073,18 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
                 .key(keyInfo)
                 .build();
         doReturn(Collections.singletonList(tokenInfo)).when(tokenService).getAllTokens();
-        ResponseEntity<OrphanInformation> orphanResponse = clientsApiController
+        ResponseEntity<OrphanInformationDto> orphanResponse = clientsApiController
                 .getClientOrphans("FI:GOV:ORPHAN:SS1");
         assertEquals(HttpStatus.OK, orphanResponse.getStatusCode());
+        assertNotNull(orphanResponse.getBody());
         assertEquals(true, orphanResponse.getBody().getOrphansExist());
 
-        try {
-            clientsApiController.getClientOrphans("FI:GOV:M1:SS777");
-            fail("should not find orphans");
-        } catch (ResourceNotFoundException expected) {
-        }
+        assertThrows(NotFoundException.class, () -> clientsApiController.getClientOrphans("FI:GOV:M1:SS777"));
     }
 
     @Test
-    @WithMockUser(authorities = { "DELETE_CLIENT", "DELETE_SIGN_KEY" })
-    public void deleteOrphans() throws Exception {
+    @WithMockUser(authorities = {"DELETE_CLIENT", "DELETE_SIGN_KEY"})
+    void deleteOrphans() {
         ClientId.Conf orphanClient = TestUtils.getClientId("FI:GOV:ORPHAN:SS1");
         String orphanKeyId = "orphan-key";
         KeyInfo keyInfo = new TokenTestUtils.KeyInfoBuilder()
@@ -1118,179 +1103,175 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
                 .deleteOrphans("FI:GOV:ORPHAN:SS1");
         assertEquals(HttpStatus.NO_CONTENT, orphanResponse.getStatusCode());
 
-        verify(signerProxyFacade, times(1))
-                .deleteKey(orphanKeyId, true);
-        verify(signerProxyFacade, times(1))
-                .deleteKey(orphanKeyId, false);
-        verifyNoMoreInteractions(signerProxyFacade);
+        verify(signerRpcClient).deleteKey(orphanKeyId, true);
+        verify(signerRpcClient).deleteKey(orphanKeyId, false);
 
-        try {
-            clientsApiController.deleteOrphans("FI:GOV:M1:SS777");
-            fail("should not find orphans");
-        } catch (ResourceNotFoundException expected) {
-        }
+        assertThrows(NotFoundException.class, () -> clientsApiController.deleteOrphans("FI:GOV:M1:SS777"));
     }
 
     @Test
-    @WithMockUser(authorities = { "SEND_CLIENT_REG_REQ" })
-    public void registerClient() {
+    @WithMockUser(authorities = {"SEND_CLIENT_REG_REQ"})
+    void registerClient() {
         ResponseEntity<Void> response = clientsApiController.registerClient(TestUtils.CLIENT_ID_M2_SS6);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     }
 
-    @Test(expected = BadRequestException.class)
-    @WithMockUser(authorities = { "SEND_CLIENT_REG_REQ" })
-    public void registerOwner() {
-        clientsApiController.registerClient(TestUtils.OWNER_ID);
-    }
-
-    @Test(expected = ConflictException.class)
-    @WithMockUser(authorities = { "SEND_CLIENT_REG_REQ" })
-    public void registerClientWrongStatus() {
-        clientsApiController.registerClient(TestUtils.CLIENT_ID_SS1);
-    }
-
-    @WithMockUser(authorities = { "SEND_CLIENT_REG_REQ" })
-    public void registerClientWithInvalidInstanceIdentifier() throws Exception {
-        try {
-            clientsApiController.registerClient(TestUtils.CLIENT_ID_INVALID_INSTANCE_IDENTIFIER);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_INSTANCE_IDENTIFIER,
-                    expected.getErrorDeviation().getCode());
-        }
-    }
-
-    @WithMockUser(authorities = { "SEND_CLIENT_REG_REQ" })
-    public void registerClientWithInvalidMemberClass() throws Exception {
-        try {
-            clientsApiController.registerClient(TestUtils.CLIENT_ID_INVALID_MEMBER_CLASS);
-            fail("should have thrown BadRequestException");
-        } catch (BadRequestException expected) {
-            Assert.assertEquals(DeviationCodes.ERROR_INVALID_MEMBER_CLASS, expected.getErrorDeviation().getCode());
-        }
-    }
-
-    @Test(expected = ConflictException.class)
-    @WithMockUser(authorities = { "SEND_CLIENT_DEL_REQ" })
-    public void unregisterOwner() {
-        clientsApiController.unregisterClient(TestUtils.OWNER_ID);
+    @Test
+    @WithMockUser(authorities = {"SEND_CLIENT_REG_REQ"})
+    void registerOwner() {
+        assertThrows(BadRequestException.class, () -> clientsApiController.registerClient(TestUtils.OWNER_ID));
     }
 
     @Test
-    @WithMockUser(authorities = { "SEND_CLIENT_DEL_REQ" })
-    public void unregisterClient() {
+    @WithMockUser(authorities = {"SEND_CLIENT_REG_REQ"})
+    void registerClientWrongStatus() {
+        assertThrows(ConflictException.class, () -> clientsApiController.registerClient(TestUtils.CLIENT_ID_SS1));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"SEND_CLIENT_REG_REQ"})
+    void registerClientWithInvalidInstanceIdentifier() {
+        var expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.registerClient(TestUtils.CLIENT_ID_INVALID_INSTANCE_IDENTIFIER));
+        assertEquals(DeviationCodes.ERROR_INVALID_INSTANCE_IDENTIFIER,
+                expected.getErrorDeviation().code());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"SEND_CLIENT_REG_REQ"})
+    void registerClientWithInvalidMemberClass() {
+        var expected = assertThrows(BadRequestException.class,
+                () -> clientsApiController.registerClient(TestUtils.CLIENT_ID_INVALID_MEMBER_CLASS));
+        assertEquals(DeviationCodes.ERROR_INVALID_MEMBER_CLASS, expected.getErrorDeviation().code());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"SEND_CLIENT_DEL_REQ"})
+    void unregisterOwner() {
+        assertThrows(ConflictException.class, () -> clientsApiController.unregisterClient(TestUtils.OWNER_ID));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"SEND_CLIENT_DEL_REQ"})
+    void unregisterClient() {
         ResponseEntity<Void> response = clientsApiController.unregisterClient(TestUtils.CLIENT_ID_SS1);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     }
 
-    @Test(expected = ConflictException.class)
-    @WithMockUser(authorities = { "SEND_CLIENT_DEL_REQ" })
-    public void unregisterClientWrongStatus() {
-        clientsApiController.unregisterClient(TestUtils.CLIENT_ID_M2_SS6);
-    }
-
-    @Test(expected = ConflictException.class)
-    @WithMockUser(authorities = { "SEND_OWNER_CHANGE_REQ", "ADD_CLIENT" })
-    public void changeOwnerNotRegistered() {
-        clientsApiController.addClient(new ClientAdd().client(createTestClient(
-                "GOV", "M2", null)).ignoreWarnings(true));
-
-        ResponseEntity<Void> response = clientsApiController.changeOwner("FI:GOV:M2");
-    }
-
-    @Test(expected = BadRequestException.class)
-    @WithMockUser(authorities = { "SEND_OWNER_CHANGE_REQ" })
-    public void changeOwnerCurrentOwner() {
-        ResponseEntity<Void> response = clientsApiController.changeOwner("FI:GOV:M1");
-    }
-
-    @Test(expected = ConflictException.class)
-    @WithMockUser(authorities = { "SEND_OWNER_CHANGE_REQ" })
-    public void changeOwnerSubsystem() {
-        ResponseEntity<Void> response = clientsApiController.changeOwner("FI:GOV:M1:SS1");
-    }
-
-    @Test(expected = ResourceNotFoundException.class)
-    @WithMockUser(authorities = { "SEND_OWNER_CHANGE_REQ" })
-    public void changeOwnerClientDoesNotExist() {
-        Client client = new Client();
-        client.setInstanceId("non");
-        client.setMemberClass("existing");
-        client.setMemberCode("client");
-        ResponseEntity<Void> response = clientsApiController.changeOwner("FI:non:existing");
-    }
-
-    @Test(expected = BadRequestException.class)
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void getServiceClientNotExist() {
-        clientsApiController.getServiceClient(TestUtils.CLIENT_ID_SS1, "NoSuchServiceClient");
-    }
-
-    @Test(expected = ResourceNotFoundException.class)
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void getServiceClientWithClientNotContainingGivenServiceClient() {
-        clientsApiController.getServiceClient(TestUtils.CLIENT_ID_SS5, TestUtils.CLIENT_ID_SS1);
+    @Test
+    @WithMockUser(authorities = {"SEND_CLIENT_DEL_REQ"})
+    void unregisterClientWrongStatus() {
+        assertThrows(ConflictException.class, () -> clientsApiController.unregisterClient(TestUtils.CLIENT_ID_M2_SS6));
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_CLIENT_ACL_SUBJECTS" })
-    public void getServiceClient() {
+    @WithMockUser(authorities = {"SEND_OWNER_CHANGE_REQ", "ADD_CLIENT"})
+    void changeOwnerNotRegistered() {
+        clientsApiController.addClient(new ClientAddDto().client(createTestClient(
+                "GOV", "M2", null)).ignoreWarnings(true));
+
+        assertThrows(ConflictException.class, () -> clientsApiController.changeOwner("FI:GOV:M2"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"SEND_OWNER_CHANGE_REQ"})
+    void changeOwnerCurrentOwner() {
+        assertThrows(BadRequestException.class, () -> clientsApiController.changeOwner("FI:GOV:M1"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"SEND_OWNER_CHANGE_REQ"})
+    void changeOwnerSubsystem() {
+        assertThrows(ConflictException.class, () -> clientsApiController.changeOwner("FI:GOV:M1:SS1"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"SEND_OWNER_CHANGE_REQ"})
+    void changeOwnerClientDoesNotExist() {
+        ClientDto client = new ClientDto();
+        client.setInstanceId("non");
+        client.setMemberClass("existing");
+        client.setMemberCode("client");
+        assertThrows(NotFoundException.class, () -> clientsApiController.changeOwner("FI:non:existing"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void getServiceClientNotExist() {
+        assertThrows(BadRequestException.class, () ->
+                clientsApiController.getServiceClient(TestUtils.CLIENT_ID_SS1, "NoSuchServiceClient"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void getServiceClientWithClientNotContainingGivenServiceClient() {
+        assertThrows(NotFoundException.class, () ->
+                clientsApiController.getServiceClient(TestUtils.CLIENT_ID_SS5, TestUtils.CLIENT_ID_SS1));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"VIEW_CLIENT_ACL_SUBJECTS"})
+    void getServiceClient() {
         String clientId = TestUtils.CLIENT_ID_SS1;
         String serviceClientId = TestUtils.CLIENT_ID_SS2;
         String localGroupId = TestUtils.DB_LOCAL_GROUP_ID_1;
 
         // Get subsystem service client
-        ServiceClient subSystemserviceClient =
+        ServiceClientDto subSystemserviceClient =
                 clientsApiController.getServiceClient(clientId, serviceClientId).getBody();
-        assertTrue(ServiceClientType.SUBSYSTEM.equals(subSystemserviceClient.getServiceClientType()));
-        assertTrue("FI:GOV:M1:SS2".equals(subSystemserviceClient.getId()));
+        assertNotNull(subSystemserviceClient);
+        assertEquals(ServiceClientTypeDto.SUBSYSTEM, subSystemserviceClient.getServiceClientType());
+        assertEquals("FI:GOV:M1:SS2", subSystemserviceClient.getId());
 
         // Get localgroup service client
-        ServiceClient localGroupServiceClient = clientsApiController.getServiceClient(clientId, localGroupId).getBody();
-        assertTrue("group1".equals(localGroupServiceClient.getLocalGroupCode()));
-        assertTrue("1".equals(localGroupServiceClient.getId()));
+        ServiceClientDto localGroupServiceClient = clientsApiController.getServiceClient(clientId, localGroupId).getBody();
+        assertNotNull(localGroupServiceClient);
+        assertEquals("group1", localGroupServiceClient.getLocalGroupCode());
+        assertEquals("1", localGroupServiceClient.getId());
     }
 
     @Test
-    @WithMockUser(authorities = { "VIEW_ACL_SUBJECT_OPEN_SERVICES" })
-    public void getServiceClientAccessRightsTest() {
+    @WithMockUser(authorities = {"VIEW_ACL_SUBJECT_OPEN_SERVICES"})
+    void getServiceClientAccessRightsTest() {
         String clientId = TestUtils.CLIENT_ID_SS1;
         String serviceClientId = TestUtils.CLIENT_ID_SS2;
         String localGroupId = TestUtils.DB_LOCAL_GROUP_ID_1;
 
         // Test subsystem service client
-        Set<AccessRight> accessRights = clientsApiController
+        Set<AccessRightDto> accessRights = clientsApiController
                 .getServiceClientAccessRights(clientId, serviceClientId).getBody();
-        assertTrue(accessRights.size() == 2);
+        assertNotNull(accessRights);
+        assertEquals(2, accessRights.size());
         assertTrue(accessRights.stream().anyMatch(acl -> "getRandom".equals(acl.getServiceCode())));
         assertTrue(accessRights.stream().anyMatch(acl -> "rest-servicecode".equals(acl.getServiceCode())));
 
         // Test localgroup service client
-        Set<AccessRight> groupAcls = clientsApiController
+        Set<AccessRightDto> groupAcls = clientsApiController
                 .getServiceClientAccessRights(clientId, localGroupId).getBody();
-        assertTrue(groupAcls.size() == 1);
+        assertNotNull(groupAcls);
+        assertEquals(1, groupAcls.size());
         assertTrue(groupAcls.stream().anyMatch(acl -> "getRandom".equals(acl.getServiceCode())));
     }
 
     @Test
-    @WithMockUser(authorities = { "EDIT_ACL_SUBJECT_OPEN_SERVICES" })
-    public void addServiceClientAccessRights() throws Exception {
+    @WithMockUser(authorities = {"EDIT_ACL_SUBJECT_OPEN_SERVICES"})
+    void addServiceClientAccessRights() {
 
         String encodedOwnerId = "FI:GOV:M1:SS1";
         String encodedSubsystemId = "EE:GOV:M2:SS3";
         String encodedLocalGroupId = "2"; // pk
         String encodedGlobalGroupId = TestUtils.INSTANCE_FI + ":" + TestUtils.GLOBALGROUP;
-        AccessRights accessRights = new AccessRights();
-        accessRights.addItemsItem(new AccessRight().serviceCode("calculatePrime"));
-        accessRights.addItemsItem(new AccessRight().serviceCode("openapi-servicecode"));
-        accessRights.addItemsItem(new AccessRight().serviceCode("rest-servicecode"));
+        AccessRightsDto accessRights = new AccessRightsDto();
+        accessRights.addItemsItem(new AccessRightDto().serviceCode("calculatePrime"));
+        accessRights.addItemsItem(new AccessRightDto().serviceCode("openapi-servicecode"));
+        accessRights.addItemsItem(new AccessRightDto().serviceCode("rest-servicecode"));
 
-        ResponseEntity<Set<AccessRight>> response = clientsApiController
+        ResponseEntity<Set<AccessRightDto>> response = clientsApiController
                 .addServiceClientAccessRights(encodedOwnerId, encodedSubsystemId, accessRights);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals(3, response.getBody().size());
-        AccessRight accessRight = findAccessRight("calculatePrime", response.getBody());
+        AccessRightDto accessRight = findAccessRight("calculatePrime", response.getBody());
         assertNotNull(accessRight);
         assertEquals("calculatePrime-title", accessRight.getServiceTitle());
         assertNotNull(accessRight.getRightsGivenAt());
@@ -1300,22 +1281,21 @@ public class ClientsApiControllerIntegrationTest extends AbstractApiControllerTe
         response = clientsApiController.addServiceClientAccessRights(
                 encodedOwnerId, encodedLocalGroupId, accessRights);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals(3, response.getBody().size());
 
         response = clientsApiController.addServiceClientAccessRights(
                 encodedOwnerId, encodedGlobalGroupId, accessRights);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
         assertEquals(3, response.getBody().size());
 
-        try {
-            // try to add duplicate
-            clientsApiController.addServiceClientAccessRights(encodedOwnerId, encodedGlobalGroupId, accessRights);
-            fail("should throw exception");
-        } catch (ConflictException expected) {
-        }
+        // try to add duplicate
+        assertThrows(ConflictException.class,
+                () -> clientsApiController.addServiceClientAccessRights(encodedOwnerId, encodedGlobalGroupId, accessRights));
     }
 
-    private AccessRight findAccessRight(String serviceCode, Set<AccessRight> accessRights) {
+    private AccessRightDto findAccessRight(String serviceCode, Set<AccessRightDto> accessRights) {
         return accessRights.stream()
                 .filter(dto -> dto.getServiceCode().equals(serviceCode))
                 .findFirst()

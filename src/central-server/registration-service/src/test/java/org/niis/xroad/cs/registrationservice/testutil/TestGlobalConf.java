@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,16 +26,15 @@
  */
 package org.niis.xroad.cs.registrationservice.testutil;
 
-import ee.ria.xroad.common.CodedException;
 import ee.ria.xroad.common.TestCertUtil;
 import ee.ria.xroad.common.certificateprofile.SignCertificateProfileInfo;
 import ee.ria.xroad.common.certificateprofile.impl.EjbcaSignCertificateProfileInfo;
-import ee.ria.xroad.common.conf.globalconf.EmptyGlobalConf;
 import ee.ria.xroad.common.identifier.ClientId;
 
-import java.security.cert.X509Certificate;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.test.globalconf.EmptyGlobalConf;
 
-import static ee.ria.xroad.common.ErrorCodes.X_INTERNAL_ERROR;
+import java.security.cert.X509Certificate;
 
 public class TestGlobalConf extends EmptyGlobalConf {
 
@@ -59,14 +58,19 @@ public class TestGlobalConf extends EmptyGlobalConf {
                 return ca;
             }
         }
-        throw new CodedException(X_INTERNAL_ERROR, "Certificate is not issued by approved "
-                + "certification service provider.");
+        throw XrdRuntimeException.systemInternalError("Certificate is not issued by approved certification service provider.");
     }
 
     @Override
     public SignCertificateProfileInfo getSignCertificateProfileInfo(
             SignCertificateProfileInfo.Parameters parameters, X509Certificate cert) {
         return new EjbcaSignCertificateProfileInfo(parameters);
+    }
+
+    @Override
+    public ClientId.Conf getSubjectName(SignCertificateProfileInfo.Parameters parameters, X509Certificate cert) {
+        return getSignCertificateProfileInfo(parameters, cert)
+                .getSubjectIdentifier(cert);
     }
 
     @Override

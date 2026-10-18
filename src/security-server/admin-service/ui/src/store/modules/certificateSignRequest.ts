@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -23,29 +24,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import { saveResponseAsFile } from '@/util/helpers';
+import { saveResponseAsFile } from '@niis/shared-ui';
 import {
-  Key,
-  Client,
+  AcmeEabCredentialsStatus,
   CertificateAuthority,
+  Client,
+  CsrFormat,
+  CsrGenerate,
   CsrSubjectFieldDescription,
-  KeyWithCertificateSigningRequestId,
+  Key,
+  KeyAlgorithm,
   KeyLabelWithCsrGenerate,
   KeyUsageType,
-  CsrFormat,
+  KeyWithCertificateSigningRequestId,
+  OrderAcmeCertificateData,
+  RegisterCertificateData,
+  ServicePrioritizationStrategy,
+  TokenCertificateSigningRequest,
   TokenType,
-  CsrGenerate,
 } from '@/openapi-types';
 import { defineStore } from 'pinia';
 import * as api from '@/util/api';
 import { encodePathParameter } from '@/util/api';
+import { sorCertificateAuthorities, sortCsrSubjectFields } from '@/util/sorting';
 
 export interface CsrState {
   csrKey: Key | undefined;
   csrClient: string | undefined;
-  usage: string | undefined;
-  certificationService: string;
-  csrFormat: string;
+  usage: KeyUsageType | undefined;
+  certificationService?: string;
+  csrFormat: CsrFormat;
   certificationServiceList: CertificateAuthority[];
   keyId: string;
   form: CsrSubjectFieldDescription[];
@@ -54,15 +62,18 @@ export interface CsrState {
   tokenType: string | undefined;
   memberIds: string[];
   isNewMember: boolean;
+  acmeEabCredentialsStatus: AcmeEabCredentialsStatus | undefined;
+  failedFetchAcmeMetadata: boolean;
+  acmeOrder: boolean;
 }
 
-export const useCsrStore = defineStore('csrStore', {
+export const useCsr = defineStore('csr', {
   state: (): CsrState => {
     return {
       csrKey: undefined,
       csrClient: undefined,
       usage: undefined,
-      certificationService: '',
+      certificationService: undefined,
       csrFormat: CsrFormat.DER,
       certificationServiceList: [],
       keyId: '',
@@ -72,12 +83,21 @@ export const useCsrStore = defineStore('csrStore', {
       tokenType: undefined,
       memberIds: [],
       isNewMember: false,
+      acmeEabCredentialsStatus: undefined,
+      failedFetchAcmeMetadata: false,
+      acmeOrder: false,
     };
   },
   getters: {
-    csrForm: (state) => state.form,
+    csrForm: (state): CsrSubjectFieldDescription[] => state.form,
+    csrFormReady: (state): boolean => state.form.length > 0,
 
     csrTokenId: (state) => state.tokenId,
+
+    acmeCapable: (state) =>
+      state.certificationServiceList.find((certificateAuthority) => certificateAuthority.name == state.certificationService)?.acme_capable,
+
+    eabRequired: (state) => state.acmeEabCredentialsStatus?.acme_eab_required,
 
     csrRequestBody(state): CsrGenerate {
       // Creates an object that can be used as body for generate CSR request
@@ -89,21 +109,20 @@ export const useCsrStore = defineStore('csrStore', {
 
       return {
         key_usage_type: state.usage as KeyUsageType,
-        ca_name: state.certificationService,
+        ca_name: state.certificationService || '',
         csr_format: state.csrFormat as CsrFormat,
         subject_field_values: subjectFieldValues,
         member_id: state.csrClient,
+        acme_order: state.acmeOrder,
       };
     },
 
     filteredServiceList(state): CertificateAuthority[] {
       // Return the list of available auth services based on the current usage type
       if (state.usage === KeyUsageType.SIGNING) {
-        const filtered = state.certificationServiceList.filter(
-          (service: CertificateAuthority) => {
-            return !service.authentication_only;
-          },
-        );
+        const filtered = state.certificationServiceList.filter((service: CertificateAuthority) => {
+          return !service.authentication_only;
+        });
         return filtered;
       }
       return state.certificationServiceList;
@@ -114,7 +133,7 @@ export const useCsrStore = defineStore('csrStore', {
       if (state.tokenType === TokenType.HARDWARE) {
         return true;
       }
-      // Usage type can be selected only when the Key doesn't have already have it set
+      // Usage type can be selected only when the Key doesn't already have it set
       if (state.csrKey && state.csrKey.usage) {
         return true;
       }
@@ -129,9 +148,7 @@ export const useCsrStore = defineStore('csrStore', {
         .then((res) => {
           const idSet = new Set<string>();
           res.data.forEach((client) => {
-            idSet.add(
-              `${client.instance_id}:${client.member_class}:${client.member_code}`,
-            );
+            idSet.add(`${client.instance_id}:${client.member_class}:${client.member_code}`);
           });
 
           this.memberIds = Array.from(idSet);
@@ -141,17 +158,28 @@ export const useCsrStore = defineStore('csrStore', {
         });
     },
 
-    fetchCertificateAuthorities() {
+    async searchCertificateAuthorities(includeIntermediateCas?: boolean) {
+      const params: Record<string, unknown> = {};
+      if (includeIntermediateCas) {
+        params.include_intermediate_cas = true;
+      }
+
       return api
-        .get<CertificateAuthority[]>('/certificate-authorities')
-        .then((res) => {
-          this.certificationServiceList = res.data;
+        .get<CertificateAuthority[]>('/certificate-authorities', {
+          params,
         })
-        .catch((error) => {
-          throw error;
-        });
+        .then((res) => res.data);
     },
-    fetchCsrForm() {
+
+    async fetchCertificateAuthorities() {
+      return this.searchCertificateAuthorities().then((data) => (this.certificationServiceList = sorCertificateAuthorities(data)));
+    },
+
+    async fetchCertificateAuthoritiesPrioritizationStrategy() {
+      return api.get<ServicePrioritizationStrategy>('/certificate-authorities/ocsp-prioritization-strategy').then((resp) => resp.data);
+    },
+
+    async fetchCsrForm() {
       let params = {
         key_usage_type: this.usage,
       } as { [key: string]: unknown };
@@ -166,15 +194,13 @@ export const useCsrStore = defineStore('csrStore', {
 
       return api
         .get<CsrSubjectFieldDescription[]>(
-          `/certificate-authorities/${encodePathParameter(
-            this.certificationService,
-          )}/csr-subject-fields`,
+          `/certificate-authorities/${encodePathParameter(this.certificationService || '')}/csr-subject-fields`,
           {
             params,
           },
         )
         .then((res) => {
-          this.form = res.data;
+          this.form = sortCsrSubjectFields(res.data);
         })
         .catch((error) => {
           throw error;
@@ -210,19 +236,16 @@ export const useCsrStore = defineStore('csrStore', {
       }
 
       return api
-        .post<KeyWithCertificateSigningRequestId>(
-          `/tokens/${tokenId}/keys-with-csrs`,
-          body,
-        )
+        .post<KeyWithCertificateSigningRequestId>(`/tokens/${tokenId}/keys-with-csrs`, body)
         .then((response) => {
+          if (crtObject.acme_order) {
+            return;
+          }
           // Fetch and save the CSR file data
           api
-            .get(
-              `/keys/${response.data.key.id}/csrs/${response.data.csr_id}?csr_format=${crtObject.csr_format}`,
-              {
-                responseType: 'arraybuffer',
-              },
-            )
+            .get(`/keys/${response.data.key.id}/csrs/${response.data.csr_id}?csr_format=${crtObject.csr_format}`, {
+              responseType: 'arraybuffer',
+            })
             .then((res) => {
               saveResponseAsFile(res);
             });
@@ -239,12 +262,51 @@ export const useCsrStore = defineStore('csrStore', {
           responseType: 'arraybuffer',
         })
         .then((response) => {
-          saveResponseAsFile(
-            response,
-            `csr_${requestBody.key_usage_type}.${requestBody.csr_format}`,
-          );
+          if (requestBody.acme_order) {
+            return;
+          }
+          saveResponseAsFile(response, `csr_${requestBody.key_usage_type}.${requestBody.csr_format}`);
         })
         .catch((error) => {
+          throw error;
+        });
+    },
+
+    async deleteCsrFromKey(keyId: string, csrId: string) {
+      return api.remove(`/keys/${encodePathParameter(keyId)}/csrs/${encodePathParameter(csrId)}`);
+    },
+
+    orderAcmeCertificate(csr: TokenCertificateSigningRequest, caName: string, usage?: KeyUsageType) {
+      if (!usage) {
+        throw new Error('Key usage is missing');
+      }
+      const body: OrderAcmeCertificateData['body'] = { csr_id: csr.id, key_usage_type: usage };
+      return api
+        .post(`/certificate-authorities/${encodePathParameter(caName)}/acme-order`, body)
+        .catch((error) => {
+          throw error;
+        });
+    },
+
+    hasAcmeEabCredentials(caName?: string, csrClientId?: string, keyUsage?: KeyUsageType) {
+      this.failedFetchAcmeMetadata = false;
+
+      return api
+        .get<AcmeEabCredentialsStatus>(
+          `/certificate-authorities/${encodePathParameter(caName ?? this.certificationService ?? '')}/has-acme-eab-credentials`,
+          {
+            params: {
+              key_usage_type: keyUsage ?? this.usage,
+              member_id: csrClientId ?? this.csrClient,
+            },
+          },
+        )
+        .then((res) => {
+          this.acmeEabCredentialsStatus = res.data;
+          return res.data;
+        })
+        .catch((error) => {
+          this.failedFetchAcmeMetadata = error?.response?.data?.error?.code === 'acme.fetching_metadata_error';
           throw error;
         });
     },
@@ -266,13 +328,16 @@ export const useCsrStore = defineStore('csrStore', {
     setKeyId(keyId: string) {
       this.keyId = keyId;
     },
-
+    setCsrForm(form: CsrSubjectFieldDescription[]) {
+      this.form = form;
+    },
     setupSignKey() {
       // Initialize the state with sign type Key. Needed for "add client" wizard.
       const templateKey: Key = {
         id: '',
         name: '',
         label: '',
+        key_algorithm: KeyAlgorithm.RSA,
         certificates: [],
         certificate_signing_requests: [],
         usage: KeyUsageType.SIGNING,
@@ -291,6 +356,11 @@ export const useCsrStore = defineStore('csrStore', {
 
     storeKeyId(id: string) {
       this.keyId = id;
+    },
+
+    async registerCertificate(certHash: string, address: string) {
+      const body: RegisterCertificateData['body'] = { address };
+      return api.put(`/token-certificates/${certHash}/register`, body);
     },
   },
 });

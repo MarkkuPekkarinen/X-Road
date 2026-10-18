@@ -1,5 +1,6 @@
 <!--
    The MIT License
+
    Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
    Copyright (c) 2018 Estonian Information System Authority (RIA),
    Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -24,152 +25,109 @@
    THE SOFTWARE.
  -->
 <template>
-  <v-container
-    v-if="authenticated && !needsInitialization && hasAlerts"
-    fluid
-    class="alerts-container px-3"
-  >
-    <v-alert
+  <v-container v-if="authenticated && !needsInitialization && hasAlerts" class="pa-0" fluid>
+    <XrdBanner
+      v-if="showGlobalConfAlert"
       data-test="global-alert-global-configuration"
-      :value="showGlobalConfAlert"
-      color="red"
-      border="left"
-      colored-border
-      class="alert"
-      icon="icon-Error-notification"
+      icon="error"
+      color="error"
+      text="globalAlert.globalConfigurationInvalid"
+    />
+
+    <XrdBanner
+      v-if="isAllowedToLoginToken && showSoftTokenPinEnteredAlert"
+      icon="error"
+      color="error"
+      text="globalAlert.softTokenPinNotEntered"
     >
-      <span class="alert-text">{{
-        $t('globalAlert.globalConfigurationInvalid')
-      }}</span>
-    </v-alert>
-    <v-alert
-      v-if="isAllowedToLoginToken"
-      data-test="global-alert-soft-token-pin"
-      :value="showSoftTokenPinEnteredAlert"
-      color="red"
-      border="left"
-      colored-border
-      class="alert"
-      icon="icon-Error-notification"
-    >
-      <span
-        v-if="showLoginLink"
-        class="alert-text clickable-link"
-        @click="tokenLogin()"
-      >
-        {{ $t('globalAlert.softTokenPinNotEntered') }}
+      <template v-if="showKeysPageLink" #actions>
+        <XrdBtn data-test="global-alert-soft-token-pin" variant="text" text="keys.logIn" @click="navigateToKeysPage()" />
+      </template>
+    </XrdBanner>
+
+    <XrdBanner v-if="showRestoreInProgress" data-test="global-alert-restore" icon="error" color="error">
+      <i18n-t scope="global" keypath="globalAlert.backupRestoreInProgress">
+        <template #startTime>
+          <XrdDateTime :value="restoreStartTime" />
+        </template>
+      </i18n-t>
+    </XrdBanner>
+
+    <XrdBanner v-if="isSecondaryNode" data-test="global-alert-secondary-node" icon="error" color="error" text="globalAlert.secondaryNode" />
+
+    <XrdBanner v-if="showCertificateRenewalJobFailureAlert" data-test="global-alert-certificate-renewal-failure" icon="error" color="error">
+      <span class="alert-text">
+        {{ $t('globalAlert.certificateRenewalJobFailure') }}
       </span>
-      <span v-else class="alert-text">
-        {{ $t('globalAlert.softTokenPinNotEntered') }}
-      </span>
-    </v-alert>
-    <v-alert
-      data-test="global-alert-restore"
-      :value="showRestoreInProgress"
-      color="red"
-      border="left"
-      colored-border
-      class="alert"
-      icon="icon-Error-notification"
-    >
-      <span class="alert-text">{{
-        $t('globalAlert.backupRestoreInProgress', {
-          startTime: formatDateTime(restoreStartTime),
-        })
-      }}</span>
-    </v-alert>
-    <v-alert
-      data-test="global-alert-secondary-node"
-      :value="isSecondaryNode"
-      color="red"
-      border="left"
-      colored-border
-      class="alert"
-      icon="icon-Error-notification"
-    >
-      <span class="alert-text">{{ $t('globalAlert.secondaryNode') }}</span>
-    </v-alert>
+
+      <p v-if="authCertificateIdsWithErrors.length > 0">
+        {{ `${$t('globalAlert.certificateRenewalJobFailureAuth')} ${failedAuthCertIds}` }}
+      </p>
+      <p v-if="signCertificateIdsWithErrors.length > 0">
+        {{ `${$t('globalAlert.certificateRenewalJobFailureSign')} ${failedSignCertIds}` }}
+      </p>
+      <template v-if="showKeysPageLink" #actions>
+        <XrdBtn variant="text" text="globalAlert.navigateToKeysPage" @click="navigateToKeysPage()" />
+      </template>
+    </XrdBanner>
   </v-container>
 </template>
 
 <script lang="ts">
-import Vue from 'vue';
-import { mapState } from 'pinia';
-import { useAlerts } from '@/store/modules/alerts';
-import { useSystemStore } from '@/store/modules/system';
-import { useUser } from '@/store/modules/user';
-import { formatDateTime } from '@/filters';
-import { Permissions, RouteName } from '@/global';
+import { defineComponent } from 'vue';
 
-export default Vue.extend({
+import { mapState } from 'pinia';
+
+import { XrdDateTime, XrdBanner, XrdBtn } from '@niis/shared-ui';
+
+import { Permissions, RouteName } from '@/global';
+import { useAlerts } from '@/store/modules/alerts';
+import { useSystem } from '@/store/modules/system';
+import { useUser } from '@/store/modules/user';
+
+export default defineComponent({
+  components: { XrdDateTime, XrdBanner, XrdBtn },
   computed: {
     ...mapState(useAlerts, [
       'showGlobalConfAlert',
       'showSoftTokenPinEnteredAlert',
       'showRestoreInProgress',
+      'showCertificateRenewalJobFailureAlert',
       'restoreStartTime',
+      'authCertificateIdsWithErrors',
+      'signCertificateIdsWithErrors',
     ]),
-    ...mapState(useSystemStore, ['isSecondaryNode']),
-    ...mapState(useUser, [
-      'authenticated',
-      'needsInitialization',
-      'hasPermission',
-    ]),
+    ...mapState(useSystem, ['isSecondaryNode']),
+    ...mapState(useUser, ['username', 'authenticated', 'needsInitialization', 'hasPermission']),
     hasAlerts(): boolean {
       return (
         this.showGlobalConfAlert ||
         this.showSoftTokenPinEnteredAlert ||
         this.showRestoreInProgress ||
+        this.showCertificateRenewalJobFailureAlert ||
         this.isSecondaryNode
       );
     },
 
-    showLoginLink(): boolean {
+    showKeysPageLink(): boolean {
       return this.$route.name !== RouteName.SignAndAuthKeys;
     },
     isAllowedToLoginToken(): boolean {
       return this.hasPermission(Permissions.ACTIVATE_DEACTIVATE_TOKEN);
     },
+    failedAuthCertIds(): string {
+      return this.authCertificateIdsWithErrors.join(', ');
+    },
+    failedSignCertIds(): string {
+      return this.signCertificateIdsWithErrors.join(', ');
+    },
   },
   methods: {
-    formatDateTime,
-    tokenLogin(): void {
+    navigateToKeysPage(): void {
       this.$router.replace({ name: RouteName.SignAndAuthKeys });
     },
   },
 });
 </script>
 
-<style scoped lang="scss">
-@import '~styles/colors';
-
-.alerts-container {
-  padding: 0;
-
-  & > * {
-    margin-bottom: 4px;
-    border-radius: 0;
-  }
-
-  & > :first-child {
-    margin-top: 16px;
-  }
-}
-
-.alert {
-  margin-top: 16px;
-  border: 2px solid $XRoad-WarmGrey30;
-  box-sizing: border-box;
-  border-radius: 4px;
-}
-
-.alert-text {
-  color: $XRoad-Black100;
-  display: block;
-}
-
-.clickable-link {
-  text-decoration: underline;
-  cursor: pointer;
-}
-</style>
+<style scoped lang="scss"></style>

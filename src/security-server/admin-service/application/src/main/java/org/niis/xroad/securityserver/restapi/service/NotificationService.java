@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -25,48 +25,55 @@
  */
 package org.niis.xroad.securityserver.restapi.service;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.commonui.SignerProxy;
-import ee.ria.xroad.signer.protocol.dto.TokenInfo;
+import ee.ria.xroad.common.util.TimeUtils;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.globalconf.GlobalConfProvider;
 import org.niis.xroad.restapi.common.backup.service.BackupRestoreEvent;
 import org.niis.xroad.securityserver.restapi.dto.AlertStatus;
-import org.niis.xroad.securityserver.restapi.facade.GlobalConfFacade;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
+import org.niis.xroad.signer.api.dto.TokenInfo;
+import org.niis.xroad.signer.client.SignerRpcClient;
+import org.niis.xroad.signer.protocol.dto.KeyUsageInfo;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
+
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
  * service class for handling notifications
  */
 @Slf4j
 @Service
-@PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class NotificationService {
     private OffsetDateTime backupRestoreRunningSince;
-    private final GlobalConfFacade globalConfFacade;
+    private final GlobalConfProvider globalConfProvider;
     private final TokenService tokenService;
 
     /**
      * Checks the status of system alerts that may affect whether the system
      * is operational or not. If backup/restore is running, the status of soft token
      * related alerts is true.
+     *
      * @return
      */
+    @PreAuthorize("isAuthenticated()")
     public AlertStatus getAlerts() {
         log.debug("checking for alerts");
         AlertStatus alertStatus = new AlertStatus();
         OffsetDateTime backupRestoreStartedAt = getBackupRestoreRunningSince();
         if (backupRestoreStartedAt != null) {
             alertStatus.setBackupRestoreRunningSince(backupRestoreStartedAt);
-            alertStatus.setCurrentTime(OffsetDateTime.now(ZoneOffset.UTC));
+            alertStatus.setCurrentTime(TimeUtils.offsetDateTimeNow(ZoneOffset.UTC));
             alertStatus.setSoftTokenPinEntered(false);
             alertStatus.setSoftTokenPinEnteredCheckSuccess(false);
         } else {
@@ -89,39 +96,62 @@ public class NotificationService {
             alertStatus.setGlobalConfValidCheckSuccess(false);
         }
 
+        List<String> authCertificateIdsWithErrors = getCertificateIdsWithErrors(KeyUsageInfo.AUTHENTICATION);
+        if (!authCertificateIdsWithErrors.isEmpty()) {
+            alertStatus.setAuthCertificateIdsWithErrors(authCertificateIdsWithErrors);
+        }
+        List<String> signCertificateIdsWithErrors = getCertificateIdsWithErrors(KeyUsageInfo.SIGNING);
+        if (!signCertificateIdsWithErrors.isEmpty()) {
+            alertStatus.setSignCertificateIdsWithErrors(signCertificateIdsWithErrors);
+        }
+        alertStatus.setCertificateRenewalJobSuccess(authCertificateIdsWithErrors.isEmpty() && signCertificateIdsWithErrors.isEmpty());
+
         return alertStatus;
     }
 
     /**
      * Verifies that the global configuration is valid.
+     *
      * @return
      */
     private boolean isGlobalConfValid() {
         try {
-            globalConfFacade.verifyValidity();
+            globalConfProvider.verifyValidity();
             return true;
-        } catch (CodedException e) {
+        } catch (XrdRuntimeException e) {
             return false;
         }
     }
 
     /**
      * Checks if soft token pin is entered.
+     *
      * @return
      */
     private boolean isSoftTokenPinEntered() {
         Optional<TokenInfo> token = tokenService.getAllTokens().stream()
-                .filter(t -> t.getId().equals(SignerProxy.SSL_TOKEN_ID)).findFirst();
-        if (!token.isPresent()) {
+                .filter(t -> t.getId().equals(SignerRpcClient.SSL_TOKEN_ID)).findFirst();
+        if (token.isEmpty()) {
             log.warn("soft token not found");
-            throw new RuntimeException("soft token not found");
+            throw XrdRuntimeException.systemInternalError("soft token not found");
         }
         return token.get().isActive();
+    }
+
+    private List<String> getCertificateIdsWithErrors(KeyUsageInfo keyUsage) {
+        return tokenService.getAllTokens().stream()
+                .flatMap(t -> t.getKeyInfo().stream())
+                .filter(k -> k.getUsage() == keyUsage)
+                .flatMap(k -> k.getCerts().stream())
+                .filter(c -> c.getStatus().equals(CertificateInfo.STATUS_REGISTERED) && isNotBlank(c.getRenewalError()))
+                .map(CertificateInfo::getCertificateDisplayName)
+                .toList();
     }
 
     /**
      * Get date/time since when backup/restore has been running. Returns null if backup/restore is not
      * currently running.
+     *
      * @return
      */
     public synchronized OffsetDateTime getBackupRestoreRunningSince() {
@@ -131,6 +161,7 @@ public class NotificationService {
     /**
      * Resets backupRestoreRunningSince by setting the value to null.
      */
+    @PreAuthorize("isAuthenticated()")
     public synchronized void resetBackupRestoreRunningSince() {
         backupRestoreRunningSince = null;
     }
@@ -139,9 +170,10 @@ public class NotificationService {
      * Sets backupRestoreRunningSince to current date/time.
      */
     public synchronized void setBackupRestoreRunningSince() {
-        backupRestoreRunningSince = OffsetDateTime.now(ZoneOffset.UTC);
+        backupRestoreRunningSince = TimeUtils.offsetDateTimeNow(ZoneOffset.UTC);
     }
 
+    @PreAuthorize("isAuthenticated()")
     @EventListener
     protected void onEvent(BackupRestoreEvent e) {
         if (BackupRestoreEvent.START.equals(e)) {

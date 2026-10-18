@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,14 +26,13 @@
  */
 package org.niis.xroad.common.managementrequest;
 
-import ee.ria.xroad.common.CodedException;
-import ee.ria.xroad.common.ErrorCodes;
 import ee.ria.xroad.common.message.SoapFault;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.input.BoundedInputStream;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.core.exception.XrdRuntimeExceptionBuilder;
 import org.niis.xroad.common.managementrequest.verify.ManagementRequestUtil;
 import org.niis.xroad.common.managementrequest.verify.ManagementRequestVerifier;
 import org.slf4j.MDC;
@@ -44,27 +43,35 @@ import org.springframework.http.ResponseEntity;
 import java.io.InputStream;
 import java.util.function.ToIntFunction;
 
+import static org.niis.xroad.common.core.exception.ErrorCode.BAD_REQUEST;
+
 @Slf4j
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@RequiredArgsConstructor
 public class ManagementRequestSoapExecutor {
     public static final int MAX_REQUEST_SIZE = 100_000;
 
-    public static ResponseEntity<String> process(String contentType, InputStream body,
+    private final ManagementRequestVerifier managementRequestVerifier;
+
+    public ResponseEntity<String> process(String contentType, InputStream body,
                                           ToIntFunction<ManagementRequestVerifier.Result> onSuccess) {
-        try (var bos = new BoundedInputStream(body, MAX_REQUEST_SIZE)) {
-            var verificationResult = ManagementRequestVerifier.readRequest(contentType, bos);
+        try (var bos = BoundedInputStream.builder()
+                .setInputStream(body)
+                .setMaxCount(MAX_REQUEST_SIZE)
+                .setOnMaxCount(this::onMaxCount).get()) {
+            var verificationResult = managementRequestVerifier.readRequest(contentType, bos);
 
             var createdRequestId = onSuccess.applyAsInt(verificationResult);
 
-            var responseBody = ManagementRequestUtil.toResponse(verificationResult.getSoapMessage(), createdRequestId).getXml();
+            var responseBody = ManagementRequestUtil.toResponse(verificationResult.soapMessage(), createdRequestId).getXml();
             return disableCache(ResponseEntity.ok())
                     .body(responseBody);
         } catch (Exception e) {
-            var ex = ErrorCodes.translateException(e);
-            // override the detail code with traceId
-            ex.setFaultDetail(MDC.get("traceId"));
+            var ex = XrdRuntimeException.systemException(e);
 
-            if (log.isDebugEnabled() || !(e instanceof CodedException)) {
+            // override the identifier with traceId
+            ex = XrdRuntimeExceptionBuilder.from(ex).identifier(MDC.get("traceId")).build();
+
+            if (log.isDebugEnabled() || !(e instanceof XrdRuntimeException)) {
                 log.error("ManagementRequest failed", ex);
             } else {
                 var cause = (ex.getCause() == null) ? "" : ", nested exception is" + ex.getCause().toString();
@@ -73,6 +80,12 @@ public class ManagementRequestSoapExecutor {
             return disableCache(ResponseEntity.internalServerError())
                     .body(SoapFault.createFaultXml(ex));
         }
+    }
+
+    private void onMaxCount(Long max, Long read) {
+        throw XrdRuntimeException.systemException(BAD_REQUEST)
+                .details("Request size limit %d exceeded".formatted(max))
+                .build();
     }
 
     private static ResponseEntity.BodyBuilder disableCache(ResponseEntity.BodyBuilder builder) {

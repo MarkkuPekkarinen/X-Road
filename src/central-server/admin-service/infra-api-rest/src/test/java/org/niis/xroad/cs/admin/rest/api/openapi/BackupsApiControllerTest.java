@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -31,12 +31,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.niis.xroad.common.exception.ServiceException;
-import org.niis.xroad.restapi.common.backup.service.BaseConfigurationBackupGenerator;
+import org.niis.xroad.common.exception.InternalServerErrorException;
+import org.niis.xroad.cs.admin.api.service.ConfigurationBackupGenerator;
 
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.mockito.Mockito.when;
-import static org.niis.xroad.restapi.exceptions.DeviationCodes.ERROR_GENERATE_BACKUP_INTERRUPTED;
+import static org.niis.xroad.common.core.exception.ErrorCode.BACKUP_GENERATION_INTERRUPTED;
 
 @ExtendWith(MockitoExtension.class)
 class BackupsApiControllerTest {
@@ -45,12 +45,13 @@ class BackupsApiControllerTest {
     private BackupsApiController backupsApiController;
 
     @Mock
-    private BaseConfigurationBackupGenerator centralServerConfigurationBackupGenerator;
+    private ConfigurationBackupGenerator centralServerConfigurationBackupGenerator;
 
     @Test
-    void addBackupShouldHandleInterruptedException() throws InterruptedException {
-        when(centralServerConfigurationBackupGenerator.generateBackup()).thenThrow(new InterruptedException());
-        var error = assertThrowsExactly(ServiceException.class, backupsApiController::addBackup);
-        Assertions.assertThat(error.getErrorDeviation().getCode()).isEqualTo(ERROR_GENERATE_BACKUP_INTERRUPTED);
+    void addBackupShouldHandleInterruptedException() {
+        when(centralServerConfigurationBackupGenerator.generateBackup())
+                .thenThrow(new InternalServerErrorException(BACKUP_GENERATION_INTERRUPTED.build()));
+        var error = assertThrowsExactly(InternalServerErrorException.class, backupsApiController::addBackup);
+        Assertions.assertThat(error.getErrorDeviation().code()).isEqualTo(BACKUP_GENERATION_INTERRUPTED.code());
     }
 }

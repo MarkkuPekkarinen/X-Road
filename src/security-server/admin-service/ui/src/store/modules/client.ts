@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,26 +26,43 @@
  */
 
 import { defineStore } from 'pinia';
-import axios from 'axios';
-import { CertificateDetails, Client, TokenCertificate } from '@/openapi-types';
+import * as api from '@/util/api';
 import { encodePathParameter } from '@/util/api';
+import {
+  CertificateDetails,
+  Client,
+  ConnectionType,
+  RenameClientData,
+  SecurityServer,
+  TokenCertificate,
+  UpdateClientData,
+} from '@/openapi-types';
+import { multipartFormDataConfig, buildFileFormData } from '@niis/shared-ui';
 
 export interface ClientState {
-  client: Client | null;
+  client: Client | undefined;
   signCertificates: TokenCertificate[];
   connection_type: string | null;
   tlsCertificates: CertificateDetails[];
-  ssCertificate: CertificateDetails | null;
+  securityServers: SecurityServer[];
+  ssCertificate: CertificateDetails | undefined;
   clientLoading: boolean;
 }
-export const useClientStore = defineStore('clientStore', {
+
+function clientBaseUrl(clientId: string, path = '') {
+  const encodedId = encodePathParameter(clientId);
+  return `/clients/${encodedId}` + path;
+}
+
+export const useClient = defineStore('client', {
   state: (): ClientState => {
     return {
-      client: null,
+      client: undefined,
       signCertificates: [],
       connection_type: null,
       tlsCertificates: [],
-      ssCertificate: null,
+      securityServers: [],
+      ssCertificate: undefined,
       clientLoading: false,
     };
   },
@@ -64,8 +82,9 @@ export const useClientStore = defineStore('clientStore', {
       }
 
       this.clientLoading = true;
-      return axios
-        .get(`/clients/${encodePathParameter(id)}`)
+      this.client = undefined;
+      return api
+        .get<Client>(clientBaseUrl(id))
         .then((res) => {
           this.client = res.data;
         })
@@ -79,10 +98,8 @@ export const useClientStore = defineStore('clientStore', {
         throw new Error('Missing id');
       }
 
-      return axios
-        .get<TokenCertificate[]>(
-          `/clients/${encodePathParameter(id)}/sign-certificates`,
-        )
+      return api
+        .get<TokenCertificate[]>(clientBaseUrl(id, '/sign-certificates'))
         .then((res) => {
           this.signCertificates = res.data;
         })
@@ -96,7 +113,7 @@ export const useClientStore = defineStore('clientStore', {
         throw new Error('Missing id');
       }
 
-      return axios
+      return api
         .get<CertificateDetails>('/system/certificate')
         .then((res) => {
           this.ssCertificate = res.data;
@@ -106,15 +123,13 @@ export const useClientStore = defineStore('clientStore', {
         });
     },
 
-    async fetchTlsCertificates(id: string) {
-      if (!id) {
+    async fetchTlsCertificates(clientId: string) {
+      if (!clientId) {
         throw new Error('Missing id');
       }
 
-      return axios
-        .get<CertificateDetails[]>(
-          `/clients/${encodePathParameter(id)}/tls-certificates`,
-        )
+      return api
+        .get<CertificateDetails[]>(clientBaseUrl(clientId, '/tls-certificates'))
         .then((res) => {
           this.tlsCertificates = res.data;
         })
@@ -123,11 +138,40 @@ export const useClientStore = defineStore('clientStore', {
         });
     },
 
-    async saveConnectionType(params: { clientId: string; connType: string }) {
-      return axios
-        .patch(`/clients/${encodePathParameter(params.clientId)}`, {
-          connection_type: params.connType,
+    async fetchSecurityServers(clientId: string) {
+      if (!clientId) {
+        throw new Error('Missing id');
+      }
+
+      return api
+        .get<SecurityServer[]>(clientBaseUrl(clientId, `/security-servers`))
+        .then((res) => {
+          this.securityServers = res.data;
         })
+        .catch((error) => {
+          throw error;
+        });
+    },
+
+    async fetchTlsCertificate(clientId: string, hash: string) {
+      const encodedHash = encodePathParameter(hash);
+      return api.get<CertificateDetails>(clientBaseUrl(clientId, `/tls-certificates/${encodedHash}`)).then((response) => response.data);
+    },
+
+    async deleteTlsCertificate(clientId: string, hash: string) {
+      const encodedHash = encodePathParameter(hash);
+
+      return api.remove(clientBaseUrl(clientId, `/tls-certificates/${encodedHash}`));
+    },
+
+    async uploadTlsCertificate(clientId: string, file: File) {
+      return api.post(clientBaseUrl(clientId, '/tls-certificates'), buildFileFormData('certificate', file), multipartFormDataConfig());
+    },
+
+    async saveConnectionType(clientId: string, connType: string) {
+      const body: UpdateClientData['body'] = { connection_type: connType as ConnectionType };
+      return api
+        .patch<Client>(clientBaseUrl(clientId), body)
         .then((res) => {
           if (res.data) {
             this.client = res.data;
@@ -136,6 +180,43 @@ export const useClientStore = defineStore('clientStore', {
         .catch((error) => {
           throw error;
         });
+    },
+
+    async renameClient(clientId: string, newName: string) {
+      const body: RenameClientData['body'] = { client_name: newName };
+      return api.put(clientBaseUrl(clientId, '/rename'), body);
+    },
+
+    async registerClient(clientId: string) {
+      return api.put(clientBaseUrl(clientId, '/register'), undefined);
+    },
+
+    async unregisterClient(clientId: string) {
+      return api.put(clientBaseUrl(clientId, '/unregister'), undefined);
+    },
+
+    async deleteClient(clientId: string) {
+      return api.remove(clientBaseUrl(clientId));
+    },
+
+    async checkOrphans(clientId: string) {
+      return api.get(clientBaseUrl(clientId, '/orphans'));
+    },
+
+    async deleteOrphans(clientId: string) {
+      return api.remove(clientBaseUrl(clientId, '/orphans'));
+    },
+
+    async disableClient(clientId: string) {
+      return api.put(clientBaseUrl(clientId, '/disable'), undefined);
+    },
+
+    async enableClient(clientId: string) {
+      return api.put(clientBaseUrl(clientId, '/enable'), undefined);
+    },
+
+    async makeOwner(clientId: string) {
+      return api.put(clientBaseUrl(clientId, '/make-owner'), undefined);
     },
   },
 });

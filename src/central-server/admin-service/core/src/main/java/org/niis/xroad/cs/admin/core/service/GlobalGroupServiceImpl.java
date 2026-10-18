@@ -1,20 +1,20 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
  * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
- * <p>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,22 +27,22 @@ package org.niis.xroad.cs.admin.core.service;
 
 import ee.ria.xroad.common.identifier.ClientId;
 
-import io.vavr.control.Try;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
-import org.niis.xroad.common.exception.DataIntegrityException;
+import org.niis.xroad.common.exception.BadRequestException;
+import org.niis.xroad.common.exception.ConflictException;
 import org.niis.xroad.common.exception.NotFoundException;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.identifiers.jpa.entity.ClientIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.MemberIdEntity;
+import org.niis.xroad.common.identifiers.jpa.entity.SubsystemIdEntity;
 import org.niis.xroad.cs.admin.api.domain.GlobalGroup;
 import org.niis.xroad.cs.admin.api.dto.GlobalGroupUpdateDto;
 import org.niis.xroad.cs.admin.api.exception.ErrorMessage;
 import org.niis.xroad.cs.admin.api.service.GlobalGroupService;
-import org.niis.xroad.cs.admin.core.entity.ClientIdEntity;
 import org.niis.xroad.cs.admin.core.entity.GlobalGroupEntity;
 import org.niis.xroad.cs.admin.core.entity.GlobalGroupMemberEntity;
 import org.niis.xroad.cs.admin.core.entity.GroupMemberCount;
-import org.niis.xroad.cs.admin.core.entity.MemberIdEntity;
-import org.niis.xroad.cs.admin.core.entity.SubsystemIdEntity;
 import org.niis.xroad.cs.admin.core.entity.SystemParameterEntity;
 import org.niis.xroad.cs.admin.core.entity.mapper.GlobalGroupMapper;
 import org.niis.xroad.cs.admin.core.repository.GlobalGroupMemberRepository;
@@ -54,10 +54,9 @@ import org.niis.xroad.restapi.config.audit.RestApiAuditProperty;
 import org.niis.xroad.restapi.converter.ClientIdConverter;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
-
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
@@ -97,7 +96,6 @@ public class GlobalGroupServiceImpl implements GlobalGroupService {
         var globalGroupEntity = new GlobalGroupEntity(globalGroup.getGroupCode());
         globalGroupEntity.setDescription(globalGroup.getDescription());
 
-
         globalGroupEntity = globalGroupRepository.save(globalGroupEntity);
         addAuditData(globalGroupEntity);
 
@@ -106,9 +104,9 @@ public class GlobalGroupServiceImpl implements GlobalGroupService {
 
     @Override
     public GlobalGroup getGlobalGroup(String groupCode) {
-        return Try.success(findGlobalGroupOrThrowException(groupCode))
+        return Optional.of(findGlobalGroupOrThrowException(groupCode))
                 .map(globalGroupMapper::toTarget)
-                .get();
+                .orElse(null);
     }
 
     @Override
@@ -153,7 +151,7 @@ public class GlobalGroupServiceImpl implements GlobalGroupService {
 
         auditDataHelper.addListPropertyItem(RestApiAuditProperty.MEMBER_IDENTIFIERS, clientId);
         if (isNotMemberOfGroup(group, clientIdEntity)) {
-            var groupMember = new GlobalGroupMemberEntity(group, clientId);
+            var groupMember = new GlobalGroupMemberEntity(group, clientIdEntity);
             globalGroupMemberRepository.save(groupMember);
             return true;
         }
@@ -163,22 +161,22 @@ public class GlobalGroupServiceImpl implements GlobalGroupService {
     private ClientIdEntity getClientIdEntity(ClientId.Conf clientId) {
         if (clientId.getSubsystemCode() == null) {
             return memberIds.findOpt(MemberIdEntity.ensure(clientId))
-                    .orElseThrow(() -> new NotFoundException(MEMBER_NOT_FOUND, clientId.toString()));
+                    .orElseThrow(() -> new NotFoundException(MEMBER_NOT_FOUND.build(clientId)));
         } else {
             return subsystemIds.findOpt(SubsystemIdEntity.ensure(clientId))
-                    .orElseThrow(() -> new NotFoundException(SUBSYSTEM_NOT_FOUND, clientId.toString()));
+                    .orElseThrow(() -> new NotFoundException(SUBSYSTEM_NOT_FOUND.build(clientId)));
         }
     }
 
     private GlobalGroupEntity findGlobalGroupOrThrowException(String groupCode) {
         return globalGroupRepository.getByGroupCode(groupCode)
-                .orElseThrow(() -> new NotFoundException(GLOBAL_GROUP_NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(GLOBAL_GROUP_NOT_FOUND.build()));
     }
 
     private void assertGlobalGroupExists(String code) {
         globalGroupRepository.getByGroupCode(code)
                 .ifPresent(globalGroup -> {
-                    throw new DataIntegrityException(GLOBAL_GROUP_EXISTS, code);
+                    throw new ConflictException(GLOBAL_GROUP_EXISTS.build(code));
                 });
     }
 
@@ -201,7 +199,7 @@ public class GlobalGroupServiceImpl implements GlobalGroupService {
     public void verifyCompositionEditability(String groupCode, ErrorMessage errorMessage) {
         List<SystemParameterEntity> ownersGroupCode = systemParameterRepository.findByKey(SECURITY_SERVER_OWNERS_GROUP);
         if (isOwnersGroup(ownersGroupCode, groupCode)) {
-            throw new ValidationFailureException(errorMessage);
+            throw new BadRequestException(errorMessage.build());
         }
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -60,5 +60,6 @@ public interface GlobalGroupService {
         private final String memberClass;
         private final String instance;
         private final String code;
+        private final String subsystemCode;
     }
 }

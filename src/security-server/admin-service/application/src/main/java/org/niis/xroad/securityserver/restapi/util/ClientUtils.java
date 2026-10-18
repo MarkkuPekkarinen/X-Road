@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -26,9 +26,10 @@
 package org.niis.xroad.securityserver.restapi.util;
 
 import ee.ria.xroad.common.identifier.ClientId;
-import ee.ria.xroad.signer.protocol.dto.CertificateInfo;
 
 import lombok.extern.slf4j.Slf4j;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.signer.api.dto.CertificateInfo;
 
 import java.util.List;
 
@@ -36,6 +37,8 @@ import java.util.List;
 public final class ClientUtils {
 
     public static final String ERROR_OCSP_EXTRACT_MSG = "Failed to extract OCSP status for local sign certificate";
+
+    public static final int GLOBAL_CONF_VERSION_WITH_SUBSYSTEM_NAMES = 5;
 
     private ClientUtils() {
         // noop
@@ -51,11 +54,11 @@ public final class ClientUtils {
             if (!clientId.memberEquals(certificateInfo.getMemberId())) {
                 continue;
             }
-            String ocspResponseStatus = null;
+            String ocspResponseStatus;
             try {
                 ocspResponseStatus = OcspUtils.getOcspResponseStatus(certificateInfo.getOcspBytes());
-            } catch (OcspUtils.OcspStatusExtractionException e) {
-                log.error(ERROR_OCSP_EXTRACT_MSG + " for client: " + clientId.toString(), e);
+            } catch (XrdRuntimeException e) {
+                log.error(ERROR_OCSP_EXTRACT_MSG + " for client: " + clientId, e);
                 break;
             }
             if (certificateInfo.getStatus().equals(CertificateInfo.STATUS_REGISTERED)
@@ -64,5 +67,9 @@ public final class ClientUtils {
             }
         }
         return false;
+    }
+
+    public static boolean doesSupportSubsystemNames(int globalConfVersion) {
+        return globalConfVersion >= GLOBAL_CONF_VERSION_WITH_SUBSYSTEM_NAMES;
     }
 }

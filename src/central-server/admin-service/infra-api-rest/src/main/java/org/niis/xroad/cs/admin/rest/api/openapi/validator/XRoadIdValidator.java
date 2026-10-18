@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -27,12 +27,11 @@
 package org.niis.xroad.cs.admin.rest.api.openapi.validator;
 
 import com.google.common.base.CharMatcher;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 import org.niis.xroad.cs.openapi.model.ClientIdDto;
 import org.niis.xroad.cs.openapi.model.SecurityServerIdDto;
 import org.niis.xroad.cs.openapi.model.XRoadIdDto;
-
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
 
 public class XRoadIdValidator implements ConstraintValidator<ValidXRoadId, XRoadIdDto> {
 
@@ -44,14 +43,12 @@ public class XRoadIdValidator implements ConstraintValidator<ValidXRoadId, XRoad
         if (value == null) return true;
         if (!isValidPart(value.getInstanceId())) return false;
 
-        if (value instanceof ClientIdDto) {
-            var id = (ClientIdDto) value;
+        if (value instanceof ClientIdDto id) {
             return isValidPart(id.getMemberClass())
                     && isValidPart(id.getMemberCode())
                     && ((id.getType() == XRoadIdDto.TypeEnum.SUBSYSTEM && isValidPart(id.getSubsystemCode()))
                     || ((id.getType() == XRoadIdDto.TypeEnum.MEMBER && id.getSubsystemCode() == null)));
-        } else if (value instanceof SecurityServerIdDto) {
-            var id = (SecurityServerIdDto) value;
+        } else if (value instanceof SecurityServerIdDto id) {
             return isValidPart(id.getMemberClass())
                     && isValidPart(id.getMemberCode())
                     && isValidPart(id.getServerCode());

@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,8 +26,9 @@
  */
 package org.niis.xroad.cs.admin.core.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.niis.xroad.common.exception.DataIntegrityException;
+import org.niis.xroad.common.exception.ConflictException;
 import org.niis.xroad.common.exception.NotFoundException;
 import org.niis.xroad.cs.admin.api.domain.MemberClass;
 import org.niis.xroad.cs.admin.api.service.MemberClassService;
@@ -39,13 +40,12 @@ import org.niis.xroad.restapi.config.audit.AuditDataHelper;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
-
 import java.util.List;
 import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
-import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_CLASS_EXISTS;
+import static org.niis.xroad.common.core.exception.DeviationBuilder.trMetadata;
+import static org.niis.xroad.common.core.exception.ErrorCode.MEMBER_CLASS_EXISTS;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_CLASS_IS_IN_USE;
 import static org.niis.xroad.cs.admin.api.exception.ErrorMessage.MEMBER_CLASS_NOT_FOUND;
 import static org.niis.xroad.restapi.config.audit.RestApiAuditProperty.CODE;
@@ -87,7 +87,7 @@ public class MemberClassServiceImpl implements MemberClassService {
         boolean exists = memberClass.getId() > 0
                 || memberClassRepository.findByCode(memberClass.getCode()).isPresent();
         if (exists) {
-            throw new DataIntegrityException(MEMBER_CLASS_EXISTS, memberClass.getCode());
+            throw new ConflictException(MEMBER_CLASS_EXISTS.build(memberClass.getCode()));
         }
 
         var memberClassEntity = new MemberClassEntity(memberClass.getCode(), memberClass.getDescription());
@@ -97,7 +97,7 @@ public class MemberClassServiceImpl implements MemberClassService {
 
     private MemberClassEntity get(String code) {
         return memberClassRepository.findByCode(code)
-                .orElseThrow(() -> new NotFoundException(MEMBER_CLASS_NOT_FOUND, "code", code));
+                .orElseThrow(() -> new NotFoundException(MEMBER_CLASS_NOT_FOUND.build(trMetadata("code", code))));
     }
 
     @Override
@@ -116,7 +116,7 @@ public class MemberClassServiceImpl implements MemberClassService {
         auditData.put(CODE, code);
         final MemberClassEntity entity = get(code);
         if (members.existsByMemberClass(entity)) {
-            throw new DataIntegrityException(MEMBER_CLASS_IS_IN_USE, "code", code);
+            throw new ConflictException(MEMBER_CLASS_IS_IN_USE.build(trMetadata("code", code)));
         }
 
         memberClassRepository.delete(entity);

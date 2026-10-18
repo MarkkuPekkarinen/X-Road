@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -64,6 +64,7 @@ public class TestSimpleManagementRequestBuilder {
     }
 
     @SneakyThrows
+    @SuppressWarnings("checkstyle:SneakyThrowsCheck")
     public TestSimpleManagementRequest build() {
         var builder = new TestManagementRequestBuilder(senderClientId, receiverClientId);
 

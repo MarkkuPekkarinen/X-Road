@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -23,13 +24,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import { Tab } from '@/ui-types';
+import { Tab } from '@niis/shared-ui';
 
 // A "single source of truth" for route names
 export enum RouteName {
   BaseRoute = 'base',
   Keys = 'keys',
   Diagnostics = 'diagnostics',
+  DiagnosticsOverview = 'diagnostics-overview',
+  DiagnosticsTraffic = 'diagnostics-traffic',
+  DiagnosticsConnection = 'diagnostics-connection',
   AddSubsystem = 'add-subsystem',
   AddClient = 'add-client',
   Clients = 'clients',
@@ -55,10 +59,18 @@ export enum RouteName {
   ApiKey = 'api-key',
   CreateApiKey = 'create-api-key',
   SSTlsCertificate = 'ss-tls-certificate',
+  DsTlsCertificate = 'ds-tls-certificate',
+  DsTlsCertificateDetails = 'ds-tls-certificate-details',
+  OpMonitorTrust = 'op-monitor-trust',
+  ExternalRpcCaDetails = 'external-rpc-ca-details',
+  OpMonitorCaDetails = 'op-monitor-ca-details',
   Token = 'token',
   Key = 'key',
+  Settings = 'settings',
   SystemParameters = 'system-parameters',
   BackupAndRestore = 'backup-and-restore',
+  AdminUsers = 'admin-users',
+  AddAdminUser = 'add-admin-user',
   AddKey = 'add-key',
   GenerateCertificateSignRequest = 'generate-csr',
   InternalTlsCertificate = 'internal-tls-certificate',
@@ -68,7 +80,9 @@ export enum RouteName {
   EndpointAccessRights = 'endpoint-access-rights',
   ServiceClientAccessRights = 'service-client-access-rights',
   InitialConfiguration = 'initial-configuration',
+  InitialAdminUser = 'initial-admin-user',
   AddServiceClientAccessRight = 'add-service-client-access-right',
+  NotFound = 'not-found',
 }
 
 // A "single source of truth" for permission strings
@@ -85,6 +99,7 @@ export enum Permissions {
   ADD_OPENAPI3_ENDPOINT = 'ADD_OPENAPI3_ENDPOINT', // client > services > service > endpoints > edit endpoint
   BACKUP_CONFIGURATION = 'BACKUP_CONFIGURATION', // settings > backup and restore
   CREATE_API_KEY = 'CREATE_API_KEY', // api key
+  ADD_ADMIN_USER = 'ADD_ADMIN_USER',
   DELETE_AUTH_CERT = 'DELETE_AUTH_CERT', // certificate details
   DELETE_AUTH_KEY = 'DELETE_AUTH_KEY', // key details
   DELETE_CLIENT = 'DELETE_CLIENT', // client
@@ -97,6 +112,9 @@ export enum Permissions {
   DELETE_TSP = 'DELETE_TSP', // settings > system parameters
   DELETE_WSDL = 'DELETE_WSDL', // can delete WSDL or REST
   DELETE_ENDPOINT = 'DELETE_ENDPOINT', // can delete endpoint
+  DELETE_ADMIN_USER = 'DELETE_ADMIN_USER',
+  DISABLE_CLIENT = 'DISABLE_CLIENT',
+  RENAME_SUBSYSTEM = 'RENAME_SUBSYSTEM',
   DIAGNOSTICS = 'DIAGNOSTICS', // diagnostics tab
   DOWNLOAD_ANCHOR = 'DOWNLOAD_ANCHOR', // settings > system parameters
   EDIT_ACL_SUBJECT_OPEN_SERVICES = 'EDIT_ACL_SUBJECT_OPEN_SERVICES', // client > service clients
@@ -108,23 +126,30 @@ export enum Permissions {
   EDIT_SERVICE_ACL = 'EDIT_SERVICE_ACL', // client > service clients > access rights
   EDIT_SERVICE_PARAMS = 'EDIT_SERVICE_PARAMS', // client > services > rest/wsdl > service params
   EDIT_TOKEN_FRIENDLY_NAME = 'EDIT_TOKEN_FRIENDLY_NAME', // token details
+  DELETE_TOKEN = 'DELETE_TOKEN', // delete inactive token
   EDIT_WSDL = 'EDIT_WSDL', // client > services > edit service description of type WSDL
   EDIT_REST = 'EDIT_REST', // client > services > edit service description of type rest
   EDIT_OPENAPI3 = 'EDIT_OPENAPI3', // client > services > edit service description of type openapi3
   EDIT_OPENAPI3_ENDPOINT = 'EDIT_OPENAPI3_ENDPOINT', // client > services > service > endpoints > edit endpoint
+  ENABLE_CLIENT = 'ENABLE_CLIENT',
   ENABLE_DISABLE_WSDL = 'ENABLE_DISABLE_WSDL', // client > services > enable / disable WSDL switch
   EXPORT_INTERNAL_TLS_CERT = 'EXPORT_INTERNAL_TLS_CERT', // export SS TLS certificate in "internal servers" view & system parameters
   GENERATE_AUTH_CERT_REQ = 'GENERATE_AUTH_CERT_REQ',
+  GENERATE_DS_TLS_KEY = 'GENERATE_DS_TLS_KEY', // Generate the DataSpace TLS key
+  GENERATE_DS_TLS_CSR = 'GENERATE_DS_TLS_CSR', // Generate a certificate signing request for the DataSpace TLS key
   GENERATE_INTERNAL_TLS_KEY_CERT = 'GENERATE_INTERNAL_TLS_KEY_CERT', // Generate Security server TLS key and certificate
   GENERATE_INTERNAL_TLS_CSR = 'GENERATE_INTERNAL_TLS_CSR', // Security server TLS certificate
   GENERATE_KEY = 'GENERATE_KEY',
   GENERATE_SIGN_CERT_REQ = 'GENERATE_SIGN_CERT_REQ',
   IMPORT_AUTH_CERT = 'IMPORT_AUTH_CERT',
   IMPORT_INTERNAL_TLS_CERT = 'IMPORT_INTERNAL_TLS_CERT', // Import security server TLS certificate
+  UPLOAD_DS_TLS_CERT = 'UPLOAD_DS_TLS_CERT', // Upload the DataSpace TLS certificate
+  ORDER_DS_TLS_CERT = 'ORDER_DS_TLS_CERT', // Order the DataSpace TLS certificate via ACME
   IMPORT_SIGN_CERT = 'IMPORT_SIGN_CERT',
   IMPORT_UNKNOWN_CERT = 'IMPORT_UNKNOWN_CERT', // Import hardware token certificate from token
   INIT_CONFIG = 'INIT_CONFIG', // can initialise security server
   VIEW_API_KEYS = 'VIEW_API_KEYS', // api key
+  VIEW_ADMIN_USERS = 'VIEW_ADMIN_USERS',
   REFRESH_WSDL = 'REFRESH_WSDL', // client > services > refresh wsdl
   REFRESH_REST = 'REFRESH_REST', // not used?
   REFRESH_OPENAPI3 = 'REFRESH_OPENAPI3', // client > services > refresh openapi3
@@ -136,6 +161,7 @@ export enum Permissions {
   SEND_CLIENT_REG_REQ = 'SEND_CLIENT_REG_REQ', // clients > register
   SEND_OWNER_CHANGE_REQ = 'SEND_OWNER_CHANGE_REQ', // client > make owner
   UPDATE_API_KEY = 'UPDATE_API_KEY', // api key
+  UPDATE_ADMIN_USER = 'UPDATE_ADMIN_USER',
   UPDATE_TOKEN_PIN = 'UPDATE_TOKEN_PIN', // token details
   UPLOAD_ANCHOR = 'UPLOAD_ANCHOR', // settings / initialisation > upload anchor
   VIEW_ACL_SUBJECT_OPEN_SERVICES = 'VIEW_ACL_SUBJECT_OPEN_SERVICES', // not needed because roles can't access the view
@@ -151,43 +177,28 @@ export enum Permissions {
   VIEW_CLIENT_SERVICES = 'VIEW_CLIENT_SERVICES', // subsystem "services" tab
   VIEW_ENDPOINT_ACL = 'VIEW_ENDPOINT_ACL', // client > services > rest > endpoint > acces rights
   VIEW_INTERNAL_TLS_CERT = 'VIEW_INTERNAL_TLS_CERT', // view server TLS certificate in client "internal servers" or in system parameters
+  VIEW_DS_TLS_CERT = 'VIEW_DS_TLS_CERT', // view the DataSpace TLS certificate details and status
+  DOWNLOAD_DS_TLS_CERT = 'DOWNLOAD_DS_TLS_CERT', // download the DataSpace TLS certificate
+  VIEW_EXTERNAL_RPC_CA = 'VIEW_EXTERNAL_RPC_CA', // view the external RPC CA details
+  DOWNLOAD_EXTERNAL_RPC_CA = 'DOWNLOAD_EXTERNAL_RPC_CA', // download the external RPC CA
+  VIEW_OP_MONITOR_CA = 'VIEW_OP_MONITOR_CA', // view the op-monitor CA details
+  UPLOAD_OP_MONITOR_CA = 'UPLOAD_OP_MONITOR_CA', // upload or replace the op-monitor CA
+  DELETE_OP_MONITOR_CA = 'DELETE_OP_MONITOR_CA', // delete the op-monitor CA
   VIEW_KEYS = 'VIEW_KEYS', // keys and certificates tab
   VIEW_SERVICE_ACL = 'VIEW_SERVICE_ACL', // not needed because roles can't access the view
   VIEW_SYS_PARAMS = 'VIEW_SYS_PARAMS', // settings > system paramters tab
-  VIEW_TSPS = 'VIEW_TSPS', // settings > system paramters > timestamping services
+  VIEW_TSPS = 'VIEW_TSPS', // settings > system parameters > timestamping services
+  CHANGE_SS_ADDRESS = 'CHANGE_SS_ADDRESS', // settings > system parameters > server address
+  CHANGE_CONFIGURATION_PROPERTY = 'CHANGE_CONFIGURATION_PROPERTY', // settings > system parameters > configurable properties
+  DOWNLOAD_DIAGNOSTICS_REPORT = 'DOWNLOAD_DIAGNOSTICS_REPORT', // diagnostics > download diagnostics report
+  TOGGLE_MAINTENANCE_MODE = 'TOGGLE_MAINTENANCE_MODE', // diagnostics > enable / disable maintenance mode button
+  SEND_TEST_MAIL = 'SEND_TEST_MAIL', // diagnostics > send test mail button
 }
 
 export enum UsageTypes {
   SIGNING = 'SIGNING',
   AUTHENTICATION = 'AUTHENTICATION',
 }
-
-export const mainTabs: Tab[] = [
-  {
-    to: { name: RouteName.Clients },
-    key: 'clients',
-    name: 'tab.main.clients',
-  },
-  {
-    to: { name: RouteName.SignAndAuthKeys },
-    key: 'keys',
-    name: 'tab.main.keys',
-  },
-  {
-    to: { name: RouteName.Diagnostics },
-    key: 'diagnostics',
-    name: 'tab.main.diagnostics',
-  },
-  {
-    to: { name: RouteName.SystemParameters },
-    key: 'settings',
-    name: 'tab.main.settings',
-    permissions: [
-      Permissions.VIEW_SYS_PARAMS,
-      Permissions.BACKUP_CONFIGURATION,
-    ],
-  },
-];
 
 // A single source of truth for roles
 export const Roles = [
@@ -215,30 +226,4 @@ export enum AddMemberWizardModes {
   CSR_EXISTS = 'CSR_EXISTS',
   CERTIFICATE_EXISTS = 'CERTIFICATE_EXISTS',
   FULL = 'FULL',
-}
-
-// Version 7.0 colors as enum.
-export enum Colors {
-  Purple10 = '#efebfb',
-  Purple20 = '#e0d8f8',
-  Purple30 = '#d1c4f4',
-  Purple70 = '#9376e6',
-  Purple100 = '#663cdc',
-  Black10 = '#e8e8e8',
-  Black30 = '#bcbbbb',
-  Black50 = '#908e8e',
-  Black70 = '#636161',
-  Black100 = '#211e1e',
-  White100 = '#ffffff',
-  WarmGrey10 = '#f4f3f6',
-  WarmGrey20 = '#eae8ee',
-  WarmGrey30 = '#dedce4',
-  WarmGrey50 = '#c9c6d3',
-  WarmGrey70 = '#b4afc2',
-  WarmGrey100 = '#575169',
-  Error = '#ec4040',
-  Warning = '#f5a623',
-  Success100 = '#0cc177',
-  Success10 = '#e6f8f1',
-  Background = '#e5e5e5',
 }

@@ -1,0 +1,76 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
+ * Copyright (c) 2018 Estonian Information System Authority (RIA),
+ * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
+ * Copyright (c) 2015-2017 Estonian Information System Authority (RIA), Population Register Centre (VRK)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package org.niis.xroad.edc.extension.assetaccess.service;
+
+import org.eclipse.edc.spi.result.ServiceResult;
+import org.eclipse.edc.spi.types.domain.DataAddress;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+
+/**
+ * Holds the per-instance in-flight request map that collapses concurrent asset access acquisitions for
+ * the same key into a single call. Agreement state lives in the shared EDC agreement store instead; see
+ * {@link org.niis.xroad.edc.extension.assetaccess.agreement.ReusableAgreementLookup}.
+ */
+public class AssetAccessStateStore {
+
+    private final ConcurrentHashMap<String, CompletableFuture<ServiceResult<DataAddress>>> inFlightRequests = new ConcurrentHashMap<>();
+
+    /**
+     * Returns the existing in-flight future for {@code key} if one exists; otherwise claims the slot with
+     * a new future, then calls {@code supplier} outside the map to produce the result. The claimed future
+     * removes itself from the map on completion and, once the supplier's future completes, adopts its outcome.
+     *
+     * <p>The slot is claimed before {@code supplier} runs, so the supplier may block; a supplier that throws
+     * synchronously fails the claimed future and leaves no entry behind.
+     */
+    public CompletableFuture<ServiceResult<DataAddress>> loadOrStartInFlight(
+            String key,
+            Supplier<CompletableFuture<ServiceResult<DataAddress>>> supplier) {
+        var claimed = new CompletableFuture<ServiceResult<DataAddress>>();
+        var existing = inFlightRequests.putIfAbsent(key, claimed);
+        if (existing != null) {
+            return existing;
+        }
+        claimed.whenComplete((result, throwable) -> inFlightRequests.remove(key, claimed));
+        try {
+            supplier.get().whenComplete((result, throwable) -> {
+                if (throwable != null) {
+                    claimed.completeExceptionally(throwable);
+                } else {
+                    claimed.complete(result);
+                }
+            });
+        } catch (Exception e) {
+            claimed.completeExceptionally(e);
+        }
+        return claimed;
+    }
+}

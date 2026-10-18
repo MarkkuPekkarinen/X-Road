@@ -37,7 +37,7 @@ import {
   PagedGroupMemberListView,
   PagingMetadata,
 } from '@/openapi-types';
-import { DataOptions } from 'vuetify';
+import { PagingOptions } from '@/ui-types';
 
 export interface State {
   globalGroups: GlobalGroupResource[];
@@ -46,7 +46,7 @@ export interface State {
   pagingOptions: PagingMetadata;
 }
 
-export const useGlobalGroupsStore = defineStore('globalGroup', {
+export const useGlobalGroups = defineStore('globalGroup', {
   state: (): State => ({
     globalGroups: [],
     groupsLoading: false,
@@ -81,70 +81,47 @@ export const useGlobalGroupsStore = defineStore('globalGroup', {
     },
     getMembersFilterModel(groupId: string) {
       return axios
-        .get<GroupMembersFilterModel>(
-          `/global-groups/${groupId}/members/filter-model`,
-        )
+        .get<GroupMembersFilterModel>(`/global-groups/${groupId}/members/filter-model`)
         .then((resp) => resp.data)
         .catch((error) => {
           throw error;
         });
     },
-    async findMembers(
-      groupCode: string,
-      dataOptions: DataOptions,
-      filter: GroupMembersFilter,
-    ) {
+    async findMembers(groupCode: string, dataOptions: PagingOptions, filter: GroupMembersFilter) {
       const offset = dataOptions?.page == null ? 0 : dataOptions.page - 1;
       filter.paging_sorting = {
         limit: dataOptions.itemsPerPage,
         offset: offset,
-        sort: dataOptions.sortBy[0],
-        desc: dataOptions.sortDesc[0],
+        sort: dataOptions.sortBy?.[0]?.key,
+        desc: dataOptions.sortBy?.[0]?.order === 'desc',
       };
 
-      return axios
-        .post<PagedGroupMemberListView>(
-          `/global-groups/${groupCode}/members/`,
-          filter,
-        )
-        .then((resp) => {
-          this.members = resp.data.items || [];
-          this.pagingOptions = resp.data.paging_metadata;
-        });
+      return axios.post<PagedGroupMemberListView>(`/global-groups/${groupCode}/members/`, filter).then((resp) => {
+        this.members = resp.data.items || [];
+        this.pagingOptions = resp.data.paging_metadata;
+      });
     },
     add(codeAndDescription: GlobalGroupCodeAndDescription) {
-      return axios
-        .post('/global-groups', codeAndDescription)
-        .finally(() => this.findAll());
+      return axios.post('/global-groups', codeAndDescription).finally(() => this.findAll());
     },
     addGroupMembers(groupCode: string, clientIds: string[]) {
       const request: Members = {
         items: clientIds,
       };
-      return axios.post<Members>(
-        `/global-groups/${groupCode}/members/add`,
-        request,
-      );
+      return axios.post<Members>(`/global-groups/${groupCode}/members/add`, request);
     },
     deleteGroupMember(groupCode: string, memberId: string) {
       return axios.delete(`/global-groups/${groupCode}/members/${memberId}`);
     },
     deleteByCode(groupCode: string) {
-      return axios
-        .delete<GlobalGroupResource>(`/global-groups/${groupCode}`)
-        .catch((error) => {
-          throw error;
-        });
+      return axios.delete<GlobalGroupResource>(`/global-groups/${groupCode}`).catch((error) => {
+        throw error;
+      });
     },
-    editGroupDescription(
-      groupCode: string,
-      description: GlobalGroupDescription,
-    ) {
-      return axios
-        .patch<GlobalGroupResource>(`/global-groups/${groupCode}`, description)
-        .catch((error) => {
-          throw error;
-        });
+    editGroupDescription(groupCode: string, description: GlobalGroupDescription) {
+      return axios.patch<GlobalGroupResource>(`/global-groups/${groupCode}`, description).catch((error) => {
+        throw error;
+      });
     },
   },
 });

@@ -1,60 +1,70 @@
 # X-Road: Configuration Proxy Manual
 
-Version: 2.10  
+Version: 2.17  
 Doc. ID: UG-CP
 
 ## Version History
 
-| Date       | Version | Description                                                                                                                                                                                   | Author           |
-|------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|
-| 26.11.2014 | 1.0     | Initial version                                                                                                                                                                               |                  |
-| 19.01.2015 | 1.1     | License information added                                                                                                                                                                     |                  |
-| 07.05.2015 | 1.2     | Configuration properties table added                                                                                                                                                          |                  |
-| 26.05.2015 | 1.3     | Token initialization description added                                                                                                                                                        |                  |
-| 30.06.2015 | 1.4     | Minor corrections done                                                                                                                                                                        |                  |
-| 09.07.2015 | 1.5     | Repository address updated                                                                                                                                                                    |                  |
-| 20.09.2015 | 2.0     | Editorial changes made                                                                                                                                                                        |                  |
-| 07.06.2017 | 2.1     | System parameter *signature-algorithm-id* replaced with *signature-digest-algorithm-id*                                                                                                       | Cybernetica AS   |
-| 05.03.2018 | 2.2     | Added references, terms and abbreviations reference, document link                                                                                                                            | Tatu Repo        |
-| 10.04.2018 | 2.3     | Updated chapter "[Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini' | Cybernetica AS   |
-| 14.10.2018 | 2.4     | Update package repository address                                                                                                                                                             | Petteri Kivimäki |
-| 15.11.2018 | 2.5     | Add Ubuntu 18.04 installation instructions                                                                                                                                                    | Jarkko Hyöty     |
-| 11.09.2019 | 2.6     | Remove Ubuntu 14.04 support                                                                                                                                                                   | Jarkko Hyöty     |
-| 24.06.2020 | 2.7     | Add repository sign key details in section [2.2 Reference data](#22-reference-data)                                                                                                           | Petteri Kivimäki |
-| 18.02.2021 | 2.8     | Add Ubuntu 20.04 in supported platforms                                                                                                                                                       | Petteri Kivimäki |
-| 01.07.2021 | 2.9     | Update 3rd party key server                                                                                                                                                                   | Petteri Kivimäki |
-| 26.09.2022 | 2.10    | Remove Ubuntu 18.04 support                                                                                                                                                                   | Andres Rosenthal |
-
+| Date       | Version | Description                                                                                                                                                                                   | Author               |
+|------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|
+| 26.11.2014 | 1.0     | Initial version                                                                                                                                                                               |                      |
+| 19.01.2015 | 1.1     | License information added                                                                                                                                                                     |                      |
+| 07.05.2015 | 1.2     | Configuration properties table added                                                                                                                                                          |                      |
+| 26.05.2015 | 1.3     | Token initialization description added                                                                                                                                                        |                      |
+| 30.06.2015 | 1.4     | Minor corrections done                                                                                                                                                                        |                      |
+| 09.07.2015 | 1.5     | Repository address updated                                                                                                                                                                    |                      |
+| 20.09.2015 | 2.0     | Editorial changes made                                                                                                                                                                        |                      |
+| 07.06.2017 | 2.1     | System parameter *signature-algorithm-id* replaced with *signature-digest-algorithm-id*                                                                                                       | Cybernetica AS       |
+| 05.03.2018 | 2.2     | Added references, terms and abbreviations reference, document link                                                                                                                            | Tatu Repo            |
+| 10.04.2018 | 2.3     | Updated chapter "[Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)" with configurable parameters described in the configuration file 'devices.ini' | Cybernetica AS       |
+| 14.10.2018 | 2.4     | Update package repository address                                                                                                                                                             | Petteri Kivimäki     |
+| 15.11.2018 | 2.5     | Add Ubuntu 18.04 installation instructions                                                                                                                                                    | Jarkko Hyöty         |
+| 11.09.2019 | 2.6     | Remove Ubuntu 14.04 support                                                                                                                                                                   | Jarkko Hyöty         |
+| 24.06.2020 | 2.7     | Add repository sign key details in section [2.2 Reference data](#22-reference-data)                                                                                                           | Petteri Kivimäki     |
+| 18.02.2021 | 2.8     | Add Ubuntu 20.04 in supported platforms                                                                                                                                                       | Petteri Kivimäki     |
+| 01.07.2021 | 2.9     | Update 3rd party key server                                                                                                                                                                   | Petteri Kivimäki     |
+| 26.09.2022 | 2.10    | Remove Ubuntu 18.04 support                                                                                                                                                                   | Andres Rosenthal     |
+| 30.10.2023 | 2.11    | Configuring TLS Certificates                                                                                                                                                                  | Madis Loitmaa        |
+| 25.04.2024 | 2.12    | Updated for Ubuntu 24.04                                                                                                                                                                      | Madis Loitmaa        |
+| 21.10.2024 | 2.13    | Update for configurable parameters in the `/etc/xroad/devices.ini` after added support for ECDSA keys and addtinal arguments for `confproxy-add-signing-key` to enable EC key creation        | Ovidijus Narkevicius |
+| 10.03.2025 | 2.14    | Remove Ubuntu 20.04 from supported platforms and other minor updates                                                                                                                          | Petteri Kivimäki     |
+| 20.05.2025 | 2.15    | Minor updates                                                                                                                                                                                 | Eneli Reimets        |
+| 30.06.2025 | 2.16    | Update the method of adding X-Road apt repository                                                                                                                                             | Mikk-Erik Bachmann   |
+| 10.09.2026 | 2.17    | Document hardware token configuration via the `xroad.signer.modules` database property                                                                                                       | Ričardas Bučiūnas    |
 
 ## Table of Contents
 
 <!-- vim-markdown-toc GFM -->
 
-* [1 Introduction](#1-introduction)
-  * [1.1 Target Audience](#11-target-audience)
-  * [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
-  * [1.3 References](#13-references)
-  * [1.4 X-Road Configuration Proxy](#14-x-road-configuration-proxy)
-* [2 Installation](#2-installation)
-  * [2.1 Supported Platforms](#21-supported-platforms)
-  * [2.2 Reference Data](#22-reference-data)
-  * [2.3 Requirements for the Configuration Proxy](#23-requirements-for-the-configuration-proxy)
-  * [2.4 Preparing OS](#24-preparing-os)
-  * [2.5 Installation](#25-installation)
-  * [2.6 Post-Installation Checks](#26-post-installation-checks)
-  * [2.7 Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)
-* [3 Configuration](#3-configuration)
-  * [3.1 Prerequisites](#31-prerequisites)
-    * [3.1.1 Security Token Activation](#311-security-token-activation)
-    * [3.1.2 User Access Privileges](#312-user-access-privileges)
-  * [3.2 General Configuration](#32-general-configuration)
-    * [3.2.1 Configuration Structure of the Instances](#321-configuration-structure-of-the-instances)
-  * [3.3 Proxy Instance Reference Data](#33-proxy-instance-reference-data)
-  * [3.4 Proxy Instance Configuration](#34-proxy-instance-configuration)
-  * [3.5 Additional Configuration](#35-additional-configuration)
-    * [3.5.1 Changing the Validity Interval](#351-changing-the-validity-interval)
-    * [3.5.2 Deleting the Signing Keys](#352-deleting-the-signing-keys)
-    * [3.5.3 Changing the Active Signing Key](#353-changing-the-active-signing-key)
+- [X-Road: Configuration Proxy Manual](#x-road-configuration-proxy-manual)
+  - [Version History](#version-history)
+  - [Table of Contents](#table-of-contents)
+  - [1 Introduction](#1-introduction)
+    - [1.1 Target Audience](#11-target-audience)
+    - [1.2 Terms and abbreviations](#12-terms-and-abbreviations)
+    - [1.3 References](#13-references)
+    - [1.4 X-Road Configuration Proxy](#14-x-road-configuration-proxy)
+  - [2 Installation](#2-installation)
+    - [2.1 Supported Platforms](#21-supported-platforms)
+    - [2.2 Reference Data](#22-reference-data)
+    - [2.3 Requirements for the Configuration Proxy](#23-requirements-for-the-configuration-proxy)
+    - [2.4 Preparing OS](#24-preparing-os)
+    - [2.5 Installation](#25-installation)
+    - [2.6 Post-Installation Checks](#26-post-installation-checks)
+    - [2.7 Installing the Support for Hardware Tokens](#27-installing-the-support-for-hardware-tokens)
+    - [2.8 Configuring TLS Certificates](#28-configuring-tls-certificates)
+  - [3 Configuration](#3-configuration)
+    - [3.1 Prerequisites](#31-prerequisites)
+      - [3.1.1 Security Token Activation](#311-security-token-activation)
+      - [3.1.2 User Access Privileges](#312-user-access-privileges)
+    - [3.2 General Configuration](#32-general-configuration)
+      - [3.2.1 Configuration Structure of the Instances](#321-configuration-structure-of-the-instances)
+    - [3.3 Proxy Instance Reference Data](#33-proxy-instance-reference-data)
+    - [3.4 Proxy Instance Configuration](#34-proxy-instance-configuration)
+    - [3.5 Additional Configuration](#35-additional-configuration)
+      - [3.5.1 Changing the Validity Interval](#351-changing-the-validity-interval)
+      - [3.5.2 Deleting the Signing Keys](#352-deleting-the-signing-keys)
+      - [3.5.3 Changing the Active Signing Key](#353-changing-the-active-signing-key)
 
 <!-- vim-markdown-toc -->
 
@@ -63,7 +73,7 @@ Doc. ID: UG-CP
 
 ### 1.1 Target Audience
 
-The intended audience of this Manual are X-Road system administrators responsible for installing and using X-Road configuration proxy software.
+The intended audience of this Manual are X-Road system administrators responsible for installing and using the X-Road Configuration Proxy software.
 
 The document is intended for readers with a moderate knowledge of Linux server management, computer networks, and the X-Road working principles.
 
@@ -77,18 +87,18 @@ See X-Road terms and abbreviations documentation \[[TA-TERMS](#Ref_TERMS)\].
 
 ### 1.4 X-Road Configuration Proxy
 
-The configuration proxy acts as an intermediary between X-Road servers in the matters of global configuration exchange.
+The Configuration Proxy acts as an intermediary between X-Road servers in the matters of global configuration exchange.
 
-The goal of the configuration proxy is to download an X-Road global configuration from a provided configuration source and further distribute it in a secure way. Optionally, the downloaded global configuration may be modified to suit the requirements of the configuration proxy owner.
+The goal of the Configuration Proxy is to download an X-Road global configuration from a provided configuration source and further distribute it in a secure way. Optionally, the downloaded global configuration may be modified to suit the requirements of the Configuration Proxy owner.
 
-The configuration proxy can be configured to mediate several global configurations (from multiple configuration sources).
+The Configuration Proxy can be configured to mediate several global configurations (from multiple configuration sources).
 
 
 ## 2 Installation
 
 ### 2.1 Supported Platforms
 
-The configuration proxy runs on the Ubuntu Server 20.04 LTS or 22.04 LTS operating system on a 64-bit platform. The configuration proxy's software is distributed as .deb packages through the official X-Road repository at [https://artifactory.niis.org/xroad-release-deb](https://artifactory.niis.org/xroad-release-deb).
+The Configuration Proxy runs on the Ubuntu Server 22.04 and 24.04 LTS operating system on a 64-bit platform. The Configuration Proxy's software is distributed as .deb packages through the official X-Road repository at [https://artifactory.niis.org/xroad-release-deb](https://artifactory.niis.org/xroad-release-deb).
 
 The software can be installed both on physical and virtualized hardware (of the latter, Xen and Oracle VirtualBox have been tested).
 
@@ -99,14 +109,14 @@ The software can be installed both on physical and virtualized hardware (of the 
 
 **Caution:** Data necessary for the functioning of the operating system is not included.
 
-| Ref |                                                     | Explanation                                                                                                                                                                                                                                                                                |
-|-----|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1.0 | Ubuntu 20.04, 64bit<br>2GB RAM, 3GB free disk space | Minimum requirements.                                                                                                                                                                                                                                                                      |
-| 1.1 | https://artifactory.niis.org/xroad-release-deb      | X-Road package repository.                                                                                                                                                                                                                                                                 |
-| 1.2 | https://artifactory.niis.org/api/gpg/key/public     | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index) |
-| 1.3 | TCP 80                                              | Global configuration distribution.<br>Ports for inbound connections (from the external network to the configuration proxy).                                                                                                                                                                |
-| 1.4 | TCP 80                                              | Global configuration download.<br>Ports for outbound connections (from the configuration proxy to the external network).                                                                                                                                                                   |
-| 1.5 |                                                     | Configuration proxy’s public IP address, NAT address.                                                                                                                                                                                                                                      |
+| Ref |                                                                       | Explanation                                                                                                                                                                                                                                                                                |
+|-----|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.0 | Ubuntu 22.04 or 24.04 (x86-64), 64bit<br>2GB RAM, 3GB free disk space | Minimum requirements.                                                                                                                                                                                                                                                                      |
+| 1.1 | https://artifactory.niis.org/xroad-release-deb                        | X-Road package repository.                                                                                                                                                                                                                                                                 |
+| 1.2 | https://artifactory.niis.org/api/gpg/key/public                       | The repository key.<br /><br />Hash: `935CC5E7FA5397B171749F80D6E3973B`<br  />Fingerprint: `A01B FE41 B9D8 EAF4 872F  A3F1 FB0D 532C 10F6 EC5B`<br  />3rd party key server: [Ubuntu key server](https://keyserver.ubuntu.com/pks/lookup?search=0xfb0d532c10f6ec5b&fingerprint=on&op=index) |
+| 1.3 | TCP 80, 443                                                           | Global configuration distribution.<br>Ports for inbound connections (from the external network to the Configuration Proxy).                                                                                                                                                                |
+| 1.4 | TCP 80, 443                                                           | Global configuration download.<br>Ports for outbound connections (from the Configuration Proxy to the external network).                                                                                                                                                                   |
+| 1.5 |                                                                       | Configuration proxy’s public IP address, NAT address.                                                                                                                                                                                                                                      |
 
 
 ### 2.3 Requirements for the Configuration Proxy
@@ -122,8 +132,8 @@ Minimum recommended hardware parameters:
 Requirements to software and settings:
 
 * an installed and configured supported version of Ubuntu x86-64 operating system;
-* if the configuration proxy is separated from other networks by a firewall and/or NAT, the necessary connections to and from the security server must be allowed (reference data: 1.3; 1.4). The enabling of auxiliary services which are necessary for the functioning and management of the operating system (such as DNS, NTP, and SSH) is outside the scope of this guide;
-* if the configuration proxy has a private IP address, a corresponding NAT record must be created in the firewall (reference data: 1.5).
+* if the Configuration Proxy is separated from other networks by a firewall and/or NAT, the necessary connections to and from the Security Server must be allowed (reference data: 1.3; 1.4). The enabling of auxiliary services which are necessary for the functioning and management of the operating system (such as DNS, NTP, and SSH) is outside the scope of this guide;
+* if the Configuration Proxy has a private IP address, a corresponding NAT record must be created in the firewall (reference data: 1.5).
 
 
 ### 2.4 Preparing OS
@@ -135,34 +145,39 @@ Requirements to software and settings:
 
 ### 2.5 Installation
 
-To install the X-Road configuration proxy software, follow these steps.
+To install the X-Road Configuration Proxy software, follow these steps.
 
 1.  Add the X-Road repository’s signing key to the list of trusted keys (**reference data: 1.2**):
 
-        curl https://artifactory.niis.org/api/gpg/key/public | sudo apt-key add -
-
+    ```bash
+    curl -fsSL https://x-road.eu/gpg/key/public/niis-artifactory-public.gpg | sudo tee /usr/share/keyrings/niis-artifactory-keyring.gpg > /dev/null
+    ```
+    
 2.  Add X-Road package repository (**reference data: 1.1**)
+    
+    ```bash
+    echo "deb [signed-by=/usr/share/keyrings/niis-artifactory-keyring.gpg] https://artifactory.niis.org/xroad-release-deb $(lsb_release -sc)-current main" | sudo tee /etc/apt/sources.list.d/xroad.list > /dev/null
+    ```
+    
+3.  Issue the following commands to install the Configuration Proxy packages:
 
-        sudo apt-add-repository -y "deb https://artifactory.niis.org/xroad-release-deb $(lsb_release -sc)-current main"
-
-3.  Issue the following commands to install the configuration proxy packages:
-
-            sudo apt-get update
-            sudo apt-get install xroad-confproxy
+    ```bash
+    sudo apt-get update
+    sudo apt-get install xroad-confproxy
+    ```
 
 ### 2.6 Post-Installation Checks
 
-The installation is successful if the 'xroad-signer' service is started, the 'xroad-confproxy' cron job is added, and the configuration proxy management utilities are available from the command line.
+The installation is successful if the 'xroad-signer' service is started, the 'xroad-confproxy' cron job is added, and the Configuration Proxy management utilities are available from the command line.
 
-* Check from the command line that the 'xroad-signer' service is in the running state (example output follows). Notice that it is normal for the xroad-confclient to be in `stopped` state on the configuration proxy since it operates in one-shot mode.
+* Check from the command line that the 'xroad-signer' service is in the running state (example output follows). Notice that it is normal for the xroad-confclient to be in `stopped` state on the Configuration Proxy since it operates in one-shot mode.
+  
+  ```bash
+  systemctl list-units "xroad*" 
 
-  * Ubuntu 20.04 or 22.04
-    ```bash
-    systemctl list-units "xroad*" 
-
-    UNIT                     LOAD   ACTIVE SUB     DESCRIPTION
-    xroad-signer.service     loaded active running X-Road signer
-    ```
+  UNIT                     LOAD   ACTIVE SUB     DESCRIPTION
+  xroad-signer.service     loaded active running X-Road signer
+  ```
 
 * Check from the command line that the 'xroad-confproxy' cron job is present (example output follows):
 
@@ -189,53 +204,102 @@ To configure support for hardware security tokens (smartcard, USB token, Hardwar
 
 1.  Install the hardware token support module using the following command:
 
-        sudo apt-get install xroad-addon-hwtokens
+    ```bash
+    sudo apt-get install xroad-addon-hwtokens
+    ```
 
 2.  Install and configure a PKCS\#11 driver for the hardware token according to the manufacturer's instructions.
 
-3.  Add the path to the PKCS\#11 driver to the file `/etc/xroad/devices.ini` (as described in the example given in the file).
+3.  Configure the module by adding an entry for it to the `xroad.signer.modules` configuration property, as described below.
 
 4.  After installing and configuring the driver, the `xroad-signer` service must be restarted:
 
-        sudo service xroad-signer restart
+    ```bash
+    sudo service xroad-signer restart
+    ```
 
-If you are running a high availability (HA) hardware token setup (such as a cluster with replicated tokens) then you may need to constrain the token identifier format such that the token replicas can be seen as the same token. The token identifier format can be changed in `/etc/xroad/devices.ini` via the `token_id_format` property (default value: `{moduleType}{slotIndex}{serialNumber}{label}`). Removing certain parts of the identifier will allow the HA setup to work correctly when one of the tokens goes down and is replaced by a replica. For example, if the token replicas are reported to be on different slots the `{slotIndex}` part should be removed from the identifier format.
+Hardware token (HSM) modules are configured as a single JSON document stored in the `xroad.signer.modules` configuration property, not as a file on disk. The document is a JSON object that maps a module identifier of your own choosing (used as the token's UID) to that module's settings, for example:
 
-Depending on the hardware token there may be a need for more additional configuration. All possible configurable parameters in the `/etc/xroad/devices.ini` are described in the next table.
+```json
+{
+  "softhsm2": {
+    "library": "/usr/lib/softhsm/libsofthsm2.so",
+    "os-locking-ok": true,
+    "library-cant-create-os-threads": true,
+    "slot-ids": [0],
+    "token-id-format": "1"
+  }
+}
+```
 
-Parameter   | Type    | Default Value | Explanation
------------ | ------- |-------------- | ---------------------------------------
-*enabled*     | BOOLEAN | *true* | Indicates whether this device is enabled.
-*library*     | STRING  |      | The path to the pkcs#11 library of the device driver.
-*library_cant_create_os_threads* | BOOLEAN | *false* | Indicates whether application threads, which are executing calls to the pkcs#11 library, may not use native operating system calls to spawn new threads (in other words, the library’s code may not create its own threads).
-*os_locking_ok* | BOOLEAN | *false* | Indicates whether the pkcs#11 library may use the native operation system threading model for locking.
-*sign_verify_pin* | BOOLEAN | *false* | Indicates whether the PIN should be entered per signing operation.
-*token_id_format* | STRING | *{moduleType}{slotIndex}{serialNumber}{label}* | Specifies the identifier format used to uniquely identify a token. In certain high availability setups may need be constrained to support replicated tokens (eg. by removing the slot index part which may be diffirent for the token replicas).
-*sign_mechanism*  | STRING | *CKM_RSA_PKCS* | Specifies the signing mechanism. Supported values: *CKM_RSA_PKCS*, *CKM_RSA_PKCS_PSS*.
-*pub_key_attribute_encrypt*  | BOOLEAN | *true* | Indicates whether public key can be used for encryption.
-*pub_key_attribute_verify* | BOOLEAN | *true* | Indicates whether public key can be used for verification.
-*pub_key_attribute_wrap* | BOOLEAN | | Indicates whether public key can be used for wrapping other keys.
-*pub_key_attribute_allowed_mechanisms* | STRING LIST | | Specifies public key allowed mechanisms. Supported values: *CKM_RSA_PKCS*, *CKM_SHA256_RSA_PKCS*, *CKM_SHA384_RSA_PKCS*, *CKM_SHA512_RSA_PKCS*, and *CKM_RSA_PKCS_PSS*, *CKM_SHA256_RSA_PKCS_PSS*, *CKM_SHA384_RSA_PKCS_PSS*, *CKM_SHA512_RSA_PKCS_PSS*.
-*priv_key_attribute_sensitive* | BOOLEAN | *true* | Indicates whether private key is sensitive.
-*priv_key_attribute_decrypt* | BOOLEAN | *true* | Indicates whether private key can be used for encryption.
-*priv_key_attribute_sign* | BOOLEAN | *true* | Indicates whether private key can be used for signing.
-*priv_key_attribute_unwrap* | BOOLEAN | | Indicates whether private key can be used for unwrapping wrapped keys.
-*priv_key_attribute_allowed_mechanisms* | STRING LIST | | Specifies private key allowed mechanisms. Supported values: *CKM_RSA_PKCS*, *CKM_SHA256_RSA_PKCS*, *CKM_SHA384_RSA_PKCS*, *CKM_SHA512_RSA_PKCS*, and *CKM_RSA_PKCS_PSS*, *CKM_SHA256_RSA_PKCS_PSS*, *CKM_SHA384_RSA_PKCS_PSS*, *CKM_SHA512_RSA_PKCS_PSS*.
+All possible properties of a module entry are described in the next table.
 
-**Note 1:** Only parameter *library* is mandatory, all the others are optional.  
-**Note 2:** The item separator of the type STRING LIST is ",".
+| Property                                 | Type         | Default Value                                  | Explanation                                                                                                                                                                                                                                                                                                                        |
+|-------------------------------------------|--------------|-------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `enabled`                                  | BOOLEAN      | `true`                                          | Indicates whether this module is enabled. Setting `enabled: false` for the reserved module id `softToken` disables the built-in software token instead of a hardware module.                                                                                                                                                    |
+| `library`                                  | STRING       |                                                  | The path to the PKCS#11 library of the device driver, as seen by the signer process.                                                                                                                                                                                                                                              |
+| `library-cant-create-os-threads`           | BOOLEAN      |                                                  | Indicates whether application threads, which are executing calls to the PKCS#11 library, may not use native operating system calls to spawn new threads (in other words, the library's code may not create its own threads).                                                                                                    |
+| `os-locking-ok`                            | BOOLEAN      |                                                  | Indicates whether the PKCS#11 library may use the native operating system threading model for locking.                                                                                                                                                                                                                            |
+| `sign-verify-pin`                          | BOOLEAN      | `false`                                          | Indicates whether the PIN should be entered per signing operation.                                                                                                                                                                                                                                                                 |
+| `token-id-format`                          | STRING       | `{moduleType}{slotIndex}{serialNumber}{label}`  | Specifies the identifier format used to uniquely identify a token. In certain high availability setups may need to be constrained to support replicated tokens (e.g. by removing the slot index part which may be different for the token replicas).                                                                             |
+| `sign-mechanism`                           | STRING       | `CKM_RSA_PKCS`                                  | Specifies the signing mechanism. Supported values: `CKM_RSA_PKCS`, `CKM_RSA_PKCS_PSS`.                                                                                                                                                                                                                                            |
+| `rsa-sign-mechanism`                       | STRING       | value of `sign-mechanism`                       | Specifies the signing mechanism for RSA keys, overriding `sign-mechanism`. Supported values: `CKM_RSA_PKCS`, `CKM_RSA_PKCS_PSS`.                                                                                                                                                                                                  |
+| `ec-sign-mechanism`                        | STRING       | `CKM_ECDSA`                                     | Specifies the signing mechanism for EC keys. Supported values: `CKM_ECDSA`.                                                                                                                                                                                                                                                       |
+| `pub-key-attribute-encrypt`                | BOOLEAN      | `true`                                           | Indicates whether the public key can be used for encryption.                                                                                                                                                                                                                                                                      |
+| `pub-key-attribute-verify`                 | BOOLEAN      | `true`                                           | Indicates whether the public key can be used for verification.                                                                                                                                                                                                                                                                    |
+| `pub-key-attribute-wrap`                   | BOOLEAN      |                                                  | Indicates whether the public key can be used for wrapping other keys.                                                                                                                                                                                                                                                             |
+| `pub-key-attribute-verify-recover`         | BOOLEAN      |                                                  | Indicates whether the public key has the verify-recover attribute.                                                                                                                                                                                                                                                                |
+| `pub-key-attribute-trusted`                | BOOLEAN      |                                                  | Indicates whether the public key has the trusted attribute.                                                                                                                                                                                                                                                                       |
+| `pub-key-attribute-allowed-mechanisms`     | STRING LIST  |                                                  | Specifies public key allowed mechanisms. Supported values: `CKM_RSA_PKCS`, `CKM_SHA256_RSA_PKCS`, `CKM_SHA384_RSA_PKCS`, `CKM_SHA512_RSA_PKCS`, `CKM_RSA_PKCS_PSS`, `CKM_SHA256_RSA_PKCS_PSS`, `CKM_SHA384_RSA_PKCS_PSS`, `CKM_SHA512_RSA_PKCS_PSS`, `CKM_ECDSA`, `CKM_ECDSA_SHA256`, `CKM_ECDSA_SHA384`, `CKM_ECDSA_SHA512`.       |
+| `priv-key-attribute-sensitive`             | BOOLEAN      | `true`                                           | Indicates whether the private key is sensitive.                                                                                                                                                                                                                                                                                   |
+| `priv-key-attribute-decrypt`               | BOOLEAN      | `true`                                           | Indicates whether the private key can be used for decryption.                                                                                                                                                                                                                                                                     |
+| `priv-key-attribute-sign`                  | BOOLEAN      | `true`                                           | Indicates whether the private key can be used for signing.                                                                                                                                                                                                                                                                        |
+| `priv-key-attribute-unwrap`                | BOOLEAN      |                                                  | Indicates whether the private key can be used for unwrapping wrapped keys.                                                                                                                                                                                                                                                        |
+| `priv-key-attribute-sign-recover`          | BOOLEAN      |                                                  | Indicates whether the private key has the sign-recover attribute.                                                                                                                                                                                                                                                                 |
+| `priv-key-attribute-extractable`           | BOOLEAN      |                                                  | Indicates whether the private key has the extractable attribute.                                                                                                                                                                                                                                                                  |
+| `priv-key-attribute-always-sensitive`      | BOOLEAN      |                                                  | Indicates whether the private key has the always-sensitive attribute.                                                                                                                                                                                                                                                             |
+| `priv-key-attribute-never-extractable`     | BOOLEAN      |                                                  | Indicates whether the private key has the never-extractable attribute.                                                                                                                                                                                                                                                            |
+| `priv-key-attribute-wrap-with-trusted`     | BOOLEAN      |                                                  | Indicates whether the private key has the wrap-with-trusted attribute.                                                                                                                                                                                                                                                            |
+| `priv-key-attribute-allowed-mechanisms`    | STRING LIST  |                                                  | Specifies private key allowed mechanisms. Supported values: same as `pub-key-attribute-allowed-mechanisms`.                                                                                                                                                                                                                       |
+| `slot-ids`                                 | INTEGER LIST |                                                  | Restricts the module to the given PKCS#11 slot IDs. Useful when a driver reports more slots than there are physical tokens.                                                                                                                                                                                                       |
+| `batch-signing-enabled`                    | BOOLEAN      | `true`                                           | Indicates whether batch signing is enabled for this module.                                                                                                                                                                                                                                                                       |
+| `read-only`                                | BOOLEAN      | `false`                                          | Indicates whether the module is opened read-only.                                                                                                                                                                                                                                                                                 |
 
+**Note 1:** Only property `library` is mandatory, all the others are optional.
+**Note 2:** Properties of the type STRING LIST are JSON arrays of strings, e.g. `["CKM_RSA_PKCS", "CKM_ECDSA"]`.
+
+Set the property with `db_property.sh`, installed at `/usr/share/xroad/scripts/db_property.sh`:
+
+```bash
+sudo /usr/share/xroad/scripts/db_property.sh set xroad.signer.modules '{"softhsm2":{"library":"/usr/lib/softhsm/libsofthsm2.so","slot-ids":[0]}}' --yes
+```
+
+The Configuration Proxy has no admin UI; `db_property.sh` is the supported way to read and write `xroad.signer.modules`. The new value takes effect on the next `xroad-signer` restart — module configuration is read once at signer startup.
+
+**Migrating from a pre-version-8 `devices.ini`:** versions of X-Road before 8 configured hardware tokens in an INI file at `/etc/xroad/devices.ini`. On X-Road 8 this file is no longer read by the signer — do not create it. When upgrading, `migration-cli signer-devices <devices.ini file> <db.properties file>` converts an existing `devices.ini` into the `xroad.signer.modules` document described above; see the version 8 upgrade guide for details.
+
+### 2.8 Configuring TLS Certificates
+
+The installation process creates a self-signed TLS certificate for serving configurations over HTTPS. However, self-signed certificates are not recommended for production use, and should be substituted with certificate issued by a trusted Certificate Authority (CA).
+
+To configure the Configuration Proxy to use a certificate issued by a trusted CA, replace the existing certificate files (`confproxy.crt`) and its associated private key (`confproxy.key`), located in the `/etc/xroad/ssl/` directory.
+
+Reload the nginx service for the certificate change to take effect.
+
+```bash
+systemctl reload nginx
+```
 
 ## 3 Configuration
 
-To start using the configuration proxy, a proxy instance configuration needs to be created. Several proxy instances can be configured to mediate multiple global configurations.
+To start using the Configuration Proxy, a proxy instance configuration needs to be created. Several proxy instances can be configured to mediate multiple global configurations.
 
 
 ### 3.1 Prerequisites
 
 #### 3.1.1 Security Token Activation
 
-The configuration proxy uses a security token for storing the key that is used for signing the distributed configuration. The token can be stored either on hard disk (software token) or in hardware. Before the configuration proxy can be used, the security token must be initialized and activated.
+The Configuration Proxy uses a security token for storing the key that is used for signing the distributed configuration. The token can be stored either on hard disk (software token) or in hardware. Before the Configuration Proxy can be used, the security token must be initialized and activated.
 
 Initialization of a software token can be done as follows:
 
@@ -276,23 +340,23 @@ Modify '/etc/xroad/conf.d/local.ini' to contain the following:
 ; address=<public or NAT address>
 ```
 
-The configuration of this parameter is necessary for generating a correctly formatted configuration anchor file that will need to be uploaded to central servers that should receive configurations mediated by this proxy, this process is described in detail in [3.4](#34-proxy-instance-configuration). There are several more system parameters that can be configured in '/etc/xroad/conf.d/local.ini' under the 'configuration-proxy' section, their descriptions and default values can be seen from the following table:
+The configuration of this parameter is necessary for generating a correctly formatted configuration anchor file that will need to be uploaded to Central Servers that should receive configurations mediated by this proxy, this process is described in detail in [3.4](#34-proxy-instance-configuration). There are several more system parameters that can be configured in '/etc/xroad/conf.d/local.ini' under the 'configuration-proxy' section, their descriptions and default values can be seen from the following table:
 
-| Parameter              | Default value                          | Explanation |
-|------------------------|----------------------------------------|-------------|
-| address                | 0.0.0.0                                | The public IP or NAT address (reference data: 1.5) which can be accessed for downloading the distributed global configurations. |
-| configuration-path     | /etc/xroad/confproxy/                  | Absolute path to the directory containing the configuration files of the proxy instance. The format of the configuration directory is described in [3.2.1](#321-configuration-structure-of-the-instances). |
-| generated-conf-path    | /var/lib/xroad/public                  | Absolute path to the public web server directory where the global configuration files generated by this configuration proxy, should be placed for distribution. |
-| signature-digest-algorithm-id | SHA-512                         | ID of the digest algorithm the configuration proxy should use when computing global configuration signatures. The possible values are: *SHA-256*, *SHA-384*, *SHA-512*. |
-| hash-algorithm-uri     | http://www.w3.org/2001/04/xmlenc#sha512 | URI identifying the algorithm the configuration proxy should use to calculate hash values for the global configuration file. The possible values are:<br>http://www.w3.org/2001/04/xmlenc#sha256,<br>http://www.w3.org/2001/04/xmlenc#sha512. |
-| download-script        | /usr/share/xroad/scripts/download_instance_configuration.sh | Absolute path to the location of the script that initializes the global configuration download procedure. |
+| Parameter                     | Default value                                               | Explanation                                                                                                                                                                                                                                   |
+|-------------------------------|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| address                       | 0.0.0.0                                                     | The public IP or NAT address (reference data: 1.5) which can be accessed for downloading the distributed global configurations.                                                                                                               |
+| configuration-path            | /etc/xroad/confproxy/                                       | Absolute path to the directory containing the configuration files of the proxy instance. The format of the configuration directory is described in [3.2.1](#321-configuration-structure-of-the-instances).                                    |
+| generated-conf-path           | /var/lib/xroad/public                                       | Absolute path to the public web server directory where the global configuration files generated by this Configuration Proxy, should be placed for distribution.                                                                               |
+| signature-digest-algorithm-id | SHA-512                                                     | ID of the digest algorithm the Configuration Proxy should use when computing global configuration signatures. The possible values are: *SHA-256*, *SHA-384*, *SHA-512*.                                                                       |
+| hash-algorithm-uri            | http://www.w3.org/2001/04/xmlenc#sha512                     | URI identifying the algorithm the Configuration Proxy should use to calculate hash values for the global configuration file. The possible values are:<br>http://www.w3.org/2001/04/xmlenc#sha256,<br>http://www.w3.org/2001/04/xmlenc#sha512. |
+| download-script               | /usr/share/xroad/scripts/download_instance_configuration.sh | Absolute path to the location of the script that initializes the global configuration download procedure.                                                                                                                                     |
 
-The configuration proxy is periodically started by a cron job. It reads the properties described above, from the configuration file before executing each proxy instance configured in 'configuration-path', generating new global configuration directories using algorithms as defined by 'signature-digest-algorithm-id' and 'hash-algorithm-uri'. The generated directories are subsequently placed in 'generated-conf-path' for distribution.
+The Configuration Proxy is periodically started by a cron job. It reads the properties described above, from the configuration file before executing each proxy instance configured in 'configuration-path', generating new global configuration directories using algorithms as defined by 'signature-digest-algorithm-id' and 'hash-algorithm-uri'. The generated directories are subsequently placed in 'generated-conf-path' for distribution.
 
 
 #### 3.2.1 Configuration Structure of the Instances
 
-Each global configuration that is to be mediated by the configuration proxy requires a proxy instance to be configured. The configuration of a proxy instance consists of a set of configuration files, including
+Each global configuration that is to be mediated by the Configuration Proxy requires a proxy instance to be configured. The configuration of a proxy instance consists of a set of configuration files, including
 
 * a trusted anchor .xml of the configuration being mediated;
 * a configuration .ini file;
@@ -319,13 +383,13 @@ The configuration of proxy instances is described in [3.4](#34-proxy-instance-co
 
 ### 3.3 Proxy Instance Reference Data
 
-**ATTENTION:** The names in the angle brackets&lt;&gt; are chosen by the X-Road configuration proxy administrator.
+**ATTENTION:** The names in the angle brackets&lt;&gt; are chosen by the X-Road Configuration Proxy administrator.
 
-| Ref |                            | Explanation |
-|-----|----------------------------|-------------|
-| 2.1 |  &lt;PROXY_NAME&gt;        | Name of the proxy instance being configured |
-| 2.2 |  &lt;SECURITY_TOKEN_ID&gt; | ID of a security token (as defined by prerequisites [3.1](#31-prerequisites)) |
-| 2.3 |  &lt;ANCHOR_FILENAME&gt;   | Filename of the generated anchor .xml file that the configuration proxy clients will need to use for downloading the global configuration |
+| Ref |                           | Explanation                                                                                                                               |
+|-----|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| 2.1 | &lt;PROXY_NAME&gt;        | Name of the proxy instance being configured                                                                                               |
+| 2.2 | &lt;SECURITY_TOKEN_ID&gt; | ID of a security token (as defined by prerequisites [3.1](#31-prerequisites))                                                             |
+| 2.3 | &lt;ANCHOR_FILENAME&gt;   | Filename of the generated anchor .xml file that the Configuration Proxy clients will need to use for downloading the global configuration |
 
 
 ### 3.4 Proxy Instance Configuration
@@ -345,9 +409,10 @@ Validity interval: 600 s.
 anchor.xml
 ================================================
 'anchor.xml' could not be loaded: IOError: /etc/xroad/confproxy/PROXY/anchor.xml (No such file or directory)
-Configuration URL
+Configuration URLs
 ================================================
 http://1.2.3.4/PROXY/conf
+https://1.2.3.4/PROXY/conf
 Signing keys and certificates
 ================================================
 active-signing-key-id:
@@ -357,8 +422,10 @@ active-signing-key-id:
 2) Generate a signing key and a self signed certificate for the newly created proxy instance using the following command:
 
 ```bash
-confproxy-add-signing-key -p <PROXY_NAME> -t <SECURITY_TOKEN_ID>
+confproxy-add-signing-key -p <PROXY_NAME> -t <SECURITY_TOKEN_ID> [-a <RSA|EC>]
 ```
+
+Note: **-a** parameter is optional and can be used to specify the key algorithm(since version 7.6.0). If not provided, the default value is RSA. If keys are using EC algorithm and consumers of the Configuration Proxy are using older X-Road instances then they will fail to verify global configuration signatures.
 
 If no active signing key is configured for the proxy instance, then the new key should be set as the currently active key (example output follows):
 
@@ -384,9 +451,9 @@ No active key configured, setting new key as active in conf.ini
 Saved self-signed certificate to cert_QWERTY123.pem
 ```
 
-3) To define which global configuration this proxy instance should distribute, download the source anchor from an X-Road central server and save it as '/etc/xroad/confproxy/&lt;PROXY_NAME&gt;/anchor.xml'.
+3) To define which global configuration this proxy instance should distribute, download the source anchor from an X-Road Central Server and save it as '/etc/xroad/confproxy/&lt;PROXY_NAME&gt;/anchor.xml'.
 
-4) The configuration proxy should be operational at this point. The periodic cron job (once a minute) should download the global configuration defined in '/etc/xroad/confproxy/&lt;PROXY_NAME&gt;/anchor.xml' and generate a directory for distribution. The output of 'confproxy-view-conf -p &lt;PROXY_NAME&gt;' should be similar to the following:
+4) The Configuration Proxy should be operational at this point. The periodic cron job (once a minute) should download the global configuration defined in '/etc/xroad/confproxy/&lt;PROXY_NAME&gt;/anchor.xml' and generate a directory for distribution. The output of 'confproxy-view-conf -p &lt;PROXY_NAME&gt;' should be similar to the following:
 
 ```bash
 confproxy-view-conf -p PROXY
@@ -398,9 +465,10 @@ anchor.xml
 Instance identifier: AA
 Generated at: UTC 2014-11-17 09:28:56
 Hash: 3A:3D:B2:A4:D3:FC:E8:08:7E:EA:8A:92:5C:6E:92:0C:70:C8
-Configuration URL
+Configuration URLs
 ================================================
 http://1.2.3.4/PROXY/conf
+https://1.2.3.4/PROXY/conf
 Signing keys and certificates
 ================================================
 active-signing-key-id:
@@ -425,7 +493,7 @@ Generated anchor xml to '/home/xroad/anchor.xml'
 
 ```bash
 mkdir test_download
-/usr/share/xroad/scripts/download_instance_configuration.sh anchor.xml test_download/
+confproxy-download-conf -a anchor.xml -d test_download/
 
 ... - Downloading configuration from http://1.2.3.4/PROXY/conf
 ... - Downloading content from http://1.2.3.4/PROXY/123/AA/shared-params.xml
@@ -452,7 +520,7 @@ The default value is 10 minutes (600 seconds). The property is set by modifying 
 validity-interval-seconds=600
 ```
 
-Notice that when the configuration proxy instance is started, it deletes all the previously generated global configuration directories that are older than the currently configured validity interval for that instance.
+Notice that when the Configuration Proxy instance is started, it deletes all the previously generated global configuration directories that are older than the currently configured validity interval for that instance.
 
 
 #### 3.5.2 Deleting the Signing Keys

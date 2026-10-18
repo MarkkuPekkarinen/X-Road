@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -26,6 +26,7 @@
 package org.niis.xroad.cs.admin.rest.api.openapi;
 
 import lombok.RequiredArgsConstructor;
+import org.niis.xroad.common.CostType;
 import org.niis.xroad.cs.admin.api.dto.ApprovedCertificationService;
 import org.niis.xroad.cs.admin.api.dto.CertificateAuthority;
 import org.niis.xroad.cs.admin.api.dto.CertificationService;
@@ -41,7 +42,10 @@ import org.niis.xroad.cs.openapi.model.ApprovedCertificationServiceListItemDto;
 import org.niis.xroad.cs.openapi.model.CertificateAuthorityDto;
 import org.niis.xroad.cs.openapi.model.CertificateDetailsDto;
 import org.niis.xroad.cs.openapi.model.CertificationServiceSettingsDto;
+import org.niis.xroad.cs.openapi.model.CostTypeDto;
+import org.niis.xroad.cs.openapi.model.CsrFormatDto;
 import org.niis.xroad.cs.openapi.model.OcspResponderDto;
+import org.niis.xroad.globalconf.model.CsrFormat;
 import org.niis.xroad.restapi.config.audit.AuditEventMethod;
 import org.niis.xroad.restapi.openapi.ControllerUtil;
 import org.niis.xroad.restapi.service.FileVerifier;
@@ -83,12 +87,25 @@ public class CertificationServicesController implements CertificationServicesApi
     @PreAuthorize("hasAuthority('ADD_APPROVED_CA')")
     @AuditEventMethod(event = ADD_CERTIFICATION_SERVICE)
     public ResponseEntity<ApprovedCertificationServiceDto> addCertificationService(MultipartFile certificate,
+                                                                                   CsrFormatDto defaultCsrFormat,
                                                                                    String certificateProfileInfo,
-                                                                                   String tlsAuth) {
+                                                                                   String tlsAuth,
+                                                                                   String acmeServerDirectoryUrl,
+                                                                                   String acmeServerIpAddress,
+                                                                                   String authenticationCertificateProfileId,
+                                                                                   String signingCertificateProfileId) {
         var isForTlsAuth = parseBoolean(tlsAuth);
         byte[] fileBytes = MultipartFileUtils.readBytes(certificate);
         fileVerifier.validateCertificate(certificate.getOriginalFilename(), fileBytes);
-        var approvedCa = new ApprovedCertificationService(fileBytes, certificateProfileInfo, isForTlsAuth);
+        var approvedCa = new ApprovedCertificationService(
+                fileBytes,
+                certificateProfileInfo,
+                isForTlsAuth,
+                CsrFormat.valueOf(defaultCsrFormat.name()),
+                acmeServerDirectoryUrl,
+                acmeServerIpAddress,
+                authenticationCertificateProfileId,
+                signingCertificateProfileId);
 
         CertificationService persistedApprovedCa = certificationServicesService.add(approvedCa);
         return status(CREATED).body(approvedCertificationServiceDtoConverter.convert(persistedApprovedCa));
@@ -108,11 +125,21 @@ public class CertificationServicesController implements CertificationServicesApi
     @Override
     @AuditEventMethod(event = ADD_CERTIFICATION_SERVICE_OCSP_RESPONDER)
     @PreAuthorize("hasAuthority('ADD_APPROVED_CA')")
-    public ResponseEntity<OcspResponderDto> addCertificationServiceOcspResponder(Integer caId, String url, MultipartFile certificate) {
+    public ResponseEntity<OcspResponderDto> addCertificationServiceOcspResponder(Integer caId,
+                                                                                 String url,
+                                                                                 CostTypeDto costType,
+                                                                                 MultipartFile certificate) {
         final var addRequest = new OcspResponderAddRequest();
-        byte[] fileBytes = MultipartFileUtils.readBytes(certificate);
-        fileVerifier.validateCertificate(certificate.getOriginalFilename(), fileBytes);
-        addRequest.setCaId(caId).setUrl(url).setCertificate(fileBytes);
+        addRequest
+                .setCaId(caId)
+                .setUrl(url)
+                .setCostType(CostType.valueOf(costType.name()));
+
+        if (certificate != null && !certificate.isEmpty()) {
+            byte[] fileBytes = MultipartFileUtils.readBytes(certificate);
+            fileVerifier.validateCertificate(certificate.getOriginalFilename(), fileBytes);
+            addRequest.setCertificate(fileBytes);
+        }
 
         var ocspResponder = certificationServicesService.addOcspResponder(addRequest);
         return status(CREATED).body(ocspResponderDtoConverter.toDto(ocspResponder));
@@ -167,7 +194,14 @@ public class CertificationServicesController implements CertificationServicesApi
         CertificationService approvedCa = new CertificationService()
                 .setId(id)
                 .setCertificateProfileInfo(settings.getCertificateProfileInfo())
-                .setTlsAuth(parseBoolean(settings.getTlsAuth()));
+                .setTlsAuth(parseBoolean(settings.getTlsAuth()))
+                .setAcmeServerDirectoryUrl(settings.getAcmeServerDirectoryUrl())
+                .setAcmeServerIpAddress(settings.getAcmeServerIpAddress())
+                .setAuthenticationCertificateProfileId(settings.getAuthenticationCertificateProfileId())
+                .setSigningCertificateProfileId(settings.getSigningCertificateProfileId());
+        if (settings.getDefaultCsrFormat() != null) {
+            approvedCa.setDefaultCsrFormat(CsrFormat.valueOf(settings.getDefaultCsrFormat().name()));
+        }
 
         return ok(approvedCertificationServiceDtoConverter.convert(certificationServicesService.update(approvedCa)));
     }

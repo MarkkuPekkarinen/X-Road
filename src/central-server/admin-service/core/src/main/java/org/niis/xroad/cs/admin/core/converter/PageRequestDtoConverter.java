@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
@@ -26,7 +26,7 @@
 package org.niis.xroad.cs.admin.core.converter;
 
 import org.apache.commons.lang3.StringUtils;
-import org.niis.xroad.common.exception.ValidationFailureException;
+import org.niis.xroad.common.exception.BadRequestException;
 import org.niis.xroad.cs.admin.api.paging.PageRequestDto;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -51,7 +51,7 @@ public class PageRequestDtoConverter {
                     pageRequestDto.getLimit(),
                     convertToSort(pageRequestDto));
         } catch (IllegalArgumentException | NullPointerException e) {
-            throw new ValidationFailureException(INVALID_PAGINATION_PROPERTIES, e.getMessage());
+            throw new BadRequestException(e, INVALID_PAGINATION_PROPERTIES.build(e.getMessage()));
         }
     }
 

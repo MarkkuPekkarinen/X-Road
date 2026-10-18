@@ -1,5 +1,6 @@
 /*
  * The MIT License
+ *
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
  * Copyright (c) 2018 Estonian Information System Authority (RIA),
  * Nordic Institute for Interoperability Solutions (NIIS), Population Register Centre (VRK)
@@ -25,16 +26,13 @@
  */
 import { Client } from '@/openapi-types';
 import { AxiosResponse } from 'axios';
+import dayjs from 'dayjs';
 
 // Filters an array of objects excluding specified object key
-export function selectedFilter<T, K extends keyof T>(
-  arr: T[],
-  search: string,
-  excluded?: K,
-): T[] {
+export function selectedFilter<T extends object, K extends keyof T>(arr: T[], search: string, excluded?: K): T[] {
   // Clean the search string
-  const mysearch = search.toString().toLowerCase();
-  if (mysearch.trim() === '') {
+  const mySearch = search.toString().toLowerCase();
+  if (mySearch.trim() === '') {
     return arr;
   }
 
@@ -49,7 +47,7 @@ export function selectedFilter<T, K extends keyof T>(
     }
 
     return filteredKeys.find((key: K) => {
-      return String(g[key]).toLowerCase().includes(mysearch);
+      return String(g[key]).toLowerCase().includes(mySearch);
     });
   });
 
@@ -68,10 +66,7 @@ export function isValidRestURL(str: string): boolean {
 }
 
 // Save response data as a file
-export function saveResponseAsFile(
-  response: AxiosResponse,
-  defaultFileName = 'certs.tar.gz',
-): void {
+export function saveResponseAsFile(response: AxiosResponse, defaultFileName = 'certs.tar.gz'): void {
   let suggestedFileName;
   const disposition = response.headers['content-disposition'];
 
@@ -82,10 +77,9 @@ export function saveResponseAsFile(
       suggestedFileName = matches[1].replace(/['"]/g, '');
     }
   }
-  const effectiveFileName =
-    suggestedFileName === undefined ? defaultFileName : suggestedFileName;
+  const effectiveFileName = suggestedFileName === undefined ? defaultFileName : suggestedFileName;
   const blob = new Blob([response.data], {
-    type: response.headers['content-type'],
+    type: response.headers['content-type'] as string | undefined,
   });
 
   // Create a link to DOM and click it. This will trigger the browser to start file download.
@@ -102,12 +96,7 @@ export function saveResponseAsFile(
 }
 
 // Finds if an array of clients has a client with given member class, member code and subsystem code.
-export function containsClient(
-  clients: Client[],
-  memberClass: string,
-  memberCode: string,
-  subsystemCode: string | undefined,
-): boolean {
+export function containsClient(clients: Client[], memberClass: string, memberCode: string, subsystemCode: string | undefined): boolean {
   if (!memberClass || !memberCode || !subsystemCode) {
     return false;
   }
@@ -135,17 +124,17 @@ export function containsClient(
 }
 
 // Create a client ID
-export function createClientId(
-  instanceId: string,
-  memberClass: string,
-  memberCode: string,
-  subsystemCode?: string,
-): string {
+export function createClientId(instanceId: string, memberClass: string, memberCode: string, subsystemCode?: string): string {
   if (subsystemCode) {
     return `${instanceId}:${memberClass}:${memberCode}:${subsystemCode}`;
   }
 
   return `${instanceId}:${memberClass}:${memberCode}`;
+}
+
+// Create a client ID
+export function createFullServiceId(clientId: string, serviceCode: string): string {
+  return `${clientId}:${serviceCode}`;
 }
 
 // Debounce function
@@ -162,7 +151,7 @@ export const debounce = <F extends (...args: any[]) => any>(
         clearTimeout(timeout);
       }
 
-      timeout = setTimeout(() => resolve(func(...args)), waitFor);
+      timeout = window.setTimeout(() => resolve(func(...args)), waitFor);
     });
 };
 
@@ -175,27 +164,6 @@ export function isEmpty(str: string | []): boolean {
 export type Mutable<T> = {
   -readonly [K in keyof T]: T[K];
 };
-
-// Helper to copy text to clipboard
-export function toClipboard(val: string): void {
-  // If a dialog is overlaying the entire page we need to put the textbox inside it, otherwise it doesn't get copied
-  const container =
-    document.getElementsByClassName('v-dialog--active')[0] || document.body;
-  const tempValueContainer = document.createElement('input');
-  tempValueContainer.setAttribute('type', 'text');
-  tempValueContainer.style.zIndex = '300';
-  tempValueContainer.style.opacity = '0';
-  tempValueContainer.style.filter = 'alpha(opacity=0)';
-  tempValueContainer.setAttribute(
-    'data-test',
-    'generated-temp-value-container',
-  );
-  tempValueContainer.value = val;
-  container.appendChild(tempValueContainer);
-  tempValueContainer.select();
-  document.execCommand('copy');
-  container.removeChild(tempValueContainer);
-}
 
 // Deep clones an object or array using JSON
 export function deepClone<T>(value: T): T {

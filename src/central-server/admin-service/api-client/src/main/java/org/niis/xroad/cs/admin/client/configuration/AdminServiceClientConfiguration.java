@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  * <p>
  * Copyright (c) 2019- Nordic Institute for Interoperability Solutions (NIIS)
@@ -26,7 +26,6 @@
  */
 package org.niis.xroad.cs.admin.client.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.Client;
 import feign.Contract;
 import feign.Feign;
@@ -34,14 +33,19 @@ import feign.codec.Decoder;
 import feign.codec.Encoder;
 import feign.codec.ErrorDecoder;
 import feign.hc5.ApacheHttp5Client;
+import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.client5.http.io.HttpClientConnectionManager;
+import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
+import org.apache.hc.client5.http.ssl.HostnameVerificationPolicy;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
-import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
 import org.apache.hc.core5.ssl.SSLContexts;
+import org.niis.xroad.common.core.exception.XrdRuntimeException;
+import org.niis.xroad.common.vault.VaultClient;
+import org.niis.xroad.common.vault.spring.SpringVaultClientConfig;
 import org.niis.xroad.cs.admin.client.AuthFeignClientInterceptor;
 import org.niis.xroad.cs.admin.client.FeignManagementRequestsApi;
 import org.niis.xroad.cs.admin.client.FeignRestErrorDecoder;
@@ -51,17 +55,18 @@ import org.springframework.cloud.openfeign.FeignClientsConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import tools.jackson.databind.ObjectMapper;
+
+import javax.net.ssl.SSLContext;
 
 import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 
 import static org.apache.hc.core5.util.Timeout.ofSeconds;
 
 
-@Import(FeignClientsConfiguration.class)
+@Import({FeignClientsConfiguration.class, SpringVaultClientConfig.class})
 @Configuration
 public class AdminServiceClientConfiguration {
 
@@ -93,13 +98,11 @@ public class AdminServiceClientConfiguration {
     }
 
     @Bean("adminServiceHttpClient")
-    public CloseableHttpClient feignClient(final AdminServiceClientPropertyProvider propertyProvider)
-            throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, CertificateException, IOException {
+    public CloseableHttpClient feignClient(final AdminServiceClientPropertyProvider propertyProvider, final VaultClient vaultClient) {
         var httpClientProperties = propertyProvider.getHttpClientProperties();
         return HttpClients.custom()
-                .setConnectionManager(buildConnectionManager(propertyProvider))
+                .setConnectionManager(buildConnectionManager(propertyProvider, vaultClient))
                 .setDefaultRequestConfig(RequestConfig.custom()
-                        .setConnectTimeout(ofSeconds(httpClientProperties.getConnectionTimeoutSeconds()))
                         .setResponseTimeout(ofSeconds(httpClientProperties.getResponseTimeoutSeconds()))
                         .setConnectionRequestTimeout(ofSeconds(httpClientProperties.getConnectionRequestTimeoutSeconds()))
                         .build())
@@ -110,24 +113,39 @@ public class AdminServiceClientConfiguration {
                 .build();
     }
 
-    private HttpClientConnectionManager buildConnectionManager(final AdminServiceClientPropertyProvider propertyProvider)
-            throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, KeyManagementException {
-        final var sslcontext = SSLContexts.custom()
-                .setProtocol("TLSv1.3")
-                .loadTrustMaterial(
-                        propertyProvider.getApiTrustStore().toFile(),
-                        propertyProvider.getApiTrustStorePassword().toCharArray())
-                .build();
+    private HttpClientConnectionManager buildConnectionManager(final AdminServiceClientPropertyProvider propertyProvider,
+                                                               final VaultClient vaultClient) {
+        var httpClientProperties = propertyProvider.getHttpClientProperties();
+        var sslcontext = createSSLContext(vaultClient);
 
-        final var sslSocketFactory = SSLConnectionSocketFactoryBuilder.create()
-                .setHostnameVerifier(new NoopHostnameVerifier())
-                .setSslContext(sslcontext)
-                .build();
+        final var tlsStrategy = new DefaultClientTlsStrategy(sslcontext, HostnameVerificationPolicy.CLIENT, new NoopHostnameVerifier());
 
         return PoolingHttpClientConnectionManagerBuilder.create()
+                .setDefaultConnectionConfig(ConnectionConfig.custom()
+                        .setConnectTimeout(ofSeconds(httpClientProperties.getConnectionTimeoutSeconds()))
+                        .build()
+                )
                 .setMaxConnPerRoute(propertyProvider.getHttpClientProperties().getMaxConnectionsPerRoute())
                 .setMaxConnTotal(propertyProvider.getHttpClientProperties().getMaxConnectionsTotal())
-                .setSSLSocketFactory(sslSocketFactory)
+                .setTlsSocketStrategy(tlsStrategy)
                 .build();
+    }
+
+    private static SSLContext createSSLContext(final VaultClient vaultClient) {
+        try {
+            var certChain = vaultClient.getAdminServiceTlsCredentials().getCertChain();
+            KeyStore trustStore = KeyStore.getInstance("PKCS12");
+            trustStore.load(null, null);
+            for (int i = 0; i < certChain.length; i++) {
+                trustStore.setCertificateEntry(String.valueOf(i), certChain[i]);
+            }
+
+            return SSLContexts.custom()
+                    .setProtocol("TLSv1.3")
+                    .loadTrustMaterial(trustStore, null)
+                    .build();
+        } catch (GeneralSecurityException | IOException e) {
+            throw XrdRuntimeException.systemException(e);
+        }
     }
 }
