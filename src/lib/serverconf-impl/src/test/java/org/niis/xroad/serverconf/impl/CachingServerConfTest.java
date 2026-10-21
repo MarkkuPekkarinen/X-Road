@@ -29,6 +29,7 @@ package org.niis.xroad.serverconf.impl;
 import ee.ria.xroad.common.ExpectedXrdRuntimeException;
 import ee.ria.xroad.common.db.DatabaseCtx;
 import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.LocalGroupId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.common.identifier.ServiceId;
 import ee.ria.xroad.common.metadata.Endpoint;
@@ -40,15 +41,19 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.niis.xroad.common.identifiers.jpa.entity.SubsystemIdEntity;
 import org.niis.xroad.globalconf.GlobalConfProvider;
 import org.niis.xroad.serverconf.IsAuthentication;
 import org.niis.xroad.serverconf.ServerConfProvider;
 import org.niis.xroad.serverconf.impl.dao.ClientDAOImpl;
 import org.niis.xroad.serverconf.impl.dao.ServiceDAOImpl;
+import org.niis.xroad.serverconf.impl.entity.GroupMemberEntity;
+import org.niis.xroad.serverconf.impl.entity.LocalGroupEntity;
 import org.niis.xroad.test.globalconf.EmptyGlobalConf;
 
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -60,6 +65,9 @@ import static org.junit.Assert.assertTrue;
 import static org.niis.xroad.common.core.exception.ErrorCode.UNKNOWN_SERVICE;
 import static org.niis.xroad.serverconf.impl.TestUtil.BASE64_CERT;
 import static org.niis.xroad.serverconf.impl.TestUtil.CLIENT_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.CROSS_SS_GROUP_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.CROSS_SS_MEMBER_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.CROSS_SS_SUBSYSTEM_CODE;
 import static org.niis.xroad.serverconf.impl.TestUtil.MEMBER_CLASS;
 import static org.niis.xroad.serverconf.impl.TestUtil.MEMBER_CODE;
 import static org.niis.xroad.serverconf.impl.TestUtil.NUM_CLIENTS;
@@ -68,11 +76,14 @@ import static org.niis.xroad.serverconf.impl.TestUtil.NUM_SERVICES;
 import static org.niis.xroad.serverconf.impl.TestUtil.NUM_TSPS;
 import static org.niis.xroad.serverconf.impl.TestUtil.SERVER_CODE;
 import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_CODE;
+import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_DISABLED_BLANK_NOTICE;
+import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_DISABLED_NULL_NOTICE;
 import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_TIMEOUT;
 import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_URL;
 import static org.niis.xroad.serverconf.impl.TestUtil.SERVICE_VERSION;
 import static org.niis.xroad.serverconf.impl.TestUtil.SUBSYSTEM;
 import static org.niis.xroad.serverconf.impl.TestUtil.XROAD_INSTANCE;
+import static org.niis.xroad.serverconf.impl.TestUtil.addDisabledService;
 import static org.niis.xroad.serverconf.impl.TestUtil.client;
 import static org.niis.xroad.serverconf.impl.TestUtil.createAccessRight;
 import static org.niis.xroad.serverconf.impl.TestUtil.createTestClientId;
@@ -109,6 +120,8 @@ public class CachingServerConfTest {
         serverConfProvider = new CachingServerConfImpl(DATABASE_CTX, globalConfProvider, null, serverConfProperties);
 
         prepareDB(DATABASE_CTX);
+        addDisabledService(DATABASE_CTX, createTestClientId(client(2)), SERVICE_DISABLED_NULL_NOTICE, null);
+        addDisabledService(DATABASE_CTX, createTestClientId(client(2)), SERVICE_DISABLED_BLANK_NOTICE, " ");
     }
 
     @AfterClass
@@ -227,9 +240,25 @@ public class CachingServerConfTest {
         ServiceId existingService = createTestServiceId(client(1),
                 service(NUM_SERVICEDESCRIPTIONS - 1, NUM_SERVICES - 1), SERVICE_VERSION);
         ServiceId nonExistingService = createTestServiceId("foo", "bar");
+        ServiceId enabledService = createTestServiceId(client(1), service(0, 0), SERVICE_VERSION);
 
-        assertNotNull(serverConfProvider.getDisabledNotice(existingService));
+        assertEquals("disabledNotice", serverConfProvider.getDisabledNotice(existingService));
+        assertNull(serverConfProvider.getDisabledNotice(enabledService));
         assertNull(serverConfProvider.getDisabledNotice(nonExistingService));
+    }
+
+    /**
+     * Tests that a disabled service description without notice text reports the default notice.
+     */
+    @Test
+    public void getDisabledNoticeDefaultsWhenNoticeIsNullOrBlank() {
+        ServiceId nullNoticeService = createTestServiceId(client(2), SERVICE_DISABLED_NULL_NOTICE, SERVICE_VERSION);
+        ServiceId blankNoticeService = createTestServiceId(client(2), SERVICE_DISABLED_BLANK_NOTICE, SERVICE_VERSION);
+
+        assertEquals(String.format("Service '%s' is disabled", nullNoticeService),
+                serverConfProvider.getDisabledNotice(nullNoticeService));
+        assertEquals(String.format("Service '%s' is disabled", blankNoticeService),
+                serverConfProvider.getDisabledNotice(blankNoticeService));
     }
 
     /**
@@ -450,5 +479,63 @@ public class CachingServerConfTest {
         DATABASE_CTX.commitTransaction();
         DATABASE_CTX.beginTransaction();
         serverConfProvider.clearCache();
+    }
+
+    /**
+     * A cached {@code isLocalGroupMember} result must keep serving the old answer after the group's
+     * membership changes in the database, keyed separately per member, and {@code clearCache()} must
+     * discard it so the next read sees the change.
+     */
+    @Test
+    public void isLocalGroupMemberIsCachedPerOwnerGroupAndMember() {
+        ClientId owner = createTestClientId(client(1));
+        LocalGroupId groupId = LocalGroupId.Conf.create(CROSS_SS_GROUP_CODE);
+        ClientId crossSsMember = ClientId.Conf.create(XROAD_INSTANCE, MEMBER_CLASS, CROSS_SS_MEMBER_CODE);
+        ClientId nonMember = ClientId.Conf.create(
+                XROAD_INSTANCE, MEMBER_CLASS, "cachingNonMember", CROSS_SS_SUBSYSTEM_CODE);
+
+        assertFalse(serverConfProvider.isLocalGroupMember(owner, groupId, nonMember));
+
+        addMemberToCrossSsGroup(owner, nonMember);
+        try {
+            assertFalse(serverConfProvider.isLocalGroupMember(owner, groupId, nonMember));
+            assertTrue(serverConfProvider.isLocalGroupMember(owner, groupId, crossSsMember));
+
+            serverConfProvider.clearCache();
+
+            assertTrue(serverConfProvider.isLocalGroupMember(owner, groupId, nonMember));
+        } finally {
+            removeMemberFromCrossSsGroup(owner, nonMember);
+            serverConfProvider.clearCache();
+        }
+    }
+
+    private static void addMemberToCrossSsGroup(ClientId owner, ClientId member) {
+        var memberEntity = SubsystemIdEntity.create(
+                member.getXRoadInstance(), member.getMemberClass(), member.getMemberCode(), member.getSubsystemCode());
+        DATABASE_CTX.getSession().persist(memberEntity);
+
+        var groupMember = new GroupMemberEntity();
+        groupMember.setAdded(new Date());
+        groupMember.setGroupMemberId(memberEntity);
+        crossSsGroup(owner).getGroupMembers().add(groupMember);
+
+        DATABASE_CTX.commitTransaction();
+        DATABASE_CTX.beginTransaction();
+    }
+
+    private static void removeMemberFromCrossSsGroup(ClientId owner, ClientId member) {
+        crossSsGroup(owner).getGroupMembers()
+                .removeIf(groupMember -> groupMember.getGroupMemberId().memberEquals(member));
+        DATABASE_CTX.commitTransaction();
+        DATABASE_CTX.beginTransaction();
+    }
+
+    private static LocalGroupEntity crossSsGroup(ClientId owner) {
+        var ownerEntity = new ClientDAOImpl().getClient(DATABASE_CTX.getSession(), owner);
+        return ownerEntity.getLocalGroups().stream()
+                .filter(group -> CROSS_SS_GROUP_CODE.equals(group.getGroupCode()))
+                .findFirst()
+                .orElseThrow();
     }
 }

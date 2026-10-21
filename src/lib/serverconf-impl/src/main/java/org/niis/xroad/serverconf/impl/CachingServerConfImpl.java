@@ -29,6 +29,7 @@ package org.niis.xroad.serverconf.impl;
 import ee.ria.xroad.common.conf.InternalSSLKey;
 import ee.ria.xroad.common.db.DatabaseCtx;
 import ee.ria.xroad.common.identifier.ClientId;
+import ee.ria.xroad.common.identifier.LocalGroupId;
 import ee.ria.xroad.common.identifier.SecurityServerId;
 import ee.ria.xroad.common.identifier.ServiceId;
 
@@ -69,6 +70,7 @@ public class CachingServerConfImpl extends ServerConfImpl {
     private final Cache<Object, List<String>> tspCache;
     private final Cache<ServiceId, Optional<Service>> serviceCache;
     private final Cache<AclCacheKey, List<Endpoint>> aclCache;
+    private final Cache<LocalGroupMemberCacheKey, Boolean> localGroupMemberCache;
     private final Cache<ServiceId, List<ee.ria.xroad.common.metadata.Endpoint>> serviceEndpointsCache;
     private final Cache<ServiceId, List<AccessRight>> serviceAccessRightsCache;
     private final Cache<ClientId, Optional<Client>> clientCache;
@@ -109,6 +111,12 @@ public class CachingServerConfImpl extends ServerConfImpl {
         aclCache = CacheBuilder.newBuilder()
                 .weigher((AclCacheKey k, List<Endpoint> v) -> v.size() + 1)
                 .maximumWeight(serverConfProperties.aclCacheSize())
+                .expireAfterWrite(expireSeconds, TimeUnit.SECONDS)
+                .recordStats()
+                .build();
+
+        localGroupMemberCache = CacheBuilder.newBuilder()
+                .maximumSize(serverConfProperties.aclCacheSize())
                 .expireAfterWrite(expireSeconds, TimeUnit.SECONDS)
                 .recordStats()
                 .build();
@@ -248,8 +256,8 @@ public class CachingServerConfImpl extends ServerConfImpl {
     @Override
     public String getDisabledNotice(ServiceId serviceId) {
         return getService(serviceId)
-                .map(it -> it.getServiceDescription().isDisabled() ? it.getServiceDescription().getDisabledNotice() : null
-        ).orElse(null);
+                .map(it -> disabledNotice(it.getServiceDescription(), serviceId))
+                .orElse(null);
     }
 
     @Override
@@ -273,6 +281,20 @@ public class CachingServerConfImpl extends ServerConfImpl {
             }
             log.debug("Failed get list of endpoints", e);
             return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public boolean isLocalGroupMember(ClientId ownerId, LocalGroupId localGroupId, ClientId memberId) {
+        final LocalGroupMemberCacheKey key = new LocalGroupMemberCacheKey(ownerId, localGroupId, memberId);
+        try {
+            return localGroupMemberCache.get(key, () -> super.isLocalGroupMember(ownerId, localGroupId, memberId));
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof XrdRuntimeException) {
+                throw (XrdRuntimeException) e.getCause();
+            }
+            log.debug("Failed to check local group membership", e);
+            return false;
         }
     }
 
@@ -311,6 +333,8 @@ public class CachingServerConfImpl extends ServerConfImpl {
                     serviceCache.stats());
             log.trace("ServerConf.aclCache    : entries: {}, stats: {}", aclCache.size(),
                     aclCache.stats());
+            log.trace("ServerConf.localGroupMemberCache: entries: {}, stats: {}", localGroupMemberCache.size(),
+                    localGroupMemberCache.stats());
             log.trace("ServerConf.serviceEndpointsCache: entries: {}, stats: {}", serviceEndpointsCache.size(),
                     serviceEndpointsCache.stats());
             log.trace("ServerConf.serviceAccessRightsCache: entries: {}, stats: {}", serviceAccessRightsCache.size(),
@@ -325,11 +349,15 @@ public class CachingServerConfImpl extends ServerConfImpl {
         tspCache.invalidateAll();
         serviceCache.invalidateAll();
         aclCache.invalidateAll();
+        localGroupMemberCache.invalidateAll();
         serviceEndpointsCache.invalidateAll();
         serviceAccessRightsCache.invalidateAll();
         clientCache.invalidateAll();
     }
 
     private record AclCacheKey(ClientId clientId, ServiceId serviceId) {
+    }
+
+    private record LocalGroupMemberCacheKey(ClientId ownerId, LocalGroupId localGroupId, ClientId memberId) {
     }
 }
